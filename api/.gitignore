@@ -1,0 +1,200 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.pyo
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Type checking
+*.pyi
+
+# Translations
+*.mo
+*.pot
+
+# pyenv
+.python-version
+
+# Pipenv
+Pipfile.lock
+
+# Poetry (not used — project uses uv)
+poetry.lock
+
+# PDM
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 517/518 build frontends
+__pypackages__/
+
+# Celery (not used by this project, but harmless guard)
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Misc local artifacts
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+instance/
+
+# Sphinx docs build output
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+
+# ── Environment ───────────────────────────────────────────────────────────────
+# .env.example / .env.prod.example are tracked (templates with no real secrets)
+# .env / .env.prod contain real secrets — NEVER commit them
+.env
+.env.prod
+.env.local
+.env.*.local
+.envrc           # direnv
+
+
+# ── Virtual Environments ──────────────────────────────────────────────────────
+# uv creates .venv by default — never track it
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+
+# ── uv ────────────────────────────────────────────────────────────────────────
+# uv.lock IS intentionally tracked (reproducible installs for the whole team).
+# Uncomment only if you explicitly do NOT want lock-file tracking:
+# uv.lock
+
+# uv HTTP cache lives in ~/.cache/uv — nothing to ignore in the project dir
+
+
+# ── IDEs / Editors ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+# VS Code workspace settings (tracked if you want shared settings; ignored here for safety)
+# .vscode/settings.json
+
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# docker-compose.override.yml is for local tweaks — keep out of VCS
+docker-compose.override.yml
+
+
+# ── Database / Alembic ────────────────────────────────────────────────────────
+# Keep alembic/versions/*.py — migrations belong in VCS
+# Ignore local SQLite test databases
+*.db
+*.sqlite3
+
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+
+# ── Secrets / Keys ────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+
+# ── Build / Dist / Analysis caches ───────────────────────────────────────────
+dist/
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+
+# ── Pre-commit ────────────────────────────────────────────────────────────────
+.pre-commit-cache/
+
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig
+.benchmarks/

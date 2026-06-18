@@ -1,0 +1,473 @@
+{
+  "brand": {
+    "name": "Sample Admin",
+    "reference": "Admin reference"
+  },
+  "nav": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Overview and metrics"
+    },
+    "users": {
+      "title": "Users",
+      "description": "CRUD reference"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "description": "Data table reference"
+    },
+    "apps": {
+      "title": "Apps",
+      "description": "Integration catalog"
+    },
+    "chats": {
+      "title": "Chats",
+      "description": "Team inbox demo"
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Preferences and profile"
+    },
+    "helpCenter": {
+      "title": "Help Center",
+      "description": "Support documentation"
+    },
+    "auth": {
+      "title": "Auth",
+      "description": "Authentication demos"
+    },
+    "errors": {
+      "title": "Errors",
+      "description": "HTTP state pages"
+    },
+    "signIn": {
+      "title": "Sign In",
+      "description": "Credential form"
+    },
+    "signIn2Column": {
+      "title": "Sign In 2 Column",
+      "description": "Split-screen credential form"
+    },
+    "signUp": {
+      "title": "Sign Up",
+      "description": "Account creation"
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "description": "Recovery flow"
+    },
+    "otp": {
+      "title": "OTP",
+      "description": "One-time password"
+    },
+    "unauthorized": {
+      "title": "Unauthorized",
+      "description": "401 auth state"
+    },
+    "forbidden": {
+      "title": "Forbidden",
+      "description": "403 permission state"
+    },
+    "notFound": {
+      "title": "Not Found",
+      "description": "404 missing route"
+    },
+    "internalServerError": {
+      "title": "Internal Server Error",
+      "description": "500 failure state"
+    },
+    "maintenance": {
+      "title": "Maintenance Error",
+      "description": "503 outage state"
+    }
+  },
+  "header": {
+    "search": "Search",
+    "themePreset": "Color theme",
+    "language": "Language",
+    "openUserMenu": "Open user menu for {{name}}"
+  },
+  "command": {
+    "title": "Command Palette",
+    "placeholder": "Search pages or commands...",
+    "empty": "No results found.",
+    "navigation": "Navigation",
+    "open": "Open {{title}}"
+  },
+  "userMenu": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "appearance": "Appearance",
+    "signOut": "Sign out"
+  },
+  "themePreset": {
+    "default": "Default",
+    "blue": "Blue",
+    "green": "Green",
+    "orange": "Orange",
+    "red": "Red"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Track Sample Admin operations at a glance.",
+    "download": "Download",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics",
+      "reports": "Reports",
+      "notifications": "Notifications"
+    },
+    "overviewTitle": "Overview",
+    "overviewDescription": "Revenue trend over the last 12 months",
+    "recentSalesTitle": "Recent Sales",
+    "recentSalesDescription": "265 new transactions this month",
+    "placeholderDescription": "This panel is reserved for a later Sub-AC.",
+    "preparing": "Preparing"
+  },
+  "dataTable": {
+    "noResults": "No results found.",
+    "reset": "Reset",
+    "selectedRows": "{{selected}} of {{total}} row(s) selected.",
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{pageCount}}",
+    "goFirst": "Go to first page",
+    "goPrevious": "Go to previous page",
+    "goNext": "Go to next page",
+    "goLast": "Go to last page",
+    "view": "View",
+    "toggleColumns": "Toggle columns",
+    "asc": "Asc",
+    "desc": "Desc",
+    "hide": "Hide",
+    "selectedCount": "{{count}} selected",
+    "clearFilters": "Clear filters"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "description": "Here's a list of your tasks for this month!",
+    "tableLabel": "Tasks data table",
+    "empty": "No tasks found.",
+    "search": "Filter tasks...",
+    "columns": {
+      "task": "Task",
+      "title": "Title",
+      "status": "Status",
+      "priority": "Priority"
+    },
+    "filters": {
+      "status": "Status",
+      "priority": "Priority"
+    },
+    "selectAll": "Select all rows",
+    "selectRow": "Select {{id}}",
+    "openActions": "Open actions for {{id}}",
+    "actions": {
+      "copyId": "Copy task ID",
+      "edit": "Edit task",
+      "delete": "Delete task"
+    },
+    "status": {
+      "backlog": "Backlog",
+      "todo": "Todo",
+      "in progress": "In Progress",
+      "done": "Done",
+      "canceled": "Canceled"
+    },
+    "label": {
+      "bug": "Bug",
+      "feature": "Feature",
+      "documentation": "Documentation",
+      "enhancement": "Enhancement",
+      "design": "Design"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage users, roles, invitations, and account status.",
+    "new": "New user",
+    "tableLabel": "Users data table",
+    "empty": "No users found.",
+    "search": "Filter users...",
+    "columns": {
+      "username": "Username",
+      "name": "Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "status": "Status",
+      "role": "Role",
+      "created": "Created"
+    },
+    "filters": {
+      "status": "Status",
+      "role": "Role"
+    },
+    "selectAll": "Select all rows",
+    "selectRow": "Select {{name}}",
+    "openActions": "Open actions for {{name}}",
+    "actions": {
+      "copyId": "Copy ID",
+      "viewDetails": "View details",
+      "edit": "Edit user",
+      "delete": "Delete user"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "invited": "Invited",
+      "suspended": "Suspended"
+    },
+    "role": {
+      "superadmin": "Superadmin",
+      "admin": "Admin",
+      "manager": "Manager",
+      "cashier": "Cashier"
+    }
+  },
+  "apps": {
+    "eyebrow": "Integration hub",
+    "title": "Apps",
+    "description": "Connect product, finance, support, and developer tools to keep Sample Admin workflows in sync.",
+    "connected": "Connected",
+    "availableApps": "Available apps",
+    "featuredLabel": "Featured apps",
+    "filtersLabel": "Apps filters",
+    "listLabel": "Application integrations",
+    "search": "Search apps...",
+    "searchLabel": "Search apps",
+    "all": "All apps",
+    "manage": "Manage",
+    "metrics": {
+      "users": "Users",
+      "rating": "Rating",
+      "reviews": "Reviews"
+    },
+    "emptyTitle": "No apps found",
+    "emptyDescription": "Try a different search term or category filter.",
+    "category": {
+      "analytics": {
+        "label": "Analytics",
+        "description": "Metrics and reporting"
+      },
+      "communication": {
+        "label": "Communication",
+        "description": "Team and customer channels"
+      },
+      "developer": {
+        "label": "Developer",
+        "description": "Delivery and engineering workflows"
+      },
+      "finance": {
+        "label": "Finance",
+        "description": "Billing and accounting"
+      },
+      "marketing": {
+        "label": "Marketing",
+        "description": "Campaigns and lifecycle"
+      }
+    },
+    "status": {
+      "connected": "Connected",
+      "available": "Available",
+      "coming-soon": "Coming soon"
+    }
+  },
+  "chats": {
+    "eyebrow": "Team inbox",
+    "title": "Chats",
+    "description": "Triage customer updates, internal handoffs, and operational messages from one sample inbox.",
+    "conversations": "Conversations",
+    "unread": "Unread",
+    "search": "Search conversations...",
+    "searchLabel": "Search conversations",
+    "newMessages": "{{count}} new",
+    "priorityLabel": "{{priority}} priority",
+    "attachFile": "Attach file",
+    "writeReply": "Write a reply...",
+    "addReaction": "Add reaction",
+    "sendMessage": "Send message",
+    "emptyTitle": "No conversations found",
+    "emptyDescription": "Try another name, topic, or channel.",
+    "channel": {
+      "sales": "Sales",
+      "support": "Support",
+      "product": "Product",
+      "operations": "Operations"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "helpCenter": {
+    "eyebrow": "Self-service support",
+    "title": "Help Center",
+    "description": "Browse operational guides, implementation notes, and support handoff patterns for Sample Admin.",
+    "articles": "Articles",
+    "faqs": "FAQs",
+    "articlesLabel": "Help center articles",
+    "filtersLabel": "Help filters",
+    "search": "Search help articles...",
+    "searchLabel": "Search help articles",
+    "all": "All topics",
+    "minRead": "{{count}} min read",
+    "updated": "Updated {{date}}",
+    "faqTitle": "Frequently asked questions",
+    "contactLabel": "Support contact options",
+    "needHelp": "Need more help?",
+    "contactDescription": "Use these sample support paths as placeholders when copying the help center feature into a backend-enabled app.",
+    "emptyTitle": "No help articles found",
+    "emptyDescription": "Try another search term or topic filter.",
+    "status": {
+      "popular": "Popular",
+      "updated": "Updated",
+      "new": "New"
+    },
+    "category": {
+      "getting-started": "Getting Started",
+      "account": "Account",
+      "workflow": "Workflow",
+      "billing": "Billing",
+      "security": "Security"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "pageCount": "5 pages",
+    "description": "Account, notification, and theme setting screens used by the Sample Admin porting reference.",
+    "menuLabel": "Settings menu",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Settings saved.",
+    "nav": {
+      "profile": {
+        "title": "Profile",
+        "description": "Public user information"
+      },
+      "account": {
+        "title": "Account",
+        "description": "Personal info and language"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "Theme and color preset"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Email and push policy"
+      },
+      "display": {
+        "title": "Display",
+        "description": "Visible sidebar items"
+      }
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "description": "Enter your email and password below to log into your account.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "********",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "continueWith": "Or continue with",
+      "signUpPrompt": "Don't have an account?",
+      "signUpLink": "Sign Up",
+      "termsPrefix": "By clicking sign in, you agree to our",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "termsConjunction": "and",
+      "referenceValidatedMessage": "Local demo sign-in feedback for {{email}} only. No real authentication occurred, no session was created, and no authentication request was sent.",
+      "feedback": {
+        "successTitle": "Demo only: no real authentication occurred"
+      }
+    },
+    "signUp": {
+      "title": "Create an account",
+      "description": "Enter your name, email, and password to create an account.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Ada Lovelace",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "********",
+      "confirmPasswordLabel": "Confirm Password",
+      "confirmPasswordPlaceholder": "********",
+      "submit": "Create account",
+      "continueWith": "Or continue with",
+      "signInPrompt": "Already have an account?",
+      "signInLink": "Sign in",
+      "termsPrefix": "By creating an account, you agree to our",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "termsConjunction": "and",
+      "referenceValidatedMessage": "Sample sign-up reference validated for {{email}}. No authentication request was sent."
+    },
+    "forgotPassword": {
+      "title": "Forgot password?",
+      "description": "Enter your email address and we will validate this sample reset form.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "submit": "Send reset link",
+      "signInPrompt": "Remembered your password?",
+      "signInLink": "Back to sign in",
+      "referenceValidatedMessage": "Sample forgot-password reference validated for {{email}}. No password reset request was sent."
+    },
+    "otp": {
+      "title": "Two-factor authentication",
+      "description": "Enter the one-time password from your authenticator app to validate this sample form.",
+      "codeLabel": "One-time password",
+      "codeDigitLabel": "Digit {{position}} of the one-time password",
+      "codePlaceholder": "0",
+      "submit": "Verify",
+      "verifyingSubmit": "Verifying...",
+      "signInLink": "Back to sign in",
+      "referenceValidatedMessage": "Sample OTP reference validated for code ending in {{codeSuffix}}. No authentication request was sent.",
+      "feedback": {
+        "incompleteTitle": "Code incomplete",
+        "incompleteDescription": "Enter all six digits before verifying this sample OTP.",
+        "invalidTitle": "Code invalid",
+        "invalidDescription": "Use digits only for this six-character sample OTP.",
+        "successTitle": "Code verified"
+      }
+    },
+    "signIn2": {
+      "brandEyebrow": "Sample Admin Studio",
+      "brandBadge": "UI reference",
+      "brandStatement": "Build focused admin authentication references without backend coupling.",
+      "brandDescription": "This two-column sample mirrors the shadcn-admin auth pattern while keeping validation entirely client-side for reusable UI review.",
+      "brandHighlights": [
+        "Client-side validation only",
+        "No sessions or guards",
+        "Ready for layout review"
+      ],
+      "title": "Sign in to your account",
+      "description": "Enter your email and password below to validate the sample form.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "********",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "continueWith": "Or continue with",
+      "signUpPrompt": "Don't have an account?",
+      "signUpLink": "Sign up",
+      "referenceValidatedMessage": "Local demo two-column sign-in feedback for {{email}} only. No real authentication occurred, no session was created, and no authentication request was sent.",
+      "feedback": {
+        "successTitle": "Demo only: no real authentication occurred"
+      }
+    }
+  },
+  "errors": {
+    "standalone": "This standalone {{brand}} sample page intentionally avoids the main app, test, and production auth routes.",
+    "backToDashboard": "Back to dashboard",
+    "visitHelpCenter": "Visit help center"
+  }
+}

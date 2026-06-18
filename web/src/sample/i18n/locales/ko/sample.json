@@ -1,0 +1,469 @@
+{
+  "brand": {
+    "name": "Sample Admin",
+    "reference": "관리자 레퍼런스"
+  },
+  "nav": {
+    "dashboard": {
+      "title": "대시보드",
+      "description": "지표와 현황"
+    },
+    "users": {
+      "title": "사용자",
+      "description": "CRUD 레퍼런스"
+    },
+    "tasks": {
+      "title": "작업",
+      "description": "데이터 테이블 레퍼런스"
+    },
+    "apps": {
+      "title": "앱",
+      "description": "연동 카탈로그"
+    },
+    "chats": {
+      "title": "채팅",
+      "description": "팀 inbox 데모"
+    },
+    "settings": {
+      "title": "설정",
+      "description": "환경설정과 프로필"
+    },
+    "helpCenter": {
+      "title": "도움말 센터",
+      "description": "지원 문서"
+    },
+    "auth": {
+      "title": "인증",
+      "description": "인증 데모"
+    },
+    "errors": {
+      "title": "오류",
+      "description": "HTTP 상태 페이지"
+    },
+    "signIn": {
+      "title": "로그인",
+      "description": "자격 증명 폼"
+    },
+    "signIn2Column": {
+      "title": "2컬럼 로그인",
+      "description": "분할 화면 자격 증명 폼"
+    },
+    "signUp": {
+      "title": "회원가입",
+      "description": "계정 생성"
+    },
+    "forgotPassword": {
+      "title": "비밀번호 찾기",
+      "description": "복구 플로우"
+    },
+    "otp": {
+      "title": "OTP",
+      "description": "일회용 비밀번호"
+    },
+    "unauthorized": {
+      "title": "인증 필요",
+      "description": "401 인증 상태"
+    },
+    "forbidden": {
+      "title": "접근 금지",
+      "description": "403 권한 상태"
+    },
+    "notFound": {
+      "title": "찾을 수 없음",
+      "description": "404 누락 경로"
+    },
+    "internalServerError": {
+      "title": "내부 서버 오류",
+      "description": "500 실패 상태"
+    },
+    "maintenance": {
+      "title": "점검 오류",
+      "description": "503 장애 상태"
+    }
+  },
+  "header": {
+    "search": "검색",
+    "themePreset": "색상 테마",
+    "language": "언어",
+    "openUserMenu": "{{name}} 사용자 메뉴 열기"
+  },
+  "command": {
+    "title": "명령 팔레트",
+    "placeholder": "페이지 또는 명령 검색...",
+    "empty": "검색 결과가 없습니다.",
+    "navigation": "이동",
+    "open": "{{title}} 열기"
+  },
+  "userMenu": {
+    "profile": "프로필",
+    "settings": "설정",
+    "appearance": "화면 설정",
+    "signOut": "로그아웃"
+  },
+  "themePreset": {
+    "default": "Default",
+    "blue": "Blue",
+    "green": "Green",
+    "orange": "Orange",
+    "red": "Red"
+  },
+  "dashboard": {
+    "title": "대시보드",
+    "description": "Sample Admin 의 운영 현황을 한눈에 확인하세요.",
+    "download": "다운로드",
+    "tabs": {
+      "overview": "개요",
+      "analytics": "분석",
+      "reports": "보고서",
+      "notifications": "알림"
+    },
+    "overviewTitle": "개요",
+    "overviewDescription": "최근 12 개월 매출 추이",
+    "recentSalesTitle": "최근 판매",
+    "recentSalesDescription": "이번 달 신규 거래 265 건",
+    "placeholderDescription": "후속 Sub-AC 에서 구현될 예정입니다.",
+    "preparing": "준비 중"
+  },
+  "dataTable": {
+    "noResults": "결과가 없습니다.",
+    "reset": "초기화",
+    "selectedRows": "{{selected}} / {{total}}개 행 선택됨",
+    "rowsPerPage": "페이지당 행 수",
+    "pageOf": "{{page}} / {{pageCount}} 페이지",
+    "goFirst": "첫 페이지로 이동",
+    "goPrevious": "이전 페이지로 이동",
+    "goNext": "다음 페이지로 이동",
+    "goLast": "마지막 페이지로 이동",
+    "view": "보기",
+    "toggleColumns": "컬럼 표시 전환",
+    "asc": "오름차순",
+    "desc": "내림차순",
+    "hide": "숨기기",
+    "selectedCount": "{{count}}개 선택됨",
+    "clearFilters": "필터 지우기"
+  },
+  "tasks": {
+    "title": "작업",
+    "description": "이번 달 작업 목록입니다.",
+    "tableLabel": "작업 데이터 테이블",
+    "empty": "작업이 없습니다.",
+    "search": "작업 필터...",
+    "columns": {
+      "task": "작업",
+      "title": "제목",
+      "status": "상태",
+      "priority": "우선순위"
+    },
+    "filters": {
+      "status": "상태",
+      "priority": "우선순위"
+    },
+    "selectAll": "모든 행 선택",
+    "selectRow": "{{id}} 선택",
+    "openActions": "{{id}} 작업 메뉴 열기",
+    "actions": {
+      "copyId": "작업 ID 복사",
+      "edit": "작업 수정",
+      "delete": "작업 삭제"
+    },
+    "status": {
+      "backlog": "백로그",
+      "todo": "할 일",
+      "in progress": "진행 중",
+      "done": "완료",
+      "canceled": "취소됨"
+    },
+    "label": {
+      "bug": "버그",
+      "feature": "기능",
+      "documentation": "문서",
+      "enhancement": "개선",
+      "design": "디자인"
+    },
+    "priority": {
+      "low": "낮음",
+      "medium": "중간",
+      "high": "높음"
+    }
+  },
+  "users": {
+    "title": "사용자",
+    "description": "사용자, 역할, 초대, 계정 상태를 관리합니다.",
+    "new": "새 사용자",
+    "tableLabel": "사용자 데이터 테이블",
+    "empty": "사용자가 없습니다.",
+    "search": "사용자 필터...",
+    "columns": {
+      "username": "사용자명",
+      "name": "이름",
+      "email": "이메일",
+      "phoneNumber": "전화번호",
+      "status": "상태",
+      "role": "역할",
+      "created": "생성일"
+    },
+    "filters": {
+      "status": "상태",
+      "role": "역할"
+    },
+    "selectAll": "모든 행 선택",
+    "selectRow": "{{name}} 선택",
+    "openActions": "{{name}} 사용자 메뉴 열기",
+    "actions": {
+      "copyId": "ID 복사",
+      "viewDetails": "상세 보기",
+      "edit": "사용자 수정",
+      "delete": "사용자 삭제"
+    },
+    "status": {
+      "active": "활성",
+      "inactive": "비활성",
+      "invited": "초대됨",
+      "suspended": "정지됨"
+    },
+    "role": {
+      "superadmin": "최고 관리자",
+      "admin": "관리자",
+      "manager": "매니저",
+      "cashier": "캐셔"
+    }
+  },
+  "apps": {
+    "eyebrow": "연동 허브",
+    "title": "앱",
+    "description": "제품, 재무, 지원, 개발 도구를 연결해 Sample Admin 워크플로를 동기화하세요.",
+    "connected": "연결됨",
+    "availableApps": "사용 가능한 앱",
+    "featuredLabel": "추천 앱",
+    "filtersLabel": "앱 필터",
+    "listLabel": "앱 연동 목록",
+    "search": "앱 검색...",
+    "searchLabel": "앱 검색",
+    "all": "전체 앱",
+    "manage": "관리",
+    "metrics": {
+      "users": "사용자",
+      "rating": "평점",
+      "reviews": "리뷰"
+    },
+    "emptyTitle": "앱을 찾을 수 없습니다",
+    "emptyDescription": "다른 검색어 또는 카테고리 필터를 시도하세요.",
+    "category": {
+      "analytics": {
+        "label": "분석",
+        "description": "지표와 리포팅"
+      },
+      "communication": {
+        "label": "커뮤니케이션",
+        "description": "팀 및 고객 채널"
+      },
+      "developer": {
+        "label": "개발자",
+        "description": "배포와 엔지니어링 워크플로"
+      },
+      "finance": {
+        "label": "재무",
+        "description": "청구와 회계"
+      },
+      "marketing": {
+        "label": "마케팅",
+        "description": "캠페인과 라이프사이클"
+      }
+    },
+    "status": {
+      "connected": "연결됨",
+      "available": "사용 가능",
+      "coming-soon": "준비 중"
+    }
+  },
+  "chats": {
+    "eyebrow": "팀 inbox",
+    "title": "채팅",
+    "description": "고객 업데이트, 내부 인수인계, 운영 메시지를 하나의 샘플 inbox에서 분류합니다.",
+    "conversations": "대화",
+    "unread": "읽지 않음",
+    "search": "대화 검색...",
+    "searchLabel": "대화 검색",
+    "newMessages": "{{count}}개 신규",
+    "priorityLabel": "{{priority}} 우선순위",
+    "attachFile": "파일 첨부",
+    "writeReply": "답장 작성...",
+    "addReaction": "반응 추가",
+    "sendMessage": "메시지 보내기",
+    "emptyTitle": "대화를 찾을 수 없습니다",
+    "emptyDescription": "다른 이름, 주제, 채널을 시도하세요.",
+    "channel": {
+      "sales": "영업",
+      "support": "지원",
+      "product": "제품",
+      "operations": "운영"
+    },
+    "priority": {
+      "low": "낮음",
+      "medium": "중간",
+      "high": "높음"
+    }
+  },
+  "helpCenter": {
+    "eyebrow": "셀프서비스 지원",
+    "title": "도움말 센터",
+    "description": "Sample Admin 의 운영 가이드, 구현 노트, 지원 인수인계 패턴을 찾아보세요.",
+    "articles": "문서",
+    "faqs": "FAQ",
+    "articlesLabel": "도움말 문서",
+    "filtersLabel": "도움말 필터",
+    "search": "도움말 문서 검색...",
+    "searchLabel": "도움말 문서 검색",
+    "all": "전체 주제",
+    "minRead": "{{count}}분 읽기",
+    "updated": "업데이트 {{date}}",
+    "faqTitle": "자주 묻는 질문",
+    "contactLabel": "지원 문의 옵션",
+    "needHelp": "추가 도움이 필요하신가요?",
+    "contactDescription": "도움말 센터 기능을 백엔드 앱으로 복사할 때 사용할 샘플 지원 경로입니다.",
+    "emptyTitle": "도움말 문서를 찾을 수 없습니다",
+    "emptyDescription": "다른 검색어 또는 주제 필터를 시도하세요.",
+    "status": {
+      "popular": "인기",
+      "updated": "업데이트됨",
+      "new": "신규"
+    },
+    "category": {
+      "getting-started": "시작하기",
+      "account": "계정",
+      "workflow": "워크플로",
+      "billing": "청구",
+      "security": "보안"
+    }
+  },
+  "settings": {
+    "title": "설정",
+    "pageCount": "5개 페이지",
+    "description": "Sample Admin 포팅 레퍼런스에서 사용하는 계정, 알림, 테마 설정 화면입니다.",
+    "menuLabel": "설정 메뉴",
+    "save": "저장",
+    "cancel": "취소",
+    "saved": "설정이 저장되었습니다.",
+    "nav": {
+      "profile": {
+        "title": "프로필",
+        "description": "공개 사용자 정보"
+      },
+      "account": {
+        "title": "계정",
+        "description": "개인 정보와 언어"
+      },
+      "appearance": {
+        "title": "화면 설정",
+        "description": "테마와 컬러 프리셋"
+      },
+      "notifications": {
+        "title": "알림",
+        "description": "이메일과 푸시 정책"
+      },
+      "display": {
+        "title": "디스플레이",
+        "description": "표시할 사이드바 항목"
+      }
+    }
+  },
+  "auth": {
+    "signIn": {
+      "title": "로그인",
+      "description": "이메일과 비밀번호를 입력해 계정에 로그인합니다.",
+      "emailLabel": "이메일",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "비밀번호",
+      "passwordPlaceholder": "********",
+      "forgotPassword": "비밀번호를 잊으셨나요?",
+      "submit": "로그인",
+      "continueWith": "또는 다음으로 계속",
+      "signUpPrompt": "계정이 없으신가요?",
+      "signUpLink": "회원가입",
+      "termsPrefix": "로그인을 클릭하면 다음에 동의하게 됩니다:",
+      "termsOfService": "서비스 약관",
+      "privacyPolicy": "개인정보 처리방침",
+      "termsConjunction": "및",
+      "referenceValidatedMessage": "{{email}}에 대한 로컬 데모 로그인 피드백입니다. 실제 인증은 발생하지 않았고, 세션은 생성되지 않았으며, 인증 요청은 전송되지 않았습니다.",
+      "feedback": {
+        "successTitle": "데모 전용: 실제 인증은 발생하지 않았습니다"
+      }
+    },
+    "signUp": {
+      "title": "계정 만들기",
+      "description": "이름, 이메일, 비밀번호를 입력해 계정을 만듭니다.",
+      "nameLabel": "이름",
+      "namePlaceholder": "홍길동",
+      "emailLabel": "이메일",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "비밀번호",
+      "passwordPlaceholder": "********",
+      "confirmPasswordLabel": "비밀번호 확인",
+      "confirmPasswordPlaceholder": "********",
+      "submit": "계정 만들기",
+      "continueWith": "또는 다음으로 계속",
+      "signInPrompt": "이미 계정이 있으신가요?",
+      "signInLink": "로그인",
+      "termsPrefix": "계정을 만들면 다음에 동의하게 됩니다:",
+      "termsOfService": "서비스 약관",
+      "privacyPolicy": "개인정보 처리방침",
+      "termsConjunction": "및",
+      "referenceValidatedMessage": "{{email}}에 대한 샘플 회원가입 레퍼런스 검증이 완료되었습니다. 인증 요청은 전송되지 않았습니다."
+    },
+    "forgotPassword": {
+      "title": "비밀번호를 잊으셨나요?",
+      "description": "이메일 주소를 입력하면 이 샘플 재설정 폼을 검증합니다.",
+      "emailLabel": "이메일",
+      "emailPlaceholder": "name@example.com",
+      "submit": "재설정 링크 보내기",
+      "signInPrompt": "비밀번호가 기억나셨나요?",
+      "signInLink": "로그인으로 돌아가기",
+      "referenceValidatedMessage": "{{email}}에 대한 샘플 비밀번호 찾기 레퍼런스 검증이 완료되었습니다. 비밀번호 재설정 요청은 전송되지 않았습니다."
+    },
+    "otp": {
+      "title": "2단계 인증",
+      "description": "인증 앱의 일회용 비밀번호를 입력해 이 샘플 폼을 검증합니다.",
+      "codeLabel": "일회용 비밀번호",
+      "codeDigitLabel": "일회용 비밀번호 {{position}}번째 숫자",
+      "codePlaceholder": "0",
+      "submit": "검증",
+      "verifyingSubmit": "검증 중...",
+      "signInLink": "로그인으로 돌아가기",
+      "referenceValidatedMessage": "끝자리 {{codeSuffix}} 코드에 대한 샘플 OTP 레퍼런스 검증이 완료되었습니다. 인증 요청은 전송되지 않았습니다.",
+      "feedback": {
+        "incompleteTitle": "코드가 불완전합니다",
+        "incompleteDescription": "이 샘플 OTP를 검증하기 전에 여섯 자리 숫자를 모두 입력하세요.",
+        "invalidTitle": "코드가 올바르지 않습니다",
+        "invalidDescription": "이 여섯 글자 샘플 OTP에는 숫자만 사용할 수 있습니다.",
+        "successTitle": "코드가 검증되었습니다"
+      }
+    },
+    "signIn2": {
+      "brandEyebrow": "Sample Admin Studio",
+      "brandBadge": "UI 레퍼런스",
+      "brandStatement": "백엔드 결합 없이 집중도 높은 관리자 인증 레퍼런스를 구성합니다.",
+      "brandDescription": "이 2컬럼 샘플은 shadcn-admin 인증 패턴을 따르면서 재사용 가능한 UI 검토를 위해 검증을 전부 클라이언트에 한정합니다.",
+      "brandHighlights": ["클라이언트 검증 전용", "세션과 가드 없음", "레이아웃 리뷰 준비 완료"],
+      "title": "계정에 로그인",
+      "description": "아래에 이메일과 비밀번호를 입력해 샘플 폼을 검증합니다.",
+      "emailLabel": "이메일",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "비밀번호",
+      "passwordPlaceholder": "********",
+      "forgotPassword": "비밀번호를 잊으셨나요?",
+      "submit": "로그인",
+      "continueWith": "또는 다음으로 계속",
+      "signUpPrompt": "계정이 없으신가요?",
+      "signUpLink": "회원가입",
+      "referenceValidatedMessage": "{{email}}에 대한 로컬 데모 2컬럼 로그인 피드백입니다. 실제 인증은 발생하지 않았고, 세션은 생성되지 않았으며, 인증 요청은 전송되지 않았습니다.",
+      "feedback": {
+        "successTitle": "데모 전용: 실제 인증은 발생하지 않았습니다"
+      }
+    }
+  },
+  "errors": {
+    "standalone": "이 독립형 {{brand}} 샘플 페이지는 메인 앱, 테스트, 프로덕션 인증 라우트와 분리되어 있습니다.",
+    "backToDashboard": "대시보드로 돌아가기",
+    "visitHelpCenter": "도움말 센터 방문"
+  }
+}
