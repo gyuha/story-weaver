@@ -1,12 +1,6 @@
 import { client } from '@/api/client.gen';
-import { useAuthStore } from '@/features/auth/store/auth.store';
 
-// 요청 인터셉터: Authorization 헤더 주입
-// 401 응답 인터셉터 (토큰 갱신)는 Phase 3에서 구현 예정
-client.instance.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`);
-  }
-  return config;
-});
+// 요청 인터셉터 — 현재는 목업 인증이라 토큰 주입이 없다.
+// 실제 세션/토큰 도입(Phase 3) 시 여기서 Authorization 헤더를 주입하고
+// 401 응답 인터셉터(토큰 갱신)를 추가한다.
+client.instance.interceptors.request.use((config) => config);

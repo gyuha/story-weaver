@@ -1,11 +1,18 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { HdLoginPage } from '@/features/auth/components/hd-login-page'
+import { LoginPage } from '@/features/auth/components/login-page';
+import { createFileRoute, useSearch } from '@tanstack/react-router';
+
+interface LoginSearch {
+  redirect?: string;
+}
 
 export const Route = createFileRoute('/auth/login')({
-  component: LoginPage,
-})
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  component: LoginRoute,
+});
 
-function LoginPage() {
-  const navigate = useNavigate()
-  return <HdLoginPage onSuccess={() => navigate({ to: '/' })} />
+function LoginRoute() {
+  const { redirect } = useSearch({ from: '/auth/login' });
+  return <LoginPage redirect={redirect} />;
 }

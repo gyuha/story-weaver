@@ -1,6 +1,0 @@
-export { HdIcon } from './hd-icon'
-export { HdAvatar } from './hd-avatar'
-export { HdBadge } from './hd-badge'
-export { HdModal } from './hd-modal'
-export { HdPagination } from './hd-pagination'
-export { HdToastHost, hdToast } from './hd-toast'
