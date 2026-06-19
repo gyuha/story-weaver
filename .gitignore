@@ -1,0 +1,5 @@
+# Playwriter / browser-debug artifacts
+.playwright-mcp/
+
+# Forge volatile quick-lane log
+.forge/quick/
