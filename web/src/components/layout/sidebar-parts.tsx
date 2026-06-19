@@ -1,8 +1,7 @@
-import { ThemeToggle } from '@/components/theme-toggle';
 import { useUsage, useWorkspaceMeta } from '@/features/shared/store/selectors';
 import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
-import { ChevronsLeft, type LucideIcon, Settings2 } from 'lucide-react';
+import { ChevronsLeft, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 /** 좌측 사이드바 컨테이너 (surface 배경, 우측 경계) */
@@ -14,17 +13,20 @@ export function SidebarShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** 워크스페이스 스위처 헤더 */
+/** 워크스페이스 스위처 헤더 — 누르면 작품 목록으로 이동 */
 export function WorkspaceHeader() {
   const { workspaceName, authorInitial } = useWorkspaceMeta();
   return (
-    <div className="mx-1 flex h-[42px] items-center gap-2.5 px-2.5">
+    <Link
+      to="/works"
+      className="mx-1 flex h-[42px] items-center gap-2.5 rounded-[5px] px-2.5 transition-colors hover:bg-ink/[0.04]"
+    >
       <div className="grid size-[22px] shrink-0 place-items-center rounded-[5px] bg-ink font-serif text-[12px] font-bold text-white">
         {authorInitial}
       </div>
       <span className="flex-1 truncate text-sm font-semibold text-ink">{workspaceName}</span>
       <ChevronsLeft className="size-[15px] text-faint" />
-    </div>
+    </Link>
   );
 }
 
@@ -92,21 +94,6 @@ export function UsageCard() {
       <div className="mt-2 text-[11px] text-faint">
         {usage.plan} · {fmt(usage.usedTokens)} / {fmt(usage.totalTokens)} 토큰
       </div>
-    </div>
-  );
-}
-
-export function SettingsRow() {
-  return (
-    <div className="mx-1.5 mb-2 flex items-center gap-2 px-2.5">
-      <button
-        type="button"
-        className="flex h-[30px] flex-1 items-center gap-2 rounded-[3px] text-sm text-muted-ink transition-colors hover:bg-ink/[0.04]"
-      >
-        <Settings2 className="size-4 text-faint" strokeWidth={2} />
-        <span>설정</span>
-      </button>
-      <ThemeToggle />
     </div>
   );
 }

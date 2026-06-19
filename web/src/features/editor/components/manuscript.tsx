@@ -38,7 +38,7 @@ export function Manuscript({
 
   return (
     <div className="relative flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-[600px] px-10 pt-11 pb-28">
+      <div className="px-10 pt-11 pb-28">
         <div className="mb-[11px] text-[12px] font-semibold tracking-[0.04em] text-genre">
           {chapter.partLabel.replace(/^(제\d+부)\s*/, '$1 · ')}
         </div>
