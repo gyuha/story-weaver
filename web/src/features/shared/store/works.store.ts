@@ -20,6 +20,7 @@ interface WorksState {
   dismissSuggestion: (workId: string, sceneId: string) => void;
   acceptInlineSuggestion: (workId: string, sceneId: string) => void;
   dismissConflict: (workId: string, conflictId: string) => void;
+  renameChapter: (workId: string, chapterId: string, title: string) => void;
 }
 
 const SHORT_LABEL = (title: string) => title.trim().charAt(0) || '작';
@@ -93,6 +94,14 @@ export const useWorksStore = create<WorksState>()(
       set((state) => {
         const work = state.works.find((w) => w.id === workId);
         if (work) work.conflicts = work.conflicts.filter((c) => c.id !== conflictId);
+      }),
+
+    renameChapter: (workId, chapterId, title) =>
+      set((state) => {
+        const chapter = state.works
+          .find((w) => w.id === workId)
+          ?.chapters.find((c) => c.id === chapterId);
+        if (chapter) chapter.title = title;
       }),
   }))
 );

@@ -1,6 +1,7 @@
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Entity, Scene, Work } from '@/features/shared/types';
-import { PanelRight, Sparkles } from 'lucide-react';
+import { PanelLeft, PanelRight, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 interface MemoryPanelProps {
@@ -11,6 +12,7 @@ interface MemoryPanelProps {
 
 /** Smart Editor 우측 메모리 사이드바 — 씬-엔티티 링크 + 벡터 유사도 보조 */
 export function MemoryPanel({ work, chapter, scene }: MemoryPanelProps) {
+  const [collapsed, setCollapsed] = useState(false);
   const entityMap = new Map(work.entities.map((e) => [e.id, e]));
   const linked = scene.linkedEntityIds
     .map((id) => entityMap.get(id))
@@ -27,12 +29,37 @@ export function MemoryPanel({ work, chapter, scene }: MemoryPanelProps) {
 
   const sceneIndex = chapter.scenes.findIndex((s) => s.id === scene.id) + 1;
 
+  if (collapsed) {
+    return (
+      <aside className="flex w-11 shrink-0 flex-col items-center gap-2 border-l border-line bg-surface-soft py-3">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          aria-label="기억 패널 펼치기"
+          title="이 씬의 기억 펼치기"
+          className="grid size-8 place-items-center rounded-md text-faint transition-colors hover:bg-surface hover:text-ink-soft"
+        >
+          <PanelLeft className="size-[17px]" strokeWidth={2} />
+        </button>
+        <Sparkles className="size-4 text-primary" strokeWidth={2} />
+      </aside>
+    );
+  }
+
   return (
     <aside className="flex w-[316px] shrink-0 flex-col border-l border-line bg-surface-soft">
       <div className="flex h-[46px] shrink-0 items-center gap-2 border-b border-ink/[0.06] px-3.5">
         <Sparkles className="size-4 text-primary" strokeWidth={2} />
         <span className="flex-1 text-sm font-semibold text-ink">이 씬의 기억</span>
-        <PanelRight className="size-[17px] text-faint" strokeWidth={2} />
+        <button
+          type="button"
+          onClick={() => setCollapsed(true)}
+          aria-label="기억 패널 접기"
+          title="접기"
+          className="-mr-1 grid size-7 place-items-center rounded-md text-faint transition-colors hover:bg-surface hover:text-ink-soft"
+        >
+          <PanelRight className="size-[17px]" strokeWidth={2} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-[15px_14px]">
