@@ -51,6 +51,29 @@ export function findSceneLocation(
   return undefined;
 }
 
+export interface ChapterNav {
+  chapter: Chapter;
+  /** 이전 화 챕터 id (없으면 undefined) */
+  prevId?: string;
+  /** 다음 화 챕터 id (없으면 undefined = 마지막 화) */
+  nextId?: string;
+}
+
+/** 챕터(=화)와 그 이전/다음 화를 함께 도출한다. 읽기 모드의 챕터 내비 근거. */
+export function findChapterNav(
+  work: Work | undefined,
+  chapterId: string | undefined
+): ChapterNav | undefined {
+  if (!work) return undefined;
+  const idx = work.chapters.findIndex((c) => c.id === chapterId);
+  if (idx === -1) return undefined;
+  return {
+    chapter: work.chapters[idx],
+    prevId: idx > 0 ? work.chapters[idx - 1].id : undefined,
+    nextId: idx < work.chapters.length - 1 ? work.chapters[idx + 1].id : undefined,
+  };
+}
+
 /** 편집 대상으로 적합한 첫 씬(빈 씬 제외, 없으면 첫 씬) */
 export function defaultSceneId(work: Work | undefined): string | undefined {
   if (!work) return undefined;
