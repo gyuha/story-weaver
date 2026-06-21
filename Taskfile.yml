@@ -1,0 +1,70 @@
+version: "3"
+
+# ============================================================
+# StoryWeaver — root Taskfile (monorepo)
+# https://taskfile.dev
+# ============================================================
+# 두 앱을 한 곳에서 실행/관리합니다.
+#
+#   task              → 사용 가능한 태스크 목록
+#   task dev          → api + web 개발 서버 동시 실행 (풀스택)
+#   task dev-api      → api 개발 서버만 실행
+#   task dev-web      → web 개발 서버만 실행
+#   task install      → api + web 의존성 일괄 설치
+#   task build        → web 프로덕션 빌드
+#   task check        → web typecheck + lint
+#
+# 개별 앱은 네임스페이스로 호출:
+#   task api:dev      → 인프라 + 마이그레이션 + FastAPI 핫리로드 (포트 8000)
+#   task api:test     → pytest
+#   task web:dev      → Vite 개발 서버 (포트 3000)
+#   task web:build    → web 빌드
+#   (전체 목록은 `task --list-all`)
+# ============================================================
+
+includes:
+  api:
+    taskfile: ./api/Taskfile.yml
+    dir: ./api
+  web:
+    taskfile: ./web/Taskfile.yml
+    dir: ./web
+
+tasks:
+  default:
+    desc: 사용 가능한 태스크 목록
+    silent: true
+    cmds:
+      - task --list
+
+  install:
+    desc: api + web 의존성 일괄 설치
+    cmds:
+      - task: api:install
+      - task: web:install
+
+  dev:
+    desc: api(FastAPI :8000) + web(Vite :3000) 개발 서버 동시 실행
+    deps:
+      - api:dev
+      - web:dev
+
+  dev-api:
+    desc: api 개발 서버만 실행 (인프라 + 마이그레이션 + FastAPI :8000)
+    cmds:
+      - task: api:dev
+
+  dev-web:
+    desc: web 개발 서버만 실행 (Vite :3000)
+    cmds:
+      - task: web:dev
+
+  build:
+    desc: web 프로덕션 빌드
+    cmds:
+      - task: web:build
+
+  check:
+    desc: web 타입 검사 + 린트
+    cmds:
+      - task: web:check

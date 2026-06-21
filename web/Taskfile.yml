@@ -1,0 +1,70 @@
+version: "3"
+
+# ============================================================
+# StoryWeaver — web (React + Vite) Taskfile
+# https://taskfile.dev
+# ============================================================
+# 패키지 매니저: pnpm (Node >= 22.18)
+# 루트에서는 `task web:<name>` 으로 호출됩니다.
+# ============================================================
+
+vars:
+  PORT: "3000"
+
+tasks:
+  default:
+    desc: Show available web tasks
+    silent: true
+    cmds:
+      - task --list
+
+  install:
+    desc: pnpm 의존성 설치
+    cmds:
+      - pnpm install
+
+  dev:
+    desc: Vite 개발 서버 시작 (포트 {{.PORT}})
+    cmds:
+      - pnpm dev
+
+  build:
+    desc: 프로덕션 빌드 (tsc -b && vite build)
+    cmds:
+      - pnpm build
+
+  preview:
+    desc: 빌드 결과 미리보기 서버
+    cmds:
+      - pnpm preview
+
+  typecheck:
+    desc: 타입 검사 (tsc --noEmit)
+    cmds:
+      - pnpm typecheck
+
+  lint:
+    desc: Biome 검사
+    cmds:
+      - pnpm lint
+
+  lint-fix:
+    desc: Biome 검사 + 자동 수정
+    cmds:
+      - pnpm lint:fix
+
+  check:
+    desc: 커밋 전 검증 (typecheck + lint)
+    cmds:
+      - task: typecheck
+      - task: lint
+
+  generate:
+    desc: "openapi-ts: docs/openapi.json → src/api 타입·SDK 재생성"
+    cmds:
+      - pnpm generate
+
+  clean:
+    desc: 빌드 산출물·캐시 제거
+    cmds:
+      - rm -rf dist node_modules/.vite
