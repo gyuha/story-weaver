@@ -1,241 +1,117 @@
 ---
-last_mapped_commit: 61e6d7ef52b84d30b9eed65c7b270e1e10a14e3b
-mapped: 2026-06-18
+last_mapped_commit: eb5beed32c31e9684f037e4fe859795901adf0fd
+mapped: 2026-06-21
 ---
 
-# CONVENTIONS
+# CONVENTIONS — web 프론트엔드 코드 컨벤션
 
-StoryWeaver 모노레포의 코드 스타일·네이밍·패턴·에러 처리 규약을 구현 사실 기준으로 기록한다. 두 부분으로 나뉜다: `api/`(Python, FastAPI) / `web/`(TypeScript, React).
+이 문서는 `web/` 디렉터리의 실제 구현에서 관찰된 코드 스타일·패턴을 기록한다. 도메인 용어 정의는 `CONTEXT.md`에 있으며 여기서는 다루지 않는다.
 
-도구는 두 쪽 모두 설정 파일로 강제된다. api는 ruff(린트+포맷) + mypy(strict), web은 biome(린트+포맷). 도메인 용어 정의는 이 문서가 아니라 `.forge/CONTEXT.md` 소관이다.
+## 포매팅 / 린트 (Biome)
 
----
+단일 출처는 `web/biome.json`이다. `@biomejs/biome` 1.9.4를 쓴다.
 
-## 1. api/ (Python)
+- 들여쓰기: 스페이스 2칸 (`indentStyle: "space"`, `indentWidth: 2`)
+- 줄 폭: 100 (`lineWidth: 100`)
+- 따옴표: 작은따옴표 (`quoteStyle: "single"`)
+- trailing comma: ES5 (`trailingCommas: "es5"` — 객체·배열 끝에는 콤마, 함수 인자 끝에는 콤마 없음)
+- import 자동 정렬 활성화 (`organizeImports: true`)
+- 린트 규칙은 Biome `recommended`만 사용 (커스텀 룰 없음)
+- Biome 제외 대상(`files.ignore`): `node_modules`, `dist`, `.superpowers`, `.claude`, `src/routeTree.gen.ts`, `src/api`, `docs/openapi.json`
 
-### 1.1 린트·포맷 (ruff)
+명령(`web/package.json` scripts, pnpm):
 
-설정: `api/pyproject.toml` `[tool.ruff]` (라인 134~172).
+- `pnpm lint` → `biome check .`
+- `pnpm lint:fix` → `biome check --write .`
+- `pnpm format` → `biome format --write .`
+- `pnpm typecheck` → `tsc --noEmit`
+- `pnpm build` → `tsc -b && vite build`
+- `pnpm dev` → `vite` (포트 3000, `web/vite.config.ts`)
 
-- `target-version = "py312"`, `line-length = 100`, `src = ["src"]`.
-- 포맷(`[tool.ruff.format]`): `quote-style = "double"`(더블쿼트), `indent-style = "space"`, `line-ending = "lf"`.
-- 활성화 규칙(`[tool.ruff.lint] select`): `E`(pycodestyle errors), `W`(warnings), `F`(Pyflakes), `I`(isort), `N`(pep8-naming), `UP`(pyupgrade), `B`(flake8-bugbear), `C4`(comprehensions), `SIM`(simplify), `ANN`(flake8-annotations — 타입 힌트 강제), `S`(flake8-bandit — 보안), `T20`(flake8-print — print 금지), `PT`(pytest-style), `RUF`(Ruff 자체 규칙).
-- 전역 ignore: `ANN401`(프레임워크/LLM 경계의 동적 kwargs 허용), `S101`(assert 허용), `B008`(FastAPI DI 기본값의 함수 호출 허용 — `Depends()` 패턴 때문).
-- per-file-ignores: `tests/**`은 assert·타입힌트·print 등 대거 면제, `alembic/**`·`scripts/**`·`src/core/config.py`·`src/domains/auth/oauth/*.py`에 각각 완화 규칙 적용.
+패키지 매니저는 pnpm 10.28.2, Node ≥ 22.18 (`engines`).
 
-`T20`가 켜져 있으므로 운영 코드에서 `print()`는 금지다. 로깅은 structlog로 한다(아래 1.7).
+## 경로 별칭
 
-### 1.2 타입 체크 (mypy strict)
+`@/*` → `web/src/*`. `web/tsconfig.json`의 `paths`에 정의되고, Vite는 `vite-tsconfig-paths` 플러그인으로 동일 해석한다(`web/vite.config.ts`). import 예: `import { cn } from '@/lib/utils';`, `import { useWorksStore } from '@/features/shared/store/works.store';`. 같은 기능 폴더 내부 참조는 상대 경로(`../mock/works`, `../types`)도 혼용한다.
 
-설정: `api/pyproject.toml` `[tool.mypy]` (라인 177~205).
+## 디렉터리 / 기능 단위 구조
 
-- `python_version = "3.12"`, `strict = true`, `mypy_path = ["src"]`, `explicit_package_bases = true`.
-- 플러그인: `pydantic.mypy`, `sqlalchemy.ext.mypy.plugin`.
-- strict의 일부만 완화: `disallow_any_generics = false`, `warn_return_any = false`(프로토타입 반복 속도용).
-- `ignore_missing_imports`는 stub 없는 외부 라이브러리(`fastapi_mail`, `passlib`, `jose`, `redis`, `slowapi`, `langchain.*`, `litellm` 등)에만 override로 적용.
+`src/features/<도메인>/` 아래 `components / store / types / schema / lib / mock`로 자기 완결. 관찰된 도메인: `auth · landing · works · world-bible · editor · timeline · memory · settings · shared`. 도메인 공유 코드는 `features/shared/`(예: `features/shared/store/works.store.ts`, `features/shared/types.ts`, `features/shared/mock/works.ts`).
 
-전 운영 코드는 mypy strict + ruff 통과가 기본 요건이다. 커밋 전 `task lint`(ruff check + mypy)로 검증한다(`api/CLAUDE.md`).
+전역 인프라는 기능 밖에 둔다: `src/lib/`(`utils.ts`, `router.ts`, `api-client.ts`, `api-interceptors.ts`), `src/components/ui/`(디자인 시스템 프리미티브), `src/components/layout/`, `src/stores/`(전역 모달 등), `src/routes/`(파일 기반 라우트), `src/providers/`.
 
-### 1.3 pre-commit
+## 네이밍
 
-설정: `api/.pre-commit-config.yaml`.
+- 파일명: kebab-case (`work-card.tsx`, `new-work-modal.tsx`, `auth.schema.ts`, `works.store.ts`). 스토어는 `<도메인>.store.ts`, 스키마는 `<도메인>.schema.ts`, 타입은 `<도메인>.ts` 또는 `types.ts`.
+- 컴포넌트: PascalCase 함수 컴포넌트, `export function Xxx()` 형태(default export 미사용, 단 `src/stores/modal-store.ts`의 `useModal`은 default export). 한 파일에 주 컴포넌트 + 보조 컴포넌트(`FieldLabel`, `Steps` 등 파일 하단 비-export 헬퍼)를 함께 둔다.
+- 훅/셀렉터: `use` 접두사 (`useWorks`, `useWork`, `useEntity`, `useWorkspaceMeta`).
+- 스토어 상태 인터페이스: `XxxState` (`WorksState`, `AuthState`, `SettingsState`).
+- 식별자/주석은 한국어를 적극 사용. JSDoc 주석도 한국어(`/** 작품 내 모든 씬을 ... */`).
 
-- 모든 린터/포맷터 설정은 `pyproject.toml`에 있고 pre-commit은 호출만 오케스트레이션한다.
-- `ruff-format` / `ruff`는 스테이징된 파일만 받아 처리(빠른 per-file 실행).
-- `mypy`는 `pass_filenames: false` + `files: ^src/`로, `src/` 하위 파일이 하나라도 스테이징될 때만 트리거되며 항상 `src/` 전체를 대상으로 실행한다.
-- 일반 hygiene 훅: trailing-whitespace, end-of-file-fixer, check-yaml/toml/json, detect-private-key, debug-statements 등. `detect-secrets`로 비밀값 스캔.
+## 컴포넌트 패턴
 
-### 1.4 디렉터리 구성 — Light Modular Monolith (DDD)
+- React 19 함수 컴포넌트 + TypeScript strict. props는 인라인 타입 또는 별도 인터페이스. 작은 컴포넌트는 `{ work }: { work: Work }`처럼 인라인.
+- 디자인 시스템 프리미티브(`src/components/ui/*`)는 `@base-ui/react`·`radix-ui`를 기반으로 하고 변형은 `class-variance-authority`(cva)로 정의한다(`button.tsx`, `badge.tsx`, `alert.tsx`, `tabs.tsx`, `input-group.tsx`). 패턴: `const xxxVariants = cva(base, { variants, defaultVariants })` → 컴포넌트에서 `cn(xxxVariants({ variant, size, className }))`. props 타입은 `Primitive.Props & VariantProps<typeof xxxVariants>`. `data-slot` 속성으로 슬롯 식별.
+- 폼: `react-hook-form` + `@hookform/resolvers`로 zod 스키마를 resolver에 연결.
+- 라우팅 내비게이션: `@tanstack/react-router`의 `<Link to=... params=...>`, `useNavigate()`, `useParams({ from: ... })`. `to`/`params`는 컴파일 타임 타입 검증됨. 라우트 가드는 `beforeLoad`에서 `requireAuth(...)`(`src/features/auth/lib/guard.ts`) 호출 후 미인증 시 `throw redirect(...)`. 데이터 부재 시에도 `beforeLoad`에서 `throw redirect({ to: '/works' })`.
+- 아이콘은 `lucide-react`. 애니메이션은 `motion`, `tw-animate-css`.
 
-`src/`가 Python path 루트(`pythonpath = ["src"]`). 각 도메인은 자기 완결적 5계층으로 구성된다.
+## Tailwind v4 + 디자인 토큰
 
-```
-api/src/
-├── core/              # 횡단 관심사 (config, database, redis, middleware, exceptions, logging)
-├── domains/
-│   ├── auth/          # 인증·인가 (JWT + OAuth + RBAC)
-│   ├── chat/          # LLM 프록시·SSE 스트리밍
-│   └── shared/        # 공유 커널 (base.py, types.py, events.py)
-├── infra/             # 외부 시스템 어댑터 (infra/llm/provider_factory.py)
-└── main.py            # FastAPI app factory + lifespan + 라우터 등록
-```
+Tailwind v4(`@tailwindcss/vite`)를 쓰며 설정 파일 없이 `web/src/styles/globals.css`의 `@theme inline` 블록에서 색 토큰을 정의한다. CSS 변수(`:root`/`.dark`)를 `--color-*`로 매핑해 Tailwind 유틸리티(`bg-*`, `text-*`, `border-*`)로 노출한다.
 
-각 도메인(`auth`, `chat`)은 동일 패턴을 따른다. 모듈명은 `<도메인>_<계층>.py` 형태로 접두된다:
+StoryWeaver 전용 토큰(Notion 스타일 warm-paper 팔레트): `paper`, `board`, `surface`, `surface-soft`, `ink`, `ink-soft`, `muted-ink`, `faint`, `faintest`, `line`, `line-strong`, `ai`, `ai-soft`, `success`, `genre`, `danger`, `danger-soft`. shadcn 계열 토큰(`primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `ring`, `sidebar-*`, `chart-*`)도 병존. 다크 모드는 `.dark` 클래스 변형(`@custom-variant dark`).
 
-```
-domains/auth/
-├── router/auth_router.py        # HTTP 계층 (엔드포인트)
-├── service/auth_service.py      # 애플리케이션/비즈니스 로직
-├── repository/auth_repository.py # 데이터 접근 (async)
-├── models/auth_models.py        # SQLAlchemy ORM
-└── schemas/auth_schemas.py      # Pydantic 요청/응답 DTO
-```
+사용 관례:
 
-`chat` 도메인은 추가로 헥사고날 패턴 파일을 둔다: `ports.py`(추상 인터페이스 `LLMClientProtocol` 등), `container.py`(DI 바인딩), `llm_client.py`·`llm_factory.py`(구현체).
+- 토큰 유틸리티 우선: `bg-paper`, `text-ink`, `text-muted-ink`, `border-line`, `text-faint`, `text-ai` 등.
+- 토큰에 없는 값은 임의값(arbitrary value)으로 직접 지정: `text-[12.5px]`, `bg-[#edf3ec]`, `rounded-[10px]`, `p-[16px_18px]`, `bg-[rgba(15,15,15,0.30)]`, `shadow-[0_1px_3px_rgba(15,15,15,0.05)]`. 픽셀 단위 디자인 목업을 그대로 옮긴 흔적이 많다.
+- 폰트: 본문 `font-sans`(Noto Sans KR), 작품 제목·소설 본문 등 세리프는 `font-serif`(Noto Serif KR).
+- 조건부 클래스는 `cn()`(`src/lib/utils.ts` — `clsx` + `tailwind-merge`)로 합성. 예: `cn('block ...', work.status === '연재 중' && 'shadow-...')`.
+- 색 변형 테이블은 컴포넌트 상단 상수 객체로 둔다(예: `work-card.tsx`의 `THEME: Record<Work['coverTheme'], {...}>`).
+- tiptap 편집 본문(`.sw-editor *`) 같은 contenteditable 스타일은 `globals.css`에 직접 작성(typography 플러그인 미사용).
 
-규칙(`api/CLAUDE.md`): 도메인 간 직접 DB 모델 import 금지(경계는 ID 또는 이벤트로). src layout 유지.
+## 상태 관리 — Zustand
 
-### 1.5 네이밍
+서버 상태는 `@tanstack/react-query`, 클라이언트 상태는 `zustand` 5 + `immer` 미들웨어.
 
-| 대상 | 규약 | 예시 |
-|------|------|------|
-| 클래스(ORM/Pydantic/Service/Repo) | PascalCase | `User`, `RefreshToken`, `AuthService`, `AuthRepository` |
-| 함수 | snake_case | `signup_and_send_email()`, `get_user_by_email()`, `hash_password()` |
-| 모듈 | snake_case + 계층 접미 | `auth_router.py`, `auth_service.py`, `auth_models.py` |
-| 패키지/도메인 | snake_case | `domains.auth`, `domains.chat`, `core`, `infra` |
-| 상수 | UPPER_SNAKE_CASE | `ACCESS_TOKEN_EXPIRE_MINUTES`, `CORRELATION_ID_HEADER` |
-| DB 테이블/컬럼 | snake_case | `users`, `refresh_tokens`, `hashed_password`, `created_at` |
-| 환경변수 | UPPER_SNAKE_CASE | `LLM_PROVIDER`, `DATABASE_URL`, `REDIS_DSN` |
-| 모듈 내부(private) | `_` 접두 | `_get_service()`, `_app_error_to_http()`, `self._session` |
+스토어 액션 패턴(`features/shared/store/works.store.ts`):
 
-`N`(pep8-naming) 규칙이 ruff로 강제된다.
+- `create<XxxState>()(immer((set) => ({ ...초기값, action: (args) => set((state) => { state.xxx... }) })))`. immer 덕분에 `state.works.unshift(...)`, `scene.aiSuggestion = undefined`처럼 직접 변이 작성.
+- 새 항목 id는 `` `work-${Date.now().toString(36)}` ``처럼 타임스탬프 기반(목업 단계라 서버 id 없음).
+- 값을 반환하는 액션은 `set` 밖에서 id를 만들어 `set` 호출 후 `return id`(예: `addWork`).
 
-### 1.6 Pydantic 스키마 / DI 패턴
+영속화 패턴(`auth.store.ts`, `settings.store.ts`):
 
-스키마 접미 규약(`schemas/auth_schemas.py`):
-- 요청 본문: `<X>Request` (예: `SignupRequest`, `LoginRequest`, `RefreshRequest`).
-- 응답 본문(비밀값 제외): `<X>Response` (예: `UserResponse`, `TokenResponse`).
-- Pydantic v2 사용: `Field(min_length=..., max_length=...)` 제약, `@field_validator(..., mode="before")`로 정규화(예: email lowercase+strip), 응답 모델은 `model_config = {"from_attributes": True}`.
+- `create<XxxState>()(persist((set) => ({...}), { name: 'sw-xxx' }))`로 localStorage 저장(`sw-auth`, `sw-settings`). immer 없이 `set((s) => ({ profile: { ...s.profile, ...patch } }))` 형태 부분 갱신.
+- 전역 모달 스토어(`src/stores/modal-store.ts`)는 `devtools` 미들웨어 사용, default export `useModal`.
 
-DI는 FastAPI `Depends()` 팩토리 패턴. 라우터에 private 팩토리 함수(`_get_service`)를 두고 세션·redis·메일 서비스를 주입해 서비스를 조립한다. 엔드포인트는 `service: AuthService = Depends(_get_service)`로 받는다. `B008`이 ignore된 이유가 이 패턴이다.
+셀렉터 분리(`features/shared/store/selectors.ts`):
 
-```python
-async def _get_service(
-    session: AsyncSession = Depends(get_async_session),
-    redis: Redis = Depends(get_redis_dep),
-    mail_service: AuthEmailSender = Depends(get_auth_email_service),
-) -> AuthService:
-    return AuthService(AuthRepository(session), redis, mail_service=mail_service)
-```
+- 스토어를 직접 구독하지 않고 셀렉터 훅으로 감싼다: `useWorks`, `useUsage`, `useWork(workId)`, `useEntity(workId, entityId)`.
+- 여러 필드를 한 번에 뽑을 때는 `useShallow`로 리렌더 억제(`useWorkspaceMeta`).
+- 파생 로직(순수 함수)은 같은 파일에 비-훅으로 둔다: `flattenScenes`, `findSceneLocation`, `findChapterNav`, `defaultSceneId`, `groupChaptersByPart`, `entitiesByType`. 라우트 `beforeLoad`에서는 훅 대신 `useWorksStore.getState()`로 비반응형 접근.
 
-### 1.7 SQLAlchemy / 비동기
+## Mock 데이터 시딩
 
-- 베이스: `api/src/core/database.py`의 `class Base(DeclarativeBase)`. 믹스인 없음.
-- `Mapped[T]` + `mapped_column()` 구문(생성자 `Column()` 미사용). UUID PK는 `postgresql.UUID(as_uuid=True)`, default `uuid.uuid4`.
-- 타임스탬프: `server_default=func.now()` + `onupdate=func.now()`로 자동 관리.
-- 전 I/O 비동기: `AsyncSession`(`get_async_session` 의존성), 엔진 설정 `expire_on_commit=False`, `autoflush=False`, `pool_pre_ping=True`.
-- 리포지토리는 `@asynccontextmanager`로 `transaction()`을 제공(중첩 트랜잭션 지원: `begin_nested()` vs `begin()`).
+현재 UI 우선 단계라 대부분 화면이 mock 시드를 스토어에 채워 동작한다.
 
-### 1.8 로깅 (structlog)
+- 시드 데이터는 `features/<도메인>/mock/`에 타입이 붙은 상수로 작성(`features/shared/mock/works.ts`의 `seedWorks`, `seedUsage`, `workspaceName`, `authorInitial`). 디자인 목업과 일관된 예시 콘텐츠(무협 회귀물 등)를 한국어로 둔다.
+- 스토어 초기 상태가 시드를 직접 가리킨다: `works: seedWorks`, `usage: seedUsage`. 별도 hydrate 단계 없음.
+- `auth.store`/`settings.store`는 mock 사용자를 인라인 초기값으로 두고 localStorage 영속화. 인증 초기값이 `isAuthenticated: true`(작가 백야 시드 로그인 상태).
+- 실 API 전환 시 생성된 Query 훅으로 교체할 예정(코드 주석에 Phase 3/ADR 참조 기재).
 
-설정: `api/src/core/logging.py`의 `configure_logging(level, fmt)`. JSON 렌더러(운영) / ConsoleRenderer(개발) 두 모드.
+## 토스트 (sonner)
 
-- 프로세서 파이프라인에 `merge_contextvars`(correlation_id 주입), `add_log_level`, `TimeStamper(fmt="iso", utc=True)` 등 포함.
-- correlation_id는 `api/src/core/middleware.py`의 `CorrelationIdMiddleware`에서 `X-Correlation-ID` 헤더로 전파, `bind_contextvars`로 structlog 컨텍스트에 바인딩. 요청 종료 시 해제.
-- 모듈별 `logger = structlog.get_logger(__name__)`, 구조적 key-value 호출: `logger.info("event_name", key=value)`.
+- 전역 `<Toaster />`(`src/components/ui/sonner.tsx`, sonner 래퍼)를 루트 라우트(`src/routes/__root.tsx`)에 1회 마운트.
+- 사용처에서 `import { toast } from 'sonner'` 후 `toast.success('...')`(성공) 또는 `toast('...')`(중립/목업 안내) 호출. 메시지는 한국어. 미구현 동작은 `'... (목업)'` 접미사 관례(`manuscript.tsx`, `timeline-screen.tsx`, `auth-form-parts.tsx`, `memory-panel.tsx`).
 
-### 1.9 에러 처리
+## 에러 처리 / 유효성 검사
 
-설정: `api/src/core/exceptions.py`.
+- 폼 유효성은 zod 스키마(`features/<도메인>/schema/*.schema.ts`)로 선언, 메시지는 한국어. cross-field 검증은 `.refine(..., { path: [...] , message })`(비밀번호 확인 일치 등 — `auth.schema.ts`, `settings.schema.ts`).
+- 스키마에서 `z.infer<typeof xxxSchema>`로 폼 값 타입을 파생(`LoginFormValues`, `ProfileFormValues` 등).
+- 라우트 레벨 방어는 `beforeLoad`의 `throw redirect(...)`(미인증·데이터 부재). 현재 목업 단계라 try/catch 기반 네트워크 에러 처리·전역 에러 바운더리는 관찰되지 않음. API 인터셉터(`src/lib/api-interceptors.ts`)는 토큰 주입·401 갱신을 Phase 3로 미뤄 둔 스텁 상태.
 
-기반 클래스 `AppError(Exception)` (`message`, `status_code` 속성, 기본 400) 아래 도메인 예외:
+## API 레이어 (생성물, 직접 편집 금지)
 
-```
-AppError(Exception)
-├── NotFoundError      (404)
-├── ConflictError      (409)
-├── UnauthorizedError  (401)
-└── ForbiddenError     (403)
-```
-
-- 핸들러 등록: `register_exception_handlers(app: FastAPI)`가 세 핸들러를 등록 — `HTTPException`(warning 로깅 + `detail` JSON), `RequestValidationError`(422; Pydantic v2 에러를 직렬화 가능하게 정제), 포괄 `Exception`(500; 안전한 "Internal server error" 메시지).
-- 라우터는 도메인 예외를 잡아 HTTP로 변환: `except AppError as exc: raise _app_error_to_http(exc) from exc`.
-- 에러 응답 JSON은 `{"detail": ...}` 형태이며 모든 응답에 correlation_id 헤더가 포함된다.
-
-서비스/라우터는 HTTP를 직접 던지지 않고 도메인 예외(`AppError` 계열)를 쓰는 것이 패턴이다. HTTP 변환은 경계(라우터/핸들러)에서만 일어난다.
-
----
-
-## 2. web/ (TypeScript / React)
-
-### 2.1 린트·포맷 (biome)
-
-설정: `web/biome.json` (biome 1.9.4).
-
-- `organizeImports.enabled = true`, `linter.rules.recommended = true`.
-- 포맷: `indentStyle = "space"`, `indentWidth = 2`, `lineWidth = 100`.
-- JavaScript 포맷: `quoteStyle = "single"`(싱글쿼트 — api의 더블쿼트와 반대), `trailingCommas = "es5"`.
-- ignore: `node_modules`, `dist`, `src/routeTree.gen.ts`, `src/api`(생성 코드), `docs/openapi.json` 등 생성·외부 파일 제외.
-
-스크립트(`web/package.json`): `lint`(`biome check .`), `lint:fix`(`biome check --write .`), `format`(`biome format --write .`), `typecheck`(`tsc --noEmit`). 빌드는 `tsc -b && vite build`.
-
-### 2.2 디렉터리 구성 — Feature-Sliced
-
-```
-web/src/
-├── api/           # @hey-api/openapi-ts 생성 클라이언트 (수정 금지, biome ignore)
-├── components/
-│   ├── ui/        # 기본 UI 프리미티브 (button, form, input ...)
-│   ├── layout/    # 레이아웃
-│   └── dev/       # 개발 전용
-├── features/      # 기능 도메인 슬라이스
-│   ├── auth/      # components/ hooks/ schema/ store/ types/ lib/
-│   └── helpdesk/  # components/ hooks/ store/ lib/
-├── hooks/         # 전역 커스텀 훅 (use-theme, use-mobile)
-├── lib/           # 공유 유틸 (api-client, api-interceptors, router, utils)
-├── providers/     # app-providers.tsx (QueryClientProvider)
-├── routes/        # TanStack Router 파일 기반 라우트
-├── stores/        # 전역 zustand (modal-store)
-├── styles/        # globals.css 등
-├── main.tsx
-└── routeTree.gen.ts  # 자동 생성
-```
-
-라우팅은 **TanStack Router 파일 기반**. `src/routes/auth/login.tsx` → `/auth/login`. Vite 플러그인(`tanstackRouter`)이 `src/routeTree.gen.ts`를 자동 생성(`autoCodeSplitting: true`). 라우트는 `createRootRoute()` / `createFileRoute()` API를 쓴다.
-
-기능별 코드는 `features/<feature>/` 아래에 `components/`, `hooks/`, `schema/`, `store/`, `types/`, `lib/`로 슬라이스된다.
-
-### 2.3 네이밍
-
-| 대상 | 규약 | 예시 |
-|------|------|------|
-| React 컴포넌트 | PascalCase | `ThemeToggle`, `LoginForm`, `HdLoginPage` |
-| 파일(컴포넌트 포함) | kebab-case `.tsx`/`.ts` | `theme-toggle.tsx`, `login-form.tsx`, `use-theme.ts`, `auth.store.ts` |
-| 함수/변수 | camelCase | `isPending`, `setEmail` |
-| 훅 | `use` 접두 camelCase | `useTheme()`, `usePostList()`, `useLoginMutation()` |
-| 타입/인터페이스 | PascalCase (일부 인터페이스 `I` 접두) | `ThemeToggleProps`, `AuthState`, `IModalStore` |
-| zod 스키마 | camelCase + `Schema` 접미 | `loginSchema`, `signupSchema` |
-| zustand 스토어 훅 | `use*Store` | `useAuthStore`, `useModal` |
-| 생성 API 함수 | HTTP 동사 접두 camelCase | `postAuthLogin()`, `getBoardsByBoardIdPosts()` |
-
-파일명은 컴포넌트라도 kebab-case이고 내부 컴포넌트 식별자만 PascalCase다(예: `theme-toggle.tsx` → `export function ThemeToggle`).
-
-### 2.4 컴포넌트 패턴
-
-- 함수 선언(`function ComponentName() {}`) 방식. named export 선호(UI 프리미티브 일부는 named + default 혼용).
-- props는 인터페이스로 타입 지정(`export interface XProps`).
-- UI 프리미티브(`components/ui/`)는 `class-variance-authority`(cva)로 variant 스타일을 정의하고 `cn()`(`lib/utils.ts`)으로 클래스를 병합. 스타일은 Tailwind CSS v4 + clsx + tailwind-merge.
-- 라우트 컴포넌트는 `export const Route = createFileRoute('...')({ component: X })` 형태.
-
-### 2.5 훅 / TanStack Query
-
-- 전역 훅은 `src/hooks/`, 기능 훅은 `features/<f>/hooks/`.
-- 데이터 패칭은 TanStack Query(`useQuery` / `useMutation`). `queryKey`는 소문자 배열로 합성: `['posts', boardId, page, size]`.
-- `queryFn`은 생성된 SDK 함수를 직접 호출 후 `.then((r) => r.data?.data ...)`로 언랩.
-- 뮤테이션은 `useQueryClient()` + `onSuccess`에서 `invalidateQueries`로 캐시 무효화. 인증 뮤테이션은 zustand 스토어 갱신 + `useNavigate` 네비게이션을 결합.
-- `QueryClient`(`providers/app-providers.tsx`)는 `mutations.retry: false` 기본값.
-
-### 2.6 zod + react-hook-form
-
-- 스키마 위치: `features/<f>/schema/<f>.schema.ts`. `z.object({...})`, 메시지는 한국어, 교차 필드 검증은 `.refine(..., { path: [...] })`.
-- 폼 값 타입은 `z.infer<typeof schema>`로 파생(`type LoginFormValues = z.infer<typeof loginSchema>`).
-- 폼은 `useForm<T>({ resolver: zodResolver(schema), defaultValues })` (`@hookform/resolvers/zod`)로 구성. `components/ui/form.tsx`의 `Form` / `FormField`(render props) / `FormItem` / `FormLabel` / `FormControl` / `FormMessage` 조합을 사용한다.
-
-### 2.7 API 계층 / 상태 관리
-
-- 생성 클라이언트: `@hey-api/openapi-ts` 0.98.1. 설정 `web/openapi-ts.config.ts` — 입력 `./docs/openapi.json`, 출력 `./src/api`, 플러그인 `@hey-api/client-axios`(runtimeConfig `./src/lib/api-client`) + typescript + sdk + `@tanstack/react-query`. 생성은 `pnpm generate`.
-- `src/api`는 수정 금지 영역(biome ignore). 사용은 SDK 함수 + 타입을 import.
-- axios 1.16.1. baseURL은 `lib/api-client.ts`의 `createClientConfig`가 `VITE_API_BASE_URL ?? '/api'`로 주입. 인터셉터는 `lib/api-interceptors.ts`(`app-providers`에서 초기화). dev 서버는 `/api` → `http://localhost:8080` 프록시(`vite.config.ts`).
-- 상태 관리: zustand 5. 전역 스토어(`stores/modal-store.ts`)는 `devtools` 미들웨어 사용. auth 스토어(`features/auth/store/auth.store.ts`)는 persist 미사용(인메모리 — XSS 방어 목적), JWT 디코딩으로 user/role 추출.
-
----
-
-## 부록 — 주요 설정 파일
-
-- `api/pyproject.toml` — ruff / mypy / pytest / coverage 설정 단일 소스
-- `api/.pre-commit-config.yaml` — pre-commit 오케스트레이션
-- `api/CLAUDE.md` — api 개발 규칙 요약
-- `web/biome.json` — biome 린트·포맷
-- `web/package.json` — 스크립트·의존성
-- `web/openapi-ts.config.ts` — API 클라이언트 생성
-- `web/vite.config.ts` — Vite/TanStack Router/프록시
+`docs/openapi.json` → `pnpm generate`(openapi-ts, `web/openapi-ts.config.ts`)로 `src/api/`에 타입·SDK·TanStack Query 훅 생성. `src/api/`와 `src/routeTree.gen.ts`는 생성물이라 손대지 않으며 Biome/tsc 제외. 클라이언트 baseURL은 `src/lib/api-client.ts`(`VITE_API_BASE_URL ?? '/api'`). dev에서는 Vite 프록시가 `/api` → `http://localhost:8080`으로 rewrite(`web/vite.config.ts`).

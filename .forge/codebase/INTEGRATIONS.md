@@ -1,82 +1,50 @@
 ---
-last_mapped_commit: 61e6d7ef52b84d30b9eed65c7b270e1e10a14e3b
-mapped: 2026-06-18
+last_mapped_commit: eb5beed32c31e9684f037e4fe859795901adf0fd
+mapped: 2026-06-21
 ---
 
 # INTEGRATIONS
 
-api 백엔드가 연동하는 외부 시스템(PostgreSQL, Redis, LLM 프로바이더, OAuth, SMTP)과 web↔api 연동을 기록한다. 모든 자격증명은 환경변수로 주입되며 중앙 설정은 `api/src/core/config.py`(`Settings`)에 모인다.
+현재 web는 UI 우선(mock) 단계다. 화면은 `features/*/mock`의 시드 데이터를 Zustand 스토어에 채워 동작하고, 실 백엔드 호출(인증·작품·집필)은 아직 배선만 돼 있고 기능 연결은 진행 중이다.
 
----
+## web — 생성된 API SDK 레이어
 
-## PostgreSQL
+- 생성 도구는 `@hey-api/openapi-ts`. 설정 `web/openapi-ts.config.ts`: 입력 `./docs/openapi.json`, 출력 `./src/api`. 플러그인은 `@hey-api/client-axios`·`@hey-api/typescript`·`@hey-api/sdk`·`@tanstack/react-query`. 즉 SDK는 **axios** 기반이며 TanStack Query 훅도 함께 생성된다. parser patch가 `operationId`를 지운다(함수명은 메서드+경로로 도출).
+- 재생성 명령은 `pnpm generate`(= `openapi-ts`). 산출물 `web/src/api/`는 **직접 편집 금지**이며 tsc/biome 모두 제외.
+- 생성물 구성: `web/src/api/index.ts`(public re-export), `web/src/api/sdk.gen.ts`(SDK 함수), `web/src/api/types.gen.ts`(타입), `web/src/api/client.gen.ts`(클라이언트 인스턴스), `web/src/api/@tanstack/`(Query 옵션), `web/src/api/client/`·`web/src/api/core/`(런타임).
+- **주의 — 스펙 불일치**: 현 시점 저장소에 `web/docs/openapi.json`(설정의 input) 파일이 존재하지 않는다. 그리고 생성된 SDK(`web/src/api/index.ts`)는 StoryWeaver 도메인(작품·씬·World Bible)이 아니라 **제네릭 보일러플레이트 API**(boards/posts/comments/admin-users/samples/auth)다. 즉 SDK는 백엔드 스타터 템플릿의 OpenAPI로 생성된 잔재이며 실제 도메인 엔드포인트와 정렬돼 있지 않다. 도메인 API가 확정되면 `docs/openapi.json`을 갱신해 재생성해야 한다. `[High]`
+- SDK에 노출된 인증 엔드포인트는 `postAuthLogin`·`postAuthSignup`·`postAuthRefresh`·`postAuthLogout`(`web/src/api/index.ts`). 현재 web 코드 어디서도 이 SDK 함수를 호출하지 않는다(인증은 아래의 mock 스토어로 처리).
 
-- 로컬 인프라: `api/docker-compose.yml`의 `postgres` 서비스 — 이미지 `postgres:16-alpine`, 호스트 `127.0.0.1:${POSTGRES_PORT:-5432}`, 볼륨 `postgres_data`, healthcheck `pg_isready`.
-- 연결: `api/src/core/database.py`가 async 엔진 생성. DSN은 `Settings.async_database_url`(`postgresql+asyncpg://`) — `DATABASE_URL` 환경변수가 있으면 사용, 없으면 `POSTGRES_HOST/PORT/USER/PASSWORD/DB`로 조립.
-- 환경변수: `DATABASE_URL`, `DATABASE_URL_SYNC`, `POSTGRES_HOST`(기본 localhost), `POSTGRES_PORT`(5432), `POSTGRES_USER`(app), `POSTGRES_PASSWORD`(app), `POSTGRES_DB`(app_db).
-- 마이그레이션: Alembic이 sync DSN(`Settings.sync_database_url`, `postgresql+psycopg2://`) 사용. `api/alembic/env.py`가 `DATABASE_URL_SYNC` 환경변수를 우선 읽고, 없으면 `Settings`로 폴백. `target_metadata`는 `core.database.Base.metadata`이며 auth/chat 모델 모듈을 import해 등록.
+## web — HTTP 클라이언트 설정
 
-## Redis
+- 클라이언트 런타임 설정은 `web/src/lib/api-client.ts`: `createClientConfig`가 baseURL을 `import.meta.env.VITE_API_BASE_URL ?? '/api'`로 지정. 즉 env가 없으면 `/api`(Vite 프록시 경유).
+- 클라이언트 인스턴스는 생성물 `web/src/api/client.gen.ts`가 위 설정을 주입해 만든다(axios 기반).
+- 인터셉터는 `web/src/lib/api-interceptors.ts`: 현재 요청 인터셉터가 패스스루(`(config) => config`)만 한다. 주석상 실제 토큰 주입과 401 재시도(refresh)는 후속(Phase 3) 작업. 이 모듈은 `web/src/providers/app-providers.tsx`에서 import되어 부팅 시 인터셉터를 등록한다.
 
-- 로컬 인프라: `api/docker-compose.yml`의 `redis` 서비스 — 이미지 `redis:7-alpine`, `redis-server --save 60 1`, 호스트 `127.0.0.1:${REDIS_PORT:-6379}`, 볼륨 `redis_data`. 컨테이너 내부는 `redis://redis:6379`, 호스트 실행 앱은 `.env`(localhost).
-- 연결: `api/src/core/redis.py`가 `redis.asyncio` 단일 클라이언트(`from_url`, decode_responses=True, max_connections=20). DSN은 `Settings.redis_dsn`(`REDIS_URL` 또는 `REDIS_HOST/PORT/DB`로 조립).
-- 시작 시 `api/src/main.py` lifespan에서 `ping()`으로 풀 워밍.
-- 용도(`api/src/core/redis.py` 주석 기준): JWT 블랙리스트(`jti`), refresh 토큰 재사용 탐지, OAuth state nonce(짧은 TTL, `auth_router.py`의 `_OAUTH_STATE_PREFIX = "oauth:state:"`), 레이트리밋(slowapi), 일반 캐시, SSE fan-out pub/sub.
-- 환경변수: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`(6379), `REDIS_DB`(0).
+## web — 개발 프록시
 
-## LLM 프로바이더 (LiteLLM 라우팅)
+- `web/vite.config.ts`의 dev 서버 프록시: `'/api'` → `http://localhost:8080`, `changeOrigin: true`, `rewrite`로 선행 `/api` 제거. 즉 web에서 `/api/foo` 호출 시 백엔드 `http://localhost:8080/foo`로 전달.
+- **포트 불일치 주의**: 프록시 타깃은 `:8080`이지만 `api/README.md`의 dev 기본 포트는 `:8000`이다(CLAUDE.md 명시). 로컬 풀스택 구동 시 둘을 맞춰야 한다. `[High]`
 
-- 추상화: LangChain + langchain-litellm. `ChatLiteLLM` 인스턴스 생성 단일 지점은 `api/src/infra/llm/provider_factory.py`의 `make_chat_litellm()`. 모델 문자열 라우팅 팩토리는 `api/src/domains/chat/llm_factory.py`(`ProviderFactory`).
-- 프로바이더 선택: `LLM_PROVIDER` 환경변수 하나로 전환(`LLMProvider` enum). 지원: `openai`, `anthropic`, `gemini`, `azure`, `ollama`(`api/src/core/config.py`). 모델 식별자 형식 `<provider>/<model>`(예: `openai/gpt-4o-mini`, `anthropic/claude-3-5-sonnet-20241022`, `gemini/<model>`). Azure는 `azure/<deployment>`, Ollama는 `api_base` 사용.
-- 자격증명/엔드포인트 환경변수(활성 프로바이더만 필요):
-  - `OPENAI_API_KEY`
-  - `ANTHROPIC_API_KEY`
-  - `GEMINI_API_KEY`
-  - `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`(기본 `2024-08-01-preview`)
-  - `OLLAMA_BASE_URL`(기본 `http://localhost:11434`, API 키 불필요 — litellm sentinel `"ollama"`)
-- 생성 파라미터 환경변수: `LLM_DEFAULT_MODEL`(기본 `gpt-4o-mini`), `LLM_TEMPERATURE`(0.0–2.0, 기본 0.7), `LLM_MAX_TOKENS`(기본 2048), `LLM_STREAMING`(기본 true).
-- chat 도메인은 포트/인터페이스(`api/src/domains/chat/ports.py`)에만 의존하고 litellm을 직접 import하지 않음. 재시도는 tenacity.
+## web — 인증(현재 mock)
 
-## SSE 스트리밍
+- 실제 인증/세션 미연결. `web/src/features/auth/store/auth.store.ts`가 Zustand `persist`(localStorage 키 `sw-auth`)로 **시드 로그인 상태**(`isAuthenticated: true`, 사용자 `baekya@storyweaver.kr`)를 유지한다. 주석상 실 토큰/세션은 Phase 3.
+- 라우트 가드는 `web/src/features/auth/lib/guard.ts`의 `requireAuth`(라우트 `beforeLoad`에서 호출, 미인증 시 `/auth/login`으로 redirect). 인증 게이트 진입점은 `web/src/routes/index.tsx`(현재는 랜딩 화면을 렌더).
+- 사용자 설정/프로필도 mock — `web/src/features/settings/store/settings.store.ts`(localStorage 키 `sw-settings`, `provider: 'email'`, 품질 티어 등).
+- 도메인 데이터(작품·씬·타임라인·엔티티)는 모두 mock 스토어 `web/src/features/shared/store/works.store.ts`(시드 `web/src/features/shared/mock/works.ts`)에서 공급. 실 API 전환 시 생성된 Query 훅으로 교체하는 패턴.
 
-- LLM 토큰 스트리밍은 `sse-starlette`의 `EventSourceResponse`로 노출(`api/src/domains/chat/router/chat_router.py` — 라우터 prefix `/chat`, 스트리밍 POST/GET 엔드포인트). 클라이언트 측에서 SSE 소비.
+## web — 외부 호스트 의존(런타임)
 
-## OAuth 프로바이더
+- Google Fonts(`fonts.googleapis.com`/`fonts.gstatic.com`): Noto Sans KR·Noto Serif KR를 `web/index.html`에서 `<link>`로 로드(preconnect 포함). 그 외 런타임 외부 API 호출 없음.
 
-각 어댑터는 `httpx.AsyncClient`로 인가코드 → 토큰 교환 → userinfo 조회를 수행하며 CSRF용 `state` nonce(`secrets.token_urlsafe(32)`)를 생성한다. 라우트는 `GET /api/v1/auth/oauth/{provider}/login`, `GET /api/v1/auth/oauth/{provider}/callback`(`api/src/domains/auth/router/auth_router.py`, `_get_oauth_adapter`로 분기).
+## api — 외부 통합(백엔드, 요약)
 
-- **Google** (`api/src/domains/auth/oauth/google.py`)
-  - auth `https://accounts.google.com/o/oauth2/v2/auth`, token `https://oauth2.googleapis.com/token`, userinfo `https://www.googleapis.com/oauth2/v3/userinfo`. scope `openid email profile`, `access_type=offline`, `prompt=consent`.
-  - 환경변수: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
-- **Kakao** (`api/src/domains/auth/oauth/kakao.py`)
-  - auth `https://kauth.kakao.com/oauth/authorize`, token `https://kauth.kakao.com/oauth/token`, userinfo `https://kapi.kakao.com/v2/user/me`.
-  - 환경변수: `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`, `KAKAO_REDIRECT_URI`.
-- **Naver** (`api/src/domains/auth/oauth/naver.py`)
-  - auth `https://nid.naver.com/oauth2.0/authorize`, token `https://nid.naver.com/oauth2.0/token`, userinfo `https://openapi.naver.com/v1/nid/me`.
-  - 환경변수: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`, `NAVER_REDIRECT_URI`.
+프론트 작업 범위 밖이므로 `api/CLAUDE.md`·`api/.env.example`·`api/src/` 기준 요약. 실제 비밀값은 `api/.env`(커밋 금지).
 
-## 인증 (JWT)
-
-- python-jose 기반 JWT. 환경변수: `JWT_SECRET_KEY`, `JWT_ALGORITHM`(기본 `HS256`), `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`(15), `JWT_REFRESH_TOKEN_EXPIRE_DAYS`(7). 보안 로직 `api/src/domains/auth/security.py`. 토큰 블랙리스트/refresh 회전은 Redis 사용. 라우트: `/api/v1/auth/login`, `/refresh`, `/verify-email/{token}` 등(`auth_router.py`).
-
-## SMTP / 메일 (Mailpit · 운영 SMTP)
-
-- 발송: `fastapi-mail`(`api/src/domains/auth/email.py`, `FastAPIAuthEmailService`). 연결 설정은 `Settings.mail_connection_config`로 조립.
-- 로컬 인프라: `api/docker-compose.yml`의 `mailpit` 서비스 — 이미지 `axllent/mailpit:latest`, SMTP `127.0.0.1:${MAILPIT_SMTP_PORT:-1025}`, Web UI `127.0.0.1:${MAILPIT_UI_PORT:-8025}`, 익명 SMTP 허용(`MP_SMTP_AUTH_ACCEPT_ANY`).
-- 환경변수: `MAIL_SERVER`(기본 localhost), `MAIL_PORT`(기본 1025 = Mailpit), `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_STARTTLS`, `MAIL_SSL_TLS`. 로컬은 익명(USE_CREDENTIALS=False), 운영은 `.env.prod`로 실제 SMTP 릴레이 주입.
-- 메일 내 링크는 프론트엔드 URL 사용: `FRONTEND_URL`(기본 `http://localhost:3000`, 이메일 인증), `FRONTEND_RESET_CONFIRM_URL_BASE`(비번 재설정).
-- readiness 점검(`api/src/main.py` `/ready`)이 postgres/redis와 함께 Mailpit SMTP 220 배너를 직접 확인.
-
-## web ↔ api 연동
-
-- **OpenAPI 코드 생성**: `@hey-api/openapi-ts`가 `web/docs/openapi.json`(api의 `/openapi.json`에서 추출)을 입력으로 `web/src/api/`에 axios 클라이언트 + 타입 + SDK + TanStack Query 훅을 생성(`web/openapi-ts.config.ts`, 스크립트 `pnpm generate`). 산출물: `client.gen.ts`, `sdk.gen.ts`, `types.gen.ts`, `@tanstack/`.
-- **HTTP 클라이언트**: axios 기반(`@hey-api/client-axios`). baseURL은 `web/src/lib/api-client.ts`에서 `VITE_API_BASE_URL ?? '/api'`로 설정.
-- **인증 헤더 주입**: `web/src/lib/api-interceptors.ts`의 요청 인터셉터가 `useAuthStore`(zustand)의 토큰을 `Authorization: Bearer`로 주입. (401 토큰 갱신 인터셉터는 미구현 — 코드 주석에 "Phase 3 예정".)
-- **dev 프록시**: `web/vite.config.ts`가 dev 서버 `/api`를 `http://localhost:8080`으로 프록시(`/api` 프리픽스 제거). 단, api 기본 포트는 8000(`Settings.port`)이므로 프록시 타깃(8080)과 불일치 — 환경에 맞는 확인 필요.
-- **TanStack Query**: `web/src/providers/app-providers.tsx`의 `QueryClientProvider`가 생성 훅 소비.
-
-## 환경변수 · 시크릿 위치
-
-- api: `api/.env`(로컬, 미커밋), `api/.env.example`, `api/.env.prod.example`. 중앙 설정 `api/src/core/config.py`. 시크릿 스캔 baseline `api/.secrets.baseline`, pre-commit `api/.pre-commit-config.yaml`.
-- web: `VITE_*` 접두 환경변수(`VITE_API_BASE_URL`). Vite가 `import.meta.env`로 노출.
-- CORS: api `CORS_ORIGINS`(기본 `http://localhost:3000`, `http://localhost:8000`) — `api/src/main.py`에서 `CORSMiddleware`로 적용(allow_credentials, expose `X-Correlation-ID`).
+- **데이터베이스**: PostgreSQL(async, asyncpg) — `DATABASE_URL`/`DATABASE_URL_SYNC` 및 `POSTGRES_*`. 마이그레이션 Alembic(`api/alembic/`).
+- **캐시/세션**: Redis — `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`.
+- **인증 제공자(OAuth)**: Google·Kakao·Naver — 각각 `{GOOGLE,KAKAO,NAVER}_CLIENT_ID`·`_CLIENT_SECRET`·`_REDIRECT_URI`. 자체 JWT(`JWT_SECRET_KEY`, `JWT_ALGORITHM`, 액세스/리프레시 만료)와 RBAC. 도메인 `api/src/domains/auth/`.
+- **LLM 제공자**: provider 추상화는 `LLM_PROVIDER` 환경변수 하나로 교체(LangChain + langchain-litellm). 지원 키: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AZURE_OPENAI_*`, `OLLAMA_BASE_URL`. 모델/토큰/온도/스트리밍은 `LLM_DEFAULT_MODEL`·`LLM_MAX_TOKENS`·`LLM_TEMPERATURE`·`LLM_STREAMING`. LLM 호출·**SSE 스트리밍**은 `api/src/domains/chat/`(StoryWeaver 집필 LLM의 기반), provider 팩토리는 `api/src/infra/llm/`.
+- **메일(SMTP)**: `MAIL_*`(서버/포트/계정/발신자/TLS). 로컬 개발은 Mailpit(`MAILPIT_SMTP_PORT`/`MAILPIT_UI_PORT`). 비밀번호 재설정 등에 사용(`FRONTEND_RESET_CONFIRM_URL_BASE`).
+- **CORS·프론트 URL**: `CORS_ORIGINS`, `FRONTEND_URL`.
+- 웹훅: 현재 코드/env에서 외부 웹훅 수신·발신 설정은 확인되지 않음. `[Medium]`

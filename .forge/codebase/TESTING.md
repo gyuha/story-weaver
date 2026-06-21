@@ -1,154 +1,55 @@
 ---
-last_mapped_commit: 61e6d7ef52b84d30b9eed65c7b270e1e10a14e3b
-mapped: 2026-06-18
+last_mapped_commit: eb5beed32c31e9684f037e4fe859795901adf0fd
+mapped: 2026-06-21
 ---
 
-# TESTING
+# TESTING — 검증·테스트 접근
 
-StoryWeaver 모노레포의 테스트 프레임워크·구조·모킹·커버리지를 구현 사실 기준으로 기록한다. 비대칭이다: `api/`는 pytest 기반 테스트가 충실하고, `web/`는 테스트 인프라가 전혀 없다.
+## 핵심 사실: web에는 테스트 러너가 없다
 
----
+`web/`에는 vitest·jest 등 단위/통합 테스트 러너가 **설정되어 있지 않다**. `web/package.json`의 `scripts`에 `test` 항목이 없고, `dependencies`/`devDependencies`에 어떤 테스트 프레임워크도 없다(`vitest`, `jest`, `@testing-library/*`, `playwright` 패키지 자체도 미설치). `src/` 안에 `*.test.ts(x)`/`*.spec.ts(x)` 파일도 없다.
 
-## 1. api/ (Python, pytest)
+따라서 web의 "검증"은 자동화된 테스트 통과가 아니라 아래 정적 검사 + 빌드 + 수동 브라우저 확인의 조합으로 이뤄진다.
 
-### 1.1 프레임워크·설정
+## web 검증 절차
 
-설정: `api/pyproject.toml` `[tool.pytest.ini_options]` (라인 210~233).
+표준 게이트(커밋 전 기본):
 
-- `asyncio_mode = "auto"` — async 테스트 함수를 `@pytest.mark.asyncio` 없이 자동 실행(pytest-asyncio).
-- `testpaths = ["tests"]`, `pythonpath = ["src"]` — 테스트는 `from domains.auth.service import ...`처럼 `src` 기준으로 import.
-- 발견 규칙: `python_files = ["test_*.py", "*_test.py"]`, `python_classes = ["Test*"]`, `python_functions = ["test_*"]`.
-- `filterwarnings = ["error", ...]` — 경고를 에러로 취급(단 Deprecation/PendingDeprecation은 무시).
-- `addopts`: `--strict-markers`(미정의 마커 거부), `--cov=src`, `--cov-report=term-missing`, `--cov-report=html:htmlcov`, `--cov-fail-under=70`.
+1. `pnpm typecheck` (`tsc --noEmit`) → 타입 오류 0 확인. 라우트 `to`/`params` 타입까지 컴파일 타임에 검증됨.
+2. `pnpm lint` (`biome check .`) → 포맷·린트 위반 0 확인. 자동 수정은 `pnpm lint:fix`.
+3. `pnpm build` (`tsc -b && vite build`) → 프로덕션 빌드 성공 확인.
 
-의존성(`[dependency-groups] dev`): `pytest>=8.3`, `pytest-asyncio>=0.24`, `pytest-cov>=5.0`, `anyio>=4.6`, `httpx>=0.27`(AsyncClient), `fakeredis>=2.26`.
+검증 명령 정의 위치: `web/package.json` scripts. `web/Taskfile.yml`에도 동일 작업이 래핑돼 있을 수 있다(루트 `Taskfile.yml`/`web/Taskfile.yml` 참조).
 
-실행: `task test`(= pytest). 린트는 별도 `task lint`.
+수동 브라우저 확인(렌더링·인터랙션처럼 정적 분석으로 단정 불가한 항목):
 
-### 1.2 커버리지
+- `pnpm dev`로 Vite dev 서버를 띄우고(포트 3000, `web/vite.config.ts`) `http://localhost:3000`을 연다.
+- 프로젝트 규칙상 UI 변경의 실제 렌더링·동작 확인은 **playwriter MCP**(`mcp__playwriter_latest__execute`)로 브라우저를 띄워 확인한다. "버튼이 보이는지", "내비게이션이 동작하는지" 같은 것은 추측하지 말고 직접 확인할 것(루트 `CLAUDE.md`).
+- 풀스택 동작 확인 시 백엔드 포트 주의: Vite 프록시는 `/api` → `http://localhost:8080`으로 rewrite하지만 `api/README.md`의 dev 기본 포트는 `:8000`이라 불일치가 있다. 로컬에서 프록시 타깃과 실제 API 포트를 일치시켜야 한다.
 
-설정: `[tool.coverage.run]` / `[tool.coverage.report]` (라인 238~256).
+현재 화면 대부분이 mock 시드 데이터(`features/*/mock/`)를 Zustand 스토어에 채워 동작하므로, 브라우저 확인은 실 백엔드 없이도 가능하다.
 
-- `source = ["src"]`, `branch = true`(분기 커버리지).
-- omit: `*/migrations/*`, `*/alembic/*`, `*/tests/*`.
-- `--cov-fail-under=70` — 70% 미만이면 실패(하드 게이트). HTML 리포트는 `api/htmlcov/`.
-- `exclude_lines`: `pragma: no cover`, `def __repr__`, `if TYPE_CHECKING:`, `raise NotImplementedError`, `...`.
-
-### 1.3 디렉터리 구조
-
-`api/tests/` 는 도메인별 하위 디렉터리로 미러링된다(소스 `src/domains/` 구조 반영).
+## 검증 흐름
 
 ```
-api/tests/
-├── conftest.py            # 루트 fixture (settings 캐시 격리)
-├── __init__.py
-├── test_main_runtime.py   # FastAPI app/lifespan/ready 엔드포인트
-├── test_migrations.py     # @pytest.mark.unit
-├── test_config.py
-├── test_dev_server.py     # @pytest.mark.unit
-├── auth/                  # 인증 도메인 테스트 (다수)
-│   ├── conftest.py        # fake_redis, fake_repo, auth_service
-│   ├── test_auth_flows.py # 주요 플로우 + 토큰 헬퍼
-│   ├── test_*_route.py    # 라우트 레벨 (login/signup/refresh/...)
-│   ├── test_*_schemas.py
-│   ├── test_*_repository.py
-│   └── test_signup_mailpit_integration.py
-├── chat/                  # LLM 도메인 테스트
-│   ├── conftest.py        # 15+ LLM fixture
-│   ├── _mocks.py          # FakeChatLiteLLM, StubLLMClient (pytest 비수집 헬퍼)
-│   ├── test_llm_client.py
-│   ├── test_llm_factory.py
-│   ├── test_provider_*.py
-│   ├── test_di_container.py
-│   └── test_ports.py
-├── infra/llm/
-│   └── test_provider_factory.py
-└── shared/
-    └── test_shared_domain.py
+코드 변경 → pnpm typecheck → pnpm lint → pnpm build → playwriter로 브라우저 확인
+                  ↓ 실패            ↓ 실패         ↓ 실패
+               타입 수정         포맷/규칙 수정    빌드 오류 수정
 ```
 
-conftest.py는 3곳: `tests/conftest.py`, `tests/auth/conftest.py`, `tests/chat/conftest.py`.
+## api 쪽 (참고)
 
-### 1.4 마커 (unit / integration / e2e)
+`web`과 달리 `api/`(FastAPI 백엔드)에는 정식 테스트 스위트가 있다.
 
-정의(`pyproject.toml`):
-- `unit`: 순수 단위 테스트(I/O 없음)
-- `integration`: DB/Redis를 치는 테스트
-- `e2e`: 실행 중인 서버 대상 end-to-end
+- 러너: `pytest` (+ `pytest-asyncio`, `pytest-cov`, `anyio`, `httpx`, `fakeredis`) — `api/pyproject.toml`의 dev 의존성.
+- 테스트 위치: `api/tests/`(`testpaths = ["tests"]`). 예: `tests/test_main_runtime.py`, `tests/test_migrations.py`, `tests/test_config.py`, `tests/chat/test_llm_client.py`, `tests/chat/test_provider_routing.py` 등. 스모크 테스트는 `api/scripts/smoke_test.py`.
+- 마커 분류: `unit`(순수 단위, I/O 없음), `integration`(DB/Redis 필요), `e2e`(구동 중인 서버 대상).
+- 명령(`api/Taskfile.yml`): `task test`(`uv run pytest tests -v`, 커버리지 포함), `task test-unit`(`-m unit`), `task test-integration`(`-m integration`), `task test-cov`.
+- 품질 게이트: ruff(린트+포맷), mypy(strict), pytest (`api/CLAUDE.md`). 커버리지 산출물은 `api/htmlcov/`에 존재.
+- 백엔드 작업 시 상세는 `api/CLAUDE.md`를 우선 참조할 것.
 
-실제 적용 현황(구현 사실):
-- `@pytest.mark.unit` — 일부 파일에서 사용(`test_dev_server.py`, `test_migrations.py`).
-- `@pytest.mark.integration`, `@pytest.mark.e2e` — **정의돼 있으나 현재 적용된 테스트 파일은 없다.** 통합/E2E 시나리오는 실제 DB/Redis 대신 인메모리 fake로 대체돼 있다(아래 1.5).
-- async 테스트는 `asyncio_mode="auto"` 덕에 대부분 명시 마커 없이 실행된다. `@pytest.mark.parametrize`는 provider 검증 등에서 다수 사용.
+## 요약
 
-`--strict-markers`가 켜져 있으므로 새 마커는 반드시 `pyproject.toml`에 등록해야 한다.
-
-### 1.5 모킹 / fixture 패턴
-
-테스트는 실제 PostgreSQL/Redis/SMTP/LLM에 붙지 않고 **인메모리 fake / stub**로 대체하는 것이 일관된 패턴이다.
-
-**루트 `tests/conftest.py`:**
-- `settings_cache_clear`(autouse) — 매 테스트 전후 `get_settings.cache_clear()` 호출. monkeypatch한 env가 테스트 간 누수되는 것을 막는다.
-
-**`tests/auth/conftest.py`:**
-- `fake_redis` → `FakeRedis` 인스턴스. dict 기반 인메모리 Redis 스텁(`get`/`set`/`exists`/`delete`/`ping`), `expirations` dict로 TTL 검증 가능.
-- `fake_repo` → `FakeAuthRepository`. `AuthRepository` 호환 인메모리 스텁. users/refresh_tokens/email_verifications 등을 dict로 보관, 엔티티는 `MagicMock`으로 생성, `transaction()`은 no-op 컨텍스트(진입/종료 횟수 카운트).
-- `auth_service` → `AuthService(repo=fake_repo, redis=fake_redis)`.
-
-`fakeredis` 패키지가 dev 의존성에 있으나, auth 테스트의 `FakeRedis`는 conftest에 직접 정의한 경량 스텁이다.
-
-**`tests/chat/conftest.py` + `tests/chat/_mocks.py`:**
-- env fixture(`env_openai`, `env_ollama`) — `monkeypatch.setenv`로 `LLM_PROVIDER`/모델/API 키 설정. 루트 `settings_cache_clear`와 결합해 provider 분기 테스트.
-- settings fixture(`openai_llm_settings`, `ollama_llm_settings`) — env 없이 `LLMSettings` 객체 직접 구성.
-- ChatLiteLLM patch fixture — `patch("infra.llm.provider_factory.ChatLiteLLM", ...)`로 LangChain 어댑터를 교체. `FakeChatLiteLLM`은 `ainvoke`/`astream`을 가짜 응답으로 구현하고 호출 횟수·마지막 인자·`init_kwargs`를 캡처(provider 라우팅 검증용).
-- `StubLLMClient` — patch 없는 순수 클래스. `LLMClientProtocol`을 덕타이핑으로 만족, 가장 빠른 주입.
-- ChatService fixture — `ChatService(llm_client=...)`로 stub/mock 주입.
-
-**FastAPI 의존성 오버라이드(라우트 레벨, 예: `tests/auth/test_login_route.py`):**
-- `FastAPI()` 인스턴스에 라우터를 include하고 `application.dependency_overrides[_get_service] = lambda: fake_service`로 서비스를 테스트 더블로 교체. 더블은 `.calls` 등 검사 속성을 갖는 커스텀 스텁.
-
-**`tests/test_main_runtime.py`:**
-- `monkeypatch.setattr`로 모듈 레벨 import(`core.database.engine`, `core.redis.get_redis_client`, `asyncio.open_connection`)를 fake로 교체해 `/ready` 엔드포인트를 실제 인프라 없이 테스트.
-
-### 1.6 테스트 네이밍 / 헬퍼
-
-- 파일: `test_<도메인>_<개념>.py` (예: `test_login_route.py`, `test_provider_mocks.py`).
-- 클래스: `Test<개념>` (예: `TestSignup`, `TestLogin`). 라우트 테스트는 함수형도 혼용.
-- 함수: `test_<동작>_<결과>` 서술형 (예: `test_signup_creates_user`, `test_login_rejects_malformed_payload_before_service_call`).
-- fixture/헬퍼 네이밍은 제공물 기준(`auth_service`, `fake_repo`, `llm_client_openai`).
-- 인증 헬퍼는 fixture가 아닌 모듈 레벨 함수: `_sign_test_token(payload)`(설정된 테스트 시크릿으로 JWT 서명), `_tamper_signature(token)`(서명만 변조). 이메일 서비스 fake는 `CapturingAuthEmailService`(전송 (email, token) 쌍 기록, 실패 주입 지원). 사용자 생성은 `FakeAuthRepository.create_user`가 팩토리 역할.
-
----
-
-## 2. web/ (TypeScript / React)
-
-### 2.1 현황 — 테스트 없음
-
-`web/`에는 **테스트 파일도, 테스트 러너도, 테스트 의존성도 전혀 없다.** (구현 사실, 직접 확인)
-
-확인 근거:
-- `web/` 전체(`node_modules` 제외)에 `*.test.*` / `*.spec.*` 파일 0개. `__tests__` 디렉터리 없음.
-- `web/package.json`에 `vitest`/`jest`/`@testing-library/*`/`playwright`/`cypress` 의존성 없음. `test` 계열 스크립트 없음(존재 스크립트: `generate`, `dev`, `build`, `preview`, `typecheck`, `lint`, `lint:fix`, `format`).
-- `web/vite.config.ts`에 Vitest 설정 없음(플러그인은 `tanstackRouter`, `react`, `tailwindcss`, `tsconfigPaths`뿐).
-- 루트/프로젝트 어디에도 `vitest.config.*` / `jest.config.*` 없음.
-
-### 2.2 현재 web의 품질 게이트
-
-테스트 대신 다음이 품질 검증 수단이다:
-- `pnpm typecheck` (`tsc --noEmit`) — 타입 검증.
-- `pnpm lint` (`biome check .`) — biome 린트.
-- `pnpm build` (`tsc -b && vite build`) — 타입 빌드 + 번들.
-
-웹에 자동화 테스트를 추가하려면 러너(예: Vitest) + 설정 + 스크립트를 새로 도입해야 한다. 현재 기준점은 0이다.
-
----
-
-## 부록 — 주요 파일
-
-- `api/pyproject.toml` — pytest / coverage 설정 (`--cov-fail-under=70`)
-- `api/tests/conftest.py` — 루트 fixture (settings 캐시 격리)
-- `api/tests/auth/conftest.py` — `fake_redis`, `fake_repo`, `auth_service`
-- `api/tests/chat/conftest.py` — LLM provider fixture
-- `api/tests/chat/_mocks.py` — `FakeChatLiteLLM`, `StubLLMClient`
-- `web/package.json` — 테스트 스크립트/의존성 부재 확인 지점
-- `web/vite.config.ts` — Vitest 미설정 확인 지점
+- web: **자동 테스트 없음.** 검증 = `pnpm typecheck` + `pnpm lint` + `pnpm build` + playwriter MCP 수동 확인.
+- api: pytest 기반 테스트 존재(`uv run pytest`, unit/integration/e2e 마커) + ruff + mypy strict.
+- web에 테스트를 새로 도입한다면 러너·설정·스크립트를 처음부터 추가해야 한다(현재 전제 없음).

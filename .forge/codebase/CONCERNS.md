@@ -1,196 +1,49 @@
 ---
-last_mapped_commit: 61e6d7ef52b84d30b9eed65c7b270e1e10a14e3b
-mapped: 2026-06-18
+last_mapped_commit: eb5beed32c31e9684f037e4fe859795901adf0fd
+mapped: 2026-06-21
 ---
 
-# CONCERNS — 기술 부채·버그·보안·취약 영역
+# CONCERNS — web 프론트엔드 기술 부채·취약 지점
 
-StoryWeaver 모노레포(`api/` FastAPI, `web/` React+Vite)의 구현 사실 기반 리스크 맵. 각 항목은 직접 코드 확인으로 검증했고, 미검증 추론은 `[추정]`으로 표시했다. 심각도는 낮음/중간/높음.
+UI 우선 단계의 산물로, 대부분의 화면이 mock 시드 데이터로 동작하고 실 API는 배선만 돼 있다. 아래는 코드를 직접 확인한 사실 기반의 우려 사항이다.
 
----
+## 1. UI-first/mock 단계 — 실 API 미연결
 
-## 1. web 인증: 두 갈래 구현 공존 — dead path 존재 (심각도: 중간)
+- 모든 화면 데이터는 `web/src/features/shared/mock/works.ts`의 시드를 `web/src/features/shared/store/works.store.ts`(Zustand + immer)에 채워 동작한다. 인증 상태도 `web/src/features/auth/store/auth.store.ts`에서 `isAuthenticated: true`로 시드 로그인된 목업이며 `persist`로 localStorage(`sw-auth`)에 영속화한다.
+- 생성된 API SDK·타입(`web/src/api/**`)은 `web/src/lib/api-client.ts`와 `web/src/lib/api-interceptors.ts` 단 두 곳에서만 import 된다. `src/features/**`·`src/routes/**` 어디에서도 생성 SDK나 TanStack Query 훅(`useQuery`/`useMutation`)을 쓰지 않는다 — 즉 **실제 백엔드 호출 경로가 0개**다.
+- `QueryClientProvider`는 `web/src/providers/app-providers.tsx`에 마운트돼 있으나 실제로 쓰는 쿼리가 없어 현재는 무동작 배선이다.
+- 인터셉터(`web/src/lib/api-interceptors.ts`)는 요청을 그대로 통과시키는 빈 패스스루다. 주석상 토큰 주입·401 갱신은 Phase 3으로 미뤄져 있다 — 인증 도입 전까지 보호 자원 호출은 인증 헤더 없이 나간다.
+- 영향: "기능 동작"으로 보이는 거의 모든 버튼이 실제로는 `toast(... 목업)`만 띄운다(`web/src/features/editor/components/manuscript.tsx`의 저장·요약·장면 이미지·다시쓰기·전체화면, `web/src/features/auth/components/auth-form-parts.tsx`의 소셜 로그인, `web/src/features/timeline/components/timeline-screen.tsx`의 씬 이동 등).
 
-`web/src/features/auth/` 안에 **서로 무관한 두 인증 구현**이 동시에 존재한다.
+## 2. 에디터 본문 편집이 휘발성 (영속 안 됨)
 
-### 1-A. 살아있는 경로 (라우트가 실제로 쓰는 것)
+- `web/src/features/editor/components/manuscript.tsx`의 tiptap 에디터는 `scene.paragraphs`로 초기 콘텐츠를 만들 뿐, 편집 결과를 어떤 스토어에도 다시 쓰지 않는다. `onUpdate`·`onBlur` 등 변경 영속 핸들러가 없어 라우트 이동·새로고침 시 본문 편집이 전부 사라진다.
+- 예외: 챕터 제목 입력은 `onChange`에서 `renameChapter(work.id, chapter.id, ...)`(`works.store.ts:99`)로 스토어에 즉시 반영된다 — 제목만 살아남고 본문은 휘발하는 비대칭이 사용자 혼란을 유발한다.
+- 하단 상태바의 "자동 저장 완료" 표시(`manuscript.tsx`)는 장식이다 — 저장 로직과 무관하게 항상 같은 문구·시각(`오후 2:34`)·진행률(고정 `8%`)을 렌더한다.
+- 읽기 모드(`web/src/features/editor/components/reading-screen.tsx`)는 `chapter.scenes`의 `paragraphs`를 읽기 전용으로 평탄화해 보여줄 뿐 편집 영속과 무관하다 — 위 휘발성 문제와 직접 충돌하지는 않으나, 영속되지 않은 편집은 읽기 모드에도 반영되지 않는다.
 
-흐름: 라우트 → auth 컴포넌트 → helpdesk 훅 → 생성된 SDK.
+## 3. 죽은 코드 / 미사용 필드
 
-```
-routes/auth/login.tsx  → HdLoginPage  (features/auth/components/hd-login-page.tsx)
-routes/auth/signup.tsx → HdSignupPage (features/auth/components/hd-signup-page.tsx)
-                            ↓
-                         useLogin / useSignup (features/helpdesk/hooks/use-auth.ts)
-                            ↓
-                         postAuthLogin / postAuthSignup (src/api/sdk.gen.ts) → 실제 백엔드
-```
+- `acceptInlineSuggestion` 액션(`web/src/features/shared/store/works.store.ts:85`)은 인터페이스·구현에만 존재하고 컴포넌트 호출처가 0개다(인라인 AI 고스트 제거 후 남은 잔재). 같은 파일의 `acceptSuggestion`·`dismissSuggestion`·`dismissConflict`·`addWork`는 모두 실제 호출처가 있어 대조적으로 이것만 떠 있다.
+- `scene.aiSuggestion` 필드(`web/src/features/shared/types.ts:31`)와 그 시드 값(`web/src/features/shared/mock/works.ts:95`)은 위 죽은 액션 외에 어떤 UI에서도 렌더되지 않는다.
+- 제거는 사용자 요청 사안이라 본 매핑에서는 기록만 한다.
 
-- `web/src/routes/auth/login.tsx:2,10` — `HdLoginPage`만 import/사용.
-- `web/src/routes/auth/signup.tsx:2,10` — `HdSignupPage`만 import/사용.
-- `web/src/features/auth/components/hd-login-page.tsx:4` — `useLogin`을 `features/helpdesk/hooks/use-auth`에서 가져온다.
+## 4. 번들 크기 — vite >500kB 경고 발생
 
-### 1-B. 죽은 경로 (어떤 라우트도 참조하지 않음)
+`pnpm build`(커밋 `eb5beed`) 실측:
 
-다음 4개 파일은 서로만 import하는 자기완결 클러스터이고, 라우트·`main.tsx`·`__root.tsx` 어디서도 import되지 않는다(grep으로 확인). 즉 **빌드에는 포함될 수 있으나 런타임에 도달 불가능한 dead code**다.
+- write 라우트 청크 `dist/assets/_sceneId-*.js` = **425.14 kB**(gzip 134.84 kB). tiptap·StarterKit가 이 청크에 번들된다.
+- 메인 벤더 청크 `dist/assets/index-*.js` = **594.08 kB**(gzip 194.72 kB) — 이것이 vite의 `>500kB` 경고를 실제로 트리거하는 청크다.
+- `web/vite.config.ts`에 `build.rollupOptions.output.manualChunks`나 `chunkSizeWarningLimit` 설정이 없어 경고가 매 빌드마다 출력된다.
 
-- `web/src/features/auth/components/login-form.tsx` — `useLoginMutation` 사용.
-- `web/src/features/auth/components/signup-form.tsx` — `useSignupMutation` 사용.
-- `web/src/features/auth/hooks/use-auth-mutation.ts` — `mockLogin`/`mockSignup` 호출.
-- `web/src/features/auth/lib/mock-auth-api.ts` — 가짜 API.
+## 5. 백엔드 프록시 포트 불일치
 
-부속물(역시 죽은 경로 전용): `web/src/features/auth/schema/auth.schema.ts`(login-form/signup-form만 사용), `web/src/features/auth/types/auth.ts`의 `AuthResponse`/`LoginInput`/`SignupInput`(use-auth-mutation·mock-auth-api 전용).
+`web/vite.config.ts`의 dev 프록시는 `/api` → `http://localhost:8080`으로 보내는데, `CLAUDE.md`는 `api/README.md`의 dev 서버 기본 포트가 `:8000`이라 불일치가 있다고 명시한다. 로컬 풀스택 구동 시 프록시 타깃과 실제 API 포트를 수동으로 맞춰야 호출이 닿는다.
 
-리스크: 어느 쪽이 정본인지 코드만 봐서 헷갈린다. 후속 작업자가 dead path(`login-form` 계열)를 수정하고 화면에 안 나와 시간을 버릴 수 있다. 정리(삭제) 대상 후보지만, **이 맵은 발견만 기록**한다.
+## 6. 생성 파일 — 손대지 않음
 
----
+`web/src/routeTree.gen.ts`(TanStack Router 빌드 산물)와 `web/src/api/**`(openapi-ts 산물)는 생성물이며 tsc/biome 대상에서 제외돼 있다. 직접 편집은 다음 `pnpm generate`/빌드에서 덮어쓰이므로 금지다.
 
-## 2. web 인증 UI가 helpdesk 도메인에 결합 (심각도: 중간)
+## 7. 검증 공백 — 자동 테스트 부재
 
-살아있는 인증 화면(`features/auth/`)이 `features/helpdesk/`에 강하게 의존한다. 인증과 헬프데스크는 별개 관심사인데 디렉터리 경계를 넘어 엮여 있다.
-
-- `web/src/features/auth/components/hd-login-page.tsx:3-4` — `HdIcon`(`features/helpdesk/components/ui/hd-icon`), `useLogin`(`features/helpdesk/hooks/use-auth`)을 helpdesk에서 import.
-- `web/src/features/auth/components/hd-signup-page.tsx` — 동일하게 helpdesk UI/훅에 의존.
-- 화면 카피 자체가 헬프센터용("헬프센터 계정으로 로그인하세요", "1:1 문의", "FAQ" 등, `hd-login-page.tsx:11-21,53`)이라 StoryWeaver 제품 문맥과 어긋난다. 부트스트랩 템플릿 잔재.
-
-리스크: helpdesk feature를 정리/삭제하면 인증 화면이 깨진다. 도메인 경계가 사실상 없는 상태.
-
----
-
-## 3. helpdesk feature 대부분이 미배선 dead code (심각도: 낮음)
-
-`features/helpdesk/`에서 라우트로 연결된 것은 `hd-icon`, `use-auth`, `hd-toast`(`HdToastHost`가 `__root.tsx:4,23`에서 사용)뿐이다. 나머지 게시판/관리자 컴포넌트·훅은 어떤 라우트에서도 import되지 않는다(grep 확인).
-
-미배선 파일들:
-- `web/src/features/helpdesk/components/admin-app.tsx`, `board-view.tsx`, `post-editor.tsx`, `post-detail.tsx`, `my-activity.tsx`, `sidebar.tsx`
-- `web/src/features/helpdesk/hooks/use-posts.ts`, `use-admin.ts`
-- `web/src/features/helpdesk/store/board.store.ts`
-
-리스크: 낮음(런타임 영향 없음). 단 코드 부피·혼란 비용. 부트스트랩 헬프데스크 데모의 잔재로 보인다 `[추정]`.
-
----
-
-## 4. 로그인 후 랜딩이 임시 플레이스홀더 (심각도: 낮음)
-
-`web/src/routes/index.tsx`는 실제 작업 공간이 아니라 안내 문구만 있는 정적 페이지다. 본문에 "작업 공간(World Bible · 메모리 · Smart Editor)은 MVP 마일스톤에서 구현됩니다"라고 명시되어 있고, 로그인 성공 시 이 페이지로 이동한다(`routes/auth/login.tsx:10` → `navigate({ to: '/' })`).
-
-리스크: 낮음(의도된 미구현). 제품 핵심 화면이 아직 없음을 나타내는 지표.
-
----
-
-## 5. mock 인증 + 토큰 처리 미완성 지점 (심각도: 중간)
-
-### 5-A. mock API가 dead path에 살아있음
-`web/src/features/auth/lib/mock-auth-api.ts`는 `setTimeout` 지연 후 가짜 사용자 객체를 반환하고, `fail@example.com`/`taken@example.com`을 하드코딩 에러로 처리한다. 위 1-B의 죽은 경로 전용이라 현재 화면엔 영향 없지만, 정본 코드 옆에 가짜 API가 공존한다.
-
-### 5-B. 빈 문자열 토큰 저장 (dead path)
-`web/src/features/auth/hooks/use-auth-mutation.ts:15` — `setAuth({ email: ..., role: 'USER' }, '')`로 **토큰 자리에 빈 문자열**을 넣는다. 또한 같은 훅의 `onSuccess`는 로그인 성공 후 다시 `/auth/login`으로 navigate한다(`:16`) — 로직상 무의미. dead path이므로 런타임 영향은 없으나 미완성 코드의 증거.
-
-### 5-C. 살아있는 경로의 refresh token 폴백
-`web/src/features/helpdesk/hooks/use-auth.ts:12` — `setTokens(data.data.accessToken, data.data.refreshToken ?? '', ...)`. 백엔드가 refreshToken을 응답에 안 주면 빈 문자열을 저장한다. 그리고 web 어디에서도 `postAuthRefresh`(SDK에 존재)를 호출하지 않아 **토큰 갱신 미구현** 상태다.
-
----
-
-## 6. web 인증 상태가 장식용 — 라우트 가드 부재 (심각도: 높음)
-
-라우트 어디에도 인증 가드가 없다. `web/src/routes/` 전체에서 `beforeLoad`/`redirect`/`isAuthenticated` 검사 grep 결과 0건.
-
-- `auth.store.ts`의 `isAuthenticated`는 set만 되고 라우팅 보호에 쓰이지 않는다.
-- 따라서 미인증 사용자도 모든 라우트(`/` 포함)에 직접 접근 가능. 현재는 `/`가 플레이스홀더라 노출 데이터가 없지만(항목 4), 실제 작업 공간이 생기면 보호 누락이 곧바로 취약점이 된다.
-
-### 6-A. 401 재시도/토큰 갱신 인터셉터 부재
-`web/src/lib/api-interceptors.ts:5` 주석에 "401 응답 인터셉터(토큰 갱신)는 Phase 3에서 구현 예정". 요청 인터셉터로 `Authorization: Bearer` 주입만 있고(`:6-12`), 401 처리·자동 갱신 없음. access token TTL이 15분(`api/src/core/config.py:329`)이라 만료 시 사용자가 조용히 끊긴다.
-
-### 6-B. 토큰은 인메모리만
-`auth.store.ts:22-23` 주석대로 토큰을 localStorage에 저장하지 않는다(XSS 방지 의도). 새로고침 시 인증 상태가 날아간다. 의도된 선택이나, 갱신 로직(6-A)이 없으면 UX상 새로고침마다 재로그인 필요. `[추정]` Phase 3 httpOnly 쿠키 전환 전까지의 과도기.
-
----
-
-## 7. api ↔ web SDK 도메인 드리프트 (심각도: 높음)
-
-생성된 web SDK(`web/src/api/sdk.gen.ts`)가 **실제 백엔드에 존재하지 않는 엔드포인트**를 다수 포함한다. SDK는 boards/posts/comments/admin/samples 엔드포인트를 노출하지만:
-
-- 실제 api 라우터는 auth와 chat 둘뿐이다. `api/src/main.py:227-241`에서 `auth_router`, `chat_router`만 `/api/v1` prefix로 등록.
-- DB 마이그레이션(`api/alembic/versions/0001_initial_schema.py`)이 만드는 테이블도 auth 계열(users/roles/permissions/refresh_tokens/email_verifications/password_resets/oauth_accounts) + chat 계열(conversations/messages)뿐. boards/posts/comments 테이블 없음.
-
-SDK가 노출하는 유령 엔드포인트(백엔드 부재): `getBoardsByBoardId`, `getBoardsByBoardIdPosts`, `postBoards`, `postBoardsByBoardIdPosts`, `getPostsByPostId`, `postPostsByPostIdComments`, `getAdminUsers`, `postAdminUsersByIdPasswordReset`, `getSamples`/`postSamples` 등.
-
-원인 `[추정]`: SDK가 부트스트랩 템플릿의 헬프데스크 OpenAPI 스펙에서 생성되었고, 실제 api는 그 스펙과 무관하게 auth+chat만 구현됨. helpdesk 컴포넌트(항목 3)가 이 유령 엔드포인트를 호출하는 구조라 배선되더라도 런타임 404가 난다.
-
-리스크: 높음. 타입은 통과하지만 호출 시 실패. SDK 재생성 기준이 되는 실제 OpenAPI와 동기화 필요.
-
----
-
-## 8. api: 부트스트랩 템플릿 — StoryWeaver 도메인 부재 (심각도: 높음, 설계상 미구현)
-
-api는 cookiecutter/부트스트랩 기반이라 StoryWeaver 실제 도메인(World Bible·작품·씬 등)이 **아직 없다**. 구현된 도메인은 `api/src/domains/` 아래 `auth`, `chat`, `shared`뿐.
-
-- `auth` — JWT + OAuth(google/kakao/naver) + RBAC. 비교적 완성도 있음(테스트 다수: `api/tests/auth/`).
-- `chat` — LLM 프록시·SSE 스트리밍(litellm). StoryWeaver 집필 LLM의 *기반*이지 도메인 로직 아님.
-- 설계 문서(`docs/PRD.md`, `docs/data-model.md`, `docs/ai-pipeline.md` 등)와 코드 사이에 큰 격차. 문서가 묘사하는 핵심 도메인이 코드에 미존재.
-
-리스크: 높음(제품 미완성의 핵심 지표). 단 의도된 단계적 구현으로 보임. 문서를 코드의 현재 상태로 오해하지 말 것.
-
----
-
-## 9. 보안 민감 지점 (심각도: 중간)
-
-### 9-A. 기본 시크릿이 "change-me" 플레이스홀더
-`api/src/core/config.py`:
-- `:288` `secret_key: SecretStr("change-me-in-production")`
-- `:327` `jwt_secret_key: SecretStr("change-me-jwt-secret-key")`
-
-운영에서 미설정 시 알려진 기본값으로 JWT 서명 → 토큰 위조 가능. 프로덕션 환경에서 이 기본값을 거부하는 가드(예: `is_production()` 시 검증)는 코드상 확인되지 않음. `[추정]` 배포 시 .env 주입에 의존.
-
-### 9-B. `.env` 비밀 누출 위험 — 현재는 안전
-- 로컬에 `api/.env`가 존재한다.
-- 단 git에는 **추적되지 않는다**(`git ls-files api/.env` → 결과 없음). `.gitignore:107-108`이 `.env`/`.env.prod`를 명시 차단하고 `.env.example`/`.env.prod.example`만 추적.
-- 로컬 `api/.env` 값은 실제 시크릿이 아니라 플레이스홀더로 확인됨: `SECRET_KEY=change...`, `JWT_SECRET_KEY=change...`, `OPENAI_API_KEY`(길이 6), `ANTHROPIC_API_KEY`(길이 10), `GOOGLE_CLIENT_SECRET`(길이 25, `your-g...`) — 실제 키 형식이 아님.
-
-리스크: 현재 누출 없음. 단 `.env`에 실제 키를 채우는 순간 위험으로 전환되므로 규율 유지 필요(`api/CLAUDE.md`도 "절대 커밋 금지" 명시).
-
-### 9-C. OAuth state Redis 키
-`api/src/domains/auth/router/auth_router.py`에 OAuth state를 `{_OAUTH_STATE_PREFIX}{state}` 형태로 Redis에 보관. CSRF state 검증 구조 존재. 상세 검증 로직은 미정밀 확인 `[추정 — 별도 점검 권장]`.
-
----
-
-## 10. 빌드 경고: 청크 500kB 초과 (심각도: 낮음)
-
-`npm run build` 실행 결과 메인 청크가 한도를 넘는다.
-
-```
-dist/assets/index-CdlYtgqm.js   637.37 kB │ gzip: 207.99 kB
-(!) Some chunks are larger than 500 kB after minification.
-```
-
-- `web/vite.config.ts`에 `manualChunks`나 `chunkSizeWarningLimit` 설정 없음. autoCodeSplitting(라우터)만 켜져 있어 라우트별 작은 청크(login 3.2kB, signup 4.1kB)는 분리되나, 공통 벤더(react-query, motion, zod, react-hook-form 등)가 단일 메인 청크에 뭉친다 `[추정]`.
-
-리스크: 낮음(기능 영향 없음). 초기 로딩 성능 저하 요인.
-
----
-
-## 11. 기타 부트스트랩 잔재
-
-### 11-A. `/sample` 경로 참조하나 라우트 파일 없음 (심각도: 낮음)
-`web/src/sample/layout/navigation.ts:22-31`이 `/sample/...` 경로 상수를 다수 정의하고 `__root.tsx:6,19`가 `isSamplePath()`로 분기하지만, `web/src/routes/sample/` 디렉터리는 없고 `routeTree.gen.ts`에 sample 참조 0건. 즉 코드가 가리키는 라우트가 실재하지 않는 dead 분기.
-
-### 11-B. `i18n`/sample 레이아웃 잔재 (심각도: 낮음)
-`web/src/sample/`(i18n, layout) 디렉터리가 부트스트랩 데모용으로 남아 있다. `main.tsx:4`가 `@/sample/i18n`을 import해 i18n 초기화는 실제로 로드됨.
-
----
-
-## 우선순위 요약
-
-| # | 항목 | 심각도 | 성격 |
-|---|------|--------|------|
-| 6 | 라우트 가드/401 갱신 부재 | 높음 | 보안·미완성 |
-| 7 | api↔web SDK 도메인 드리프트(유령 엔드포인트) | 높음 | 정합성 |
-| 8 | api StoryWeaver 도메인 부재 | 높음 | 미구현(설계상) |
-| 1 | web 인증 두 갈래 + dead path | 중간 | 기술 부채 |
-| 2 | 인증 UI ↔ helpdesk 결합 | 중간 | 결합도 |
-| 5 | mock 인증·토큰 미완성 | 중간 | 미완성 |
-| 9 | 기본 시크릿·.env 규율 | 중간 | 보안 |
-| 3 | helpdesk dead code | 낮음 | 기술 부채 |
-| 4 | 랜딩 플레이스홀더 | 낮음 | 미구현 |
-| 10 | vite 청크 500kB | 낮음 | 성능 |
-| 11 | /sample·i18n 잔재 | 낮음 | 기술 부채 |
+`CLAUDE.md` 기재대로 web에는 테스트 러너(vitest/jest)가 없다. 회귀 방지가 전적으로 `pnpm typecheck` + `pnpm lint`에 의존하므로, 위 2번(휘발성 편집)·3번(죽은 코드) 같은 런타임 동작 결함은 타입·린트 통과만으로는 잡히지 않는다.
