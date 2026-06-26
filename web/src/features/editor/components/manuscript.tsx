@@ -1,5 +1,5 @@
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Chapter, Scene, Work } from '@/features/shared/types';
+import type { Chapter, Scene, SceneVersion, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
@@ -9,6 +9,7 @@ import {
   Check,
   ChevronsUpDown,
   ClipboardList,
+  History,
   Image as ImageIcon,
   Italic,
   Link2,
@@ -26,6 +27,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { SelectionAiMenu } from './selection-ai-menu';
+import { VersionHistoryModal } from './version-history-modal';
 
 /** 품질 티어 — ADR-0004. 사용자는 모델명이 아닌 이 티어만 고른다. */
 const QUALITY_TIERS = ['저비용', '균형', '고품질'] as const;
@@ -48,7 +51,9 @@ export function ManuscriptEditor({
   scene: Scene;
 }) {
   const [tier, setTier] = useState<QualityTier>('고품질');
+  const [showHistory, setShowHistory] = useState(false);
   const renameChapter = useWorksStore((s) => s.renameChapter);
+  const restoreSceneVersion = useWorksStore((s) => s.restoreSceneVersion);
 
   const initialContent = scene.paragraphs.length
     ? scene.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
@@ -59,7 +64,7 @@ export function ManuscriptEditor({
     content: initialContent,
     editorProps: {
       attributes: {
-        class: 'sw-editor font-serif text-[16.5px] leading-[1.95] text-ink min-h-[420px]',
+        class: 'sw-editor font-serif text-[18.5px] leading-[1.95] text-ink min-h-[420px]',
       },
     },
   });
@@ -90,6 +95,15 @@ export function ManuscriptEditor({
   const generateDraft = () => {
     editor?.chain().focus().insertContent(MOCK_DRAFT).run();
     toast.success('AI 초안을 생성했습니다');
+  };
+
+  const restoreVersion = (version: SceneVersion) => {
+    restoreSceneVersion(work.id, scene.id, version.id);
+    editor?.commands.setContent(
+      version.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
+    );
+    toast.success('현재 버전으로 되돌렸습니다');
+    setShowHistory(false);
   };
 
   const setLink = () => {
@@ -145,6 +159,7 @@ export function ManuscriptEditor({
               onClick={() => toast('장면 이미지 생성 (목업)')}
             />
             <ActionChip icon={RotateCw} label="다시쓰기" onClick={() => toast('다시쓰기 (목업)')} />
+            <ActionChip icon={History} label="버전 기록" onClick={() => setShowHistory(true)} />
 
             <div className="ml-auto">
               <label className="relative flex h-9 items-center rounded-full border border-line bg-paper pl-3 pr-8 text-[13.5px] font-medium text-ink-soft">
@@ -252,6 +267,7 @@ export function ManuscriptEditor({
           {/* 본문 에디터 */}
           <div className="mt-6">
             <EditorContent editor={editor} />
+            <SelectionAiMenu editor={editor} />
           </div>
         </div>
       </div>
@@ -292,6 +308,15 @@ export function ManuscriptEditor({
           <Maximize2 className="size-[14px]" strokeWidth={2} />
         </button>
       </div>
+
+      {showHistory && (
+        <VersionHistoryModal
+          scene={scene}
+          currentText={scene.paragraphs.map((p) => p.text).join('\n')}
+          onRestore={restoreVersion}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }

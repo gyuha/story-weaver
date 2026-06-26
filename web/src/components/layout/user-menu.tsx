@@ -16,7 +16,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useWorkspaceMeta } from '@/features/shared/store/selectors';
 import { type Theme, useTheme } from '@/hooks/use-theme';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ChevronDown, LogOut, Monitor, Moon, Settings2, Sun } from 'lucide-react';
+import { ChevronDown, Library, LogOut, Monitor, Moon, Settings2, Sun } from 'lucide-react';
 
 /** 상단 바 우측 인증 영역 — 비로그인: 로그인/회원가입, 로그인: 사용자 드롭다운(설정·테마·로그아웃) */
 export function UserMenu() {
@@ -64,6 +64,9 @@ export function UserMenu() {
           <span className="text-xs font-normal text-faint">{user?.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link to="/works" />}>
+          <Library />내 서재로 가기
+        </DropdownMenuItem>
         <DropdownMenuItem render={<Link to="/settings" />}>
           <Settings2 />
           설정

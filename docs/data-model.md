@@ -12,7 +12,7 @@
 
 데이터 모델은 네 개의 축으로 구성된다.
 
-1. **계층 (Hierarchy):** 작품(Work) → 시놉시스(Synopsis) → 에피소드(Episode) → 챕터(Chapter) → 씬(Scene). 원고의 구조적 뼈대.
+1. **계층 (Hierarchy):** 작품(Work) → 시놉시스(Synopsis) → 부(Part) → 챕터(Chapter) → 씬(Scene). 원고의 구조적 뼈대.
 2. **설정 (World Bible):** 엔티티 카드(Entity Card) — 인물·장소·사건·아이템. 작품의 "기억" 원천 데이터.
 3. **상태/링크 (State & Link):** 타임라인 상태(Timeline State)와 씬-엔티티 링크(Scene-Entity Link). "언제 무엇이 어떻게 변했는가"와 "어느 씬에 누가 나오는가"를 잇는다.
 4. **벡터 (Embedding):** 엔티티 카드와 씬 본문을 청킹·임베딩해 의미 검색을 보조한다(메모리의 보조 근거).
@@ -23,7 +23,7 @@
 계정(Account)
    └─ 작품(Work)                         ← 멀티테넌시 격리 경계
         ├─ 시놉시스(Synopsis)            ← 작품당 1
-        ├─ 에피소드 → 챕터 → 씬(Scene)   ← 계층 본문
+        ├─ 부 → 챕터 → 씬(Scene)         ← 계층 본문
         ├─ 엔티티 카드(Entity Card)       ← World Bible
         │     └─ 타임라인 상태(Timeline State)  ← 카드의 시점별 상태
         ├─ 씬-엔티티 링크(Scene-Entity Link)    ← 씬 ↔ 엔티티 다대다
@@ -32,11 +32,13 @@
 
 ---
 
-## 2. 계층 모델 (Work → Synopsis → Episode → Chapter → Scene)
+## 2. 계층 모델 (Work → Synopsis → Part → Chapter → Scene)
 
-작품은 시놉시스 1개와 다수의 에피소드를 가진다. 에피소드는 다수의 챕터를, 챕터는 다수의 씬을 가진다. **씬(Scene)** 은 집필과 AI 생성의 최소 단위이며 실제 원고 본문(`body`)을 보유하는 유일한 계층이다. 상위 계층(에피소드·챕터)은 구조·메타데이터만 보유한다.
+> **사용자 대면 명칭은 "부(Part)"** — `.forge/CONTEXT.md` 글로서리가 단일 출처다. 아래 코드/DB 식별자는 `episodes`/`episode_id`로 유지한다(사용자 대면 용어와 코드 식별자를 분리하는 `write`/'집필' 선례와 동일).
 
-순서가 의미를 갖는 계층(에피소드·챕터·씬)은 `order_index`로 형제 간 순서를 표현한다. (드래그 앤 드롭 순서 변경 UI는 v2 Plot Architect 소관이나, 순서 필드 자체는 MVP에서 존재한다.)
+작품은 시놉시스 1개와 다수의 부를 가진다. 부는 다수의 챕터를, 챕터는 다수의 씬을 가진다. **씬(Scene)** 은 집필과 AI 생성의 최소 단위이며 실제 원고 본문(`body`)을 보유하는 유일한 계층이다. 상위 계층(부·챕터)은 구조·메타데이터만 보유한다.
+
+순서가 의미를 갖는 계층(부·챕터·씬)은 `order_index`로 형제 간 순서를 표현한다. (드래그 앤 드롭 순서 변경 UI는 v2 Plot Architect 소관이나, 순서 필드 자체는 MVP에서 존재한다.)
 
 타임라인 상태와 충돌 감지가 **챕터/씬 시점**을 기준으로 동작하므로(4장), 씬은 작품 전체에서 단조 증가하는 정렬 가능한 시점값을 가져야 한다. 이를 위해 씬에 `global_seq`(작품 내 전역 순서)를 둔다 — "3화에서 사망 < 10화에서 등장" 같은 시점 비교의 근거다.
 
@@ -66,13 +68,13 @@
 | `work_id` | UUID FK → works, unique | 작품당 1개 |
 | `body` | text | 전체 줄거리 요약 |
 
-#### `episodes` (에피소드)
+#### `episodes` (부 — 코드/DB 식별자는 `episodes` 유지)
 | 필드 | 타입 | 설명 |
 |---|---|---|
 | `id` | UUID PK | |
 | `work_id` | UUID FK → works | 격리용 비정규화 소유 키(아래 7.2 참조) |
 | `title` | text | |
-| `order_index` | int | 작품 내 에피소드 순서 |
+| `order_index` | int | 작품 내 부 순서 |
 
 #### `chapters` (챕터)
 | 필드 | 타입 | 설명 |
@@ -81,7 +83,7 @@
 | `work_id` | UUID FK → works | 격리용 소유 키 |
 | `episode_id` | UUID FK → episodes | |
 | `title` | text | |
-| `order_index` | int | 에피소드 내 챕터 순서 |
+| `order_index` | int | 부 내 챕터 순서 |
 
 #### `scenes` (씬)
 | 필드 | 타입 | 설명 |
@@ -102,7 +104,7 @@
 ```
 작품(Work) ──1:1── 시놉시스(Synopsis)
     │
-    └──1:N── 에피소드 ──1:N── 챕터 ──1:N── 씬(Scene, body 보유)
+    └──1:N── 부 ──1:N── 챕터 ──1:N── 씬(Scene, body 보유)
 ```
 
 ---

@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 export function TopBar({ children }: { children?: ReactNode }) {
   return (
     <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-5 border-b border-line bg-paper/90 px-5 backdrop-blur">
-      <Link to="/works" className="flex items-center transition-opacity hover:opacity-80">
+      <Link to="/" className="flex items-center transition-opacity hover:opacity-80">
         <LogoMark size={22} withWordmark />
       </Link>
       {children}

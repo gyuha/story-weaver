@@ -32,6 +32,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "emoji-picker-react": "^4.19.1",
     "i18next": "^26.0.10",
     "immer": "^11.1.4",
     "lucide-react": "^0.487.0",

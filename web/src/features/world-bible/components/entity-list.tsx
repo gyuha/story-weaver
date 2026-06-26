@@ -38,7 +38,15 @@ export function EntityList({ work, selectedId }: { work: Work; selectedId?: stri
                       : 'text-ink hover:bg-ink/[0.04]'
                   )}
                 >
-                  <span className="text-[15px]">{entity.emoji}</span>
+                  {entity.imageUrl ? (
+                    <img
+                      src={entity.imageUrl}
+                      alt=""
+                      className="size-[18px] shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span className="text-[15px]">{entity.emoji}</span>
+                  )}
                   <span className="flex-1 truncate">{entity.name}</span>
                 </Link>
               );
@@ -48,12 +56,13 @@ export function EntityList({ work, selectedId }: { work: Work; selectedId?: stri
       </div>
 
       <div className="px-3.5 py-2.5">
-        <button
-          type="button"
+        <Link
+          to="/works/$workId/bible/new"
+          params={{ workId: work.id }}
           className="flex h-[34px] w-full items-center justify-center gap-[7px] rounded-md border border-dashed border-line-strong text-[13px] font-medium text-muted-ink transition-colors hover:bg-surface"
         >
           <Plus className="size-[15px]" strokeWidth={2} />새 엔티티
-        </button>
+        </Link>
       </div>
     </div>
   );

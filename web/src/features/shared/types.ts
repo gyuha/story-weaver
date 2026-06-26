@@ -15,6 +15,13 @@ export interface Paragraph {
   dim?: boolean;
 }
 
+/** 버전 기록의 한 스냅샷 — 작가 집필 시간축의 과거 본문 (타임라인 상태와 다른 축) */
+export interface SceneVersion {
+  id: string;
+  savedAt: string; // '2026-06-22 14:30' 등 표시용
+  paragraphs: Paragraph[];
+}
+
 export interface Scene {
   id: string;
   title: string;
@@ -29,6 +36,8 @@ export interface Scene {
   updateSuggestion?: { entityId: string; body: string };
   /** 인라인 AI 이어쓰기 고스트 텍스트 */
   aiSuggestion?: string;
+  /** 버전 기록 — 최신순 스냅샷 (현재 본문은 paragraphs, 과거는 여기) */
+  versions?: SceneVersion[];
 }
 
 export interface Chapter {
@@ -56,6 +65,8 @@ export interface Entity {
   name: string;
   hanja?: string;
   emoji: string;
+  /** 생성·첨부된 설정 이미지 (data-uri/URL). 없으면 emoji로 표시 */
+  imageUrl?: string;
   alias?: string;
   summary: string;
   fields: EntityField[];
