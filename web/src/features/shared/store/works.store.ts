@@ -61,6 +61,8 @@ interface WorksState {
   removeSceneEntityLink: (workId: string, sceneId: string, entityId: string) => void;
   /** World Bible에 새 엔티티 카드 추가, 새 id 반환 */
   addEntity: (workId: string, input: NewEntityInput) => string;
+  /** 엔티티 카드 내용 수정 — type(카테고리)은 변경 불가, 나머지 필드 교체 */
+  updateEntity: (workId: string, entityId: string, input: NewEntityInput) => void;
 }
 
 const SHORT_LABEL = (title: string) => title.trim().charAt(0) || '작';
@@ -279,6 +281,22 @@ export const useWorksStore = create<WorksState>()(
       });
       return id;
     },
+    updateEntity: (workId, entityId, input) =>
+      set((state) => {
+        const work = state.works.find((w) => w.id === workId);
+        if (!work) return;
+        const entity = work.entities.find((e) => e.id === entityId);
+        if (!entity) return;
+        // type(카테고리)은 변경 불가 — 기존 값 유지. hanja 등 폼 밖 필드도 보존.
+        entity.name = input.name;
+        entity.emoji = input.emoji;
+        entity.alias = input.alias || undefined;
+        entity.summary = input.summary;
+        entity.fields = input.fields;
+        entity.sampleLines = input.sampleLines?.length ? input.sampleLines : undefined;
+        entity.relations = input.relations?.length ? input.relations : undefined;
+        entity.imageUrl = input.imageUrl || undefined;
+      }),
   }))
 );
 

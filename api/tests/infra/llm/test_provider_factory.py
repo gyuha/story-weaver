@@ -425,3 +425,29 @@ class TestInfraLayerIsolation:
             "ChatLiteLLM must be present in provider_factory module namespace "
             "so tests can patch it at 'infra.llm.provider_factory.ChatLiteLLM'"
         )
+
+
+# ---------------------------------------------------------------------------
+# OpenAI-compatible provider (e.g. z.ai/GLM coding plan)
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAICompatibleRouting:
+    """openai_compatible routes via openai/<model> with a custom api_base + key."""
+
+    def _settings(self) -> LLMSettings:
+        return LLMSettings(
+            provider=LLMProvider.openai_compatible,
+            default_model="glm-4.6",
+            OPENAI_COMPATIBLE_BASE_URL="https://api.z.ai/api/coding/paas/v4",
+            OPENAI_COMPATIBLE_API_KEY="zai-test-key",
+        )
+
+    def test_forwards_base_url_and_key_to_chat_litellm(self) -> None:
+        captured, fn = _capture_kwargs()
+        with patch(_PROVIDER_FACTORY_PATH, side_effect=fn):
+            make_chat_litellm(self._settings())
+
+        assert captured["model"] == "openai/glm-4.6"
+        assert captured["api_base"] == "https://api.z.ai/api/coding/paas/v4"
+        assert captured["api_key"] == "zai-test-key"

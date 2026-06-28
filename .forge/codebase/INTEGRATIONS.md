@@ -1,50 +1,121 @@
 ---
-last_mapped_commit: eb5beed32c31e9684f037e4fe859795901adf0fd
-mapped: 2026-06-21
+last_mapped_commit: 1331c286f88b0298e21191c6b40df3d50b3e2820
+mapped: 2026-06-26
 ---
 
-# INTEGRATIONS
+# 외부 연동 (INTEGRATIONS)
 
-현재 web는 UI 우선(mock) 단계다. 화면은 `features/*/mock`의 시드 데이터를 Zustand 스토어에 채워 동작하고, 실 백엔드 호출(인증·작품·집필)은 아직 배선만 돼 있고 기능 연결은 진행 중이다.
+프론트엔드 web ↔ 백엔드 api, 그리고 백엔드가 의존하는 외부 시스템(DB·Redis·OAuth·메일·LLM)의 배선 상태를 기록한다. "계획됨-미배선" 항목은 명시한다.
 
-## web — 생성된 API SDK 레이어
+---
 
-- 생성 도구는 `@hey-api/openapi-ts`. 설정 `web/openapi-ts.config.ts`: 입력 `./docs/openapi.json`, 출력 `./src/api`. 플러그인은 `@hey-api/client-axios`·`@hey-api/typescript`·`@hey-api/sdk`·`@tanstack/react-query`. 즉 SDK는 **axios** 기반이며 TanStack Query 훅도 함께 생성된다. parser patch가 `operationId`를 지운다(함수명은 메서드+경로로 도출).
-- 재생성 명령은 `pnpm generate`(= `openapi-ts`). 산출물 `web/src/api/`는 **직접 편집 금지**이며 tsc/biome 모두 제외.
-- 생성물 구성: `web/src/api/index.ts`(public re-export), `web/src/api/sdk.gen.ts`(SDK 함수), `web/src/api/types.gen.ts`(타입), `web/src/api/client.gen.ts`(클라이언트 인스턴스), `web/src/api/@tanstack/`(Query 옵션), `web/src/api/client/`·`web/src/api/core/`(런타임).
-- **주의 — 스펙 불일치**: 현 시점 저장소에 `web/docs/openapi.json`(설정의 input) 파일이 존재하지 않는다. 그리고 생성된 SDK(`web/src/api/index.ts`)는 StoryWeaver 도메인(작품·씬·World Bible)이 아니라 **제네릭 보일러플레이트 API**(boards/posts/comments/admin-users/samples/auth)다. 즉 SDK는 백엔드 스타터 템플릿의 OpenAPI로 생성된 잔재이며 실제 도메인 엔드포인트와 정렬돼 있지 않다. 도메인 API가 확정되면 `docs/openapi.json`을 갱신해 재생성해야 한다. `[High]`
-- SDK에 노출된 인증 엔드포인트는 `postAuthLogin`·`postAuthSignup`·`postAuthRefresh`·`postAuthLogout`(`web/src/api/index.ts`). 현재 web 코드 어디서도 이 SDK 함수를 호출하지 않는다(인증은 아래의 mock 스토어로 처리).
+## 1. web ↔ api 경계
 
-## web — HTTP 클라이언트 설정
+### 1.1. Vite dev 프록시 `/api`
 
-- 클라이언트 런타임 설정은 `web/src/lib/api-client.ts`: `createClientConfig`가 baseURL을 `import.meta.env.VITE_API_BASE_URL ?? '/api'`로 지정. 즉 env가 없으면 `/api`(Vite 프록시 경유).
-- 클라이언트 인스턴스는 생성물 `web/src/api/client.gen.ts`가 위 설정을 주입해 만든다(axios 기반).
-- 인터셉터는 `web/src/lib/api-interceptors.ts`: 현재 요청 인터셉터가 패스스루(`(config) => config`)만 한다. 주석상 실제 토큰 주입과 401 재시도(refresh)는 후속(Phase 3) 작업. 이 모듈은 `web/src/providers/app-providers.tsx`에서 import되어 부팅 시 인터셉터를 등록한다.
+`web/vite.config.ts`의 dev 서버(포트 3000)는 `/api` 요청을 백엔드로 프록시한다.
 
-## web — 개발 프록시
+- target: `http://localhost:8080`
+- `changeOrigin: true`
+- `rewrite: (path) => path.replace(/^\/api/, '')` — `/api` 접두를 제거하고 전달.
 
-- `web/vite.config.ts`의 dev 서버 프록시: `'/api'` → `http://localhost:8080`, `changeOrigin: true`, `rewrite`로 선행 `/api` 제거. 즉 web에서 `/api/foo` 호출 시 백엔드 `http://localhost:8080/foo`로 전달.
-- **포트 불일치 주의**: 프록시 타깃은 `:8080`이지만 `api/README.md`의 dev 기본 포트는 `:8000`이다(CLAUDE.md 명시). 로컬 풀스택 구동 시 둘을 맞춰야 한다. `[High]`
+주의(불일치): 프록시 타깃은 `:8080`이나 `api/README.md`의 dev 기본 포트는 `:8000`이다(루트 `CLAUDE.md`도 동일 경고). 또한 백엔드 라우터는 `/api/v1` 접두로 등록되는데(`api/src/main.py` `include_router(..., prefix="/api/v1")`) Vite rewrite가 `/api`를 떼므로, 풀스택 구동 시 포트와 경로 접두를 직접 맞춰야 한다. [High]
 
-## web — 인증(현재 mock)
+### 1.2. API 클라이언트 런타임 설정
 
-- 실제 인증/세션 미연결. `web/src/features/auth/store/auth.store.ts`가 Zustand `persist`(localStorage 키 `sw-auth`)로 **시드 로그인 상태**(`isAuthenticated: true`, 사용자 `baekya@storyweaver.kr`)를 유지한다. 주석상 실 토큰/세션은 Phase 3.
-- 라우트 가드는 `web/src/features/auth/lib/guard.ts`의 `requireAuth`(라우트 `beforeLoad`에서 호출, 미인증 시 `/auth/login`으로 redirect). 인증 게이트 진입점은 `web/src/routes/index.tsx`(현재는 랜딩 화면을 렌더).
-- 사용자 설정/프로필도 mock — `web/src/features/settings/store/settings.store.ts`(localStorage 키 `sw-settings`, `provider: 'email'`, 품질 티어 등).
-- 도메인 데이터(작품·씬·타임라인·엔티티)는 모두 mock 스토어 `web/src/features/shared/store/works.store.ts`(시드 `web/src/features/shared/mock/works.ts`)에서 공급. 실 API 전환 시 생성된 Query 훅으로 교체하는 패턴.
+생성 SDK는 axios 클라이언트를 쓴다. baseURL은 `web/src/lib/api-client.ts`에서 주입.
 
-## web — 외부 호스트 의존(런타임)
+- `baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api'` — 환경변수 미설정 시 dev 프록시 `/api`로 폴백.
+- 인터셉터 `web/src/lib/api-interceptors.ts` — 요청 인터셉터가 **현재는 통과만** 한다(토큰 주입 없음). 주석상 실제 세션/토큰·401 갱신은 Phase 3 예정. **인증 토큰 배선 미완.** [High]
 
-- Google Fonts(`fonts.googleapis.com`/`fonts.gstatic.com`): Noto Sans KR·Noto Serif KR를 `web/index.html`에서 `<link>`로 로드(preconnect 포함). 그 외 런타임 외부 API 호출 없음.
+### 1.3. web에서 쓰는 환경변수
 
-## api — 외부 통합(백엔드, 요약)
+`import.meta.env` 사용처(생성 코드 제외): `VITE_API_BASE_URL`(api-client), `import.meta.env.DEV`(`web/src/routes/__root.tsx`의 router devtools, `web/src/components/dev/form-devtool.tsx`의 RHF devtool 게이트). 그 외 외부 서비스용 클라이언트 측 키는 발견되지 않음.
 
-프론트 작업 범위 밖이므로 `api/CLAUDE.md`·`api/.env.example`·`api/src/` 기준 요약. 실제 비밀값은 `api/.env`(커밋 금지).
+---
 
-- **데이터베이스**: PostgreSQL(async, asyncpg) — `DATABASE_URL`/`DATABASE_URL_SYNC` 및 `POSTGRES_*`. 마이그레이션 Alembic(`api/alembic/`).
-- **캐시/세션**: Redis — `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`.
-- **인증 제공자(OAuth)**: Google·Kakao·Naver — 각각 `{GOOGLE,KAKAO,NAVER}_CLIENT_ID`·`_CLIENT_SECRET`·`_REDIRECT_URI`. 자체 JWT(`JWT_SECRET_KEY`, `JWT_ALGORITHM`, 액세스/리프레시 만료)와 RBAC. 도메인 `api/src/domains/auth/`.
-- **LLM 제공자**: provider 추상화는 `LLM_PROVIDER` 환경변수 하나로 교체(LangChain + langchain-litellm). 지원 키: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AZURE_OPENAI_*`, `OLLAMA_BASE_URL`. 모델/토큰/온도/스트리밍은 `LLM_DEFAULT_MODEL`·`LLM_MAX_TOKENS`·`LLM_TEMPERATURE`·`LLM_STREAMING`. LLM 호출·**SSE 스트리밍**은 `api/src/domains/chat/`(StoryWeaver 집필 LLM의 기반), provider 팩토리는 `api/src/infra/llm/`.
-- **메일(SMTP)**: `MAIL_*`(서버/포트/계정/발신자/TLS). 로컬 개발은 Mailpit(`MAILPIT_SMTP_PORT`/`MAILPIT_UI_PORT`). 비밀번호 재설정 등에 사용(`FRONTEND_RESET_CONFIRM_URL_BASE`).
-- **CORS·프론트 URL**: `CORS_ORIGINS`, `FRONTEND_URL`.
-- 웹훅: 현재 코드/env에서 외부 웹훅 수신·발신 설정은 확인되지 않음. `[Medium]`
+## 2. OpenAPI 코드젠 파이프라인 (`docs/openapi.json` → `src/api`)
+
+`@hey-api/openapi-ts` `0.98.1` 기반. 설정 `web/openapi-ts.config.ts`.
+
+- **input**: `./docs/openapi.json` (web 디렉터리 기준 → `web/docs/openapi.json`)
+- **output path**: `./src/api`
+- parser patch: 모든 operation의 `operationId`를 `undefined`로 제거.
+- plugins: `@hey-api/client-axios`(runtimeConfigPath `./src/lib/api-client`, `baseUrl: false`), `@hey-api/typescript`, `@hey-api/sdk`, `@tanstack/react-query`.
+- 실행: `pnpm generate` (= `openapi-ts`).
+
+생성물 `web/src/api/`: `client.gen.ts`, `sdk.gen.ts`, `types.gen.ts`, `index.ts`, `@tanstack/`(Query 훅), `client/`, `core/`. tsconfig·biome 모두 `src/api` 제외(편집 금지 생성물).
+
+**중요 — input 스펙 누락**: `web/docs/openapi.json`(및 저장소 어디에도 `openapi.json`)이 존재하지 않으며 git에도 추적되지 않는다. 생성된 `web/src/api/`만 커밋돼 있다. 즉 현재 상태로는 `pnpm generate`를 재실행할 수 없다(스펙을 백엔드에서 추출/배치하는 단계가 빠져 있음). 루트 `CLAUDE.md`는 경로를 `docs/openapi.json`으로 기술하나 config의 상대경로는 `web/docs/openapi.json`을 가리킨다. [High]
+
+---
+
+## 3. 백엔드 외부 시스템
+
+설정 단일 출처 `api/src/core/config.py`. 키 목록은 `api/.env.example`. 비밀값은 `.env`(로컬)·`.env.prod`(운영)에서 주입.
+
+### 3.1. PostgreSQL
+
+- 드라이버: 비동기 `asyncpg`(앱 런타임), 동기 `psycopg2`(Alembic 마이그레이션). SQLAlchemy async ORM.
+- 환경변수: `DATABASE_URL`(async), `DATABASE_URL_SYNC`(Alembic). 모듈 `api/src/core/database.py`, 마이그레이션 `api/alembic/`.
+
+### 3.2. Redis
+
+- `redis[hiredis]`. 용도(pyproject 주석): JWT 블랙리스트, rate-limit(slowapi), OAuth state, SSE fanout.
+- 환경변수: `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_URL`. 모듈 `api/src/core/redis.py`.
+
+### 3.3. 인증 — JWT + OAuth (auth 도메인)
+
+`api/src/domains/auth/`. JWT(python-jose, HS256/RS256) + argon2 + RBAC.
+
+- JWT 환경변수: `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`, `JWT_REFRESH_TOKEN_EXPIRE_DAYS`.
+- **OAuth 프로바이더 3종** — `api/src/domains/auth/oauth/`에 `google.py`·`kakao.py`·`naver.py` 어댑터. httpx로 authorize/token/userinfo 호출(예: Google `accounts.google.com/o/oauth2/v2/auth`, `oauth2.googleapis.com/token`, `googleapis.com/oauth2/v3/userinfo`).
+- OAuth 환경변수: `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`, `KAKAO_CLIENT_ID/SECRET/REDIRECT_URI`, `NAVER_CLIENT_ID/SECRET/REDIRECT_URI`.
+- 라우터: `auth_router`가 `/api/v1` 접두로 등록(`api/src/main.py`).
+
+web 쪽 인증은 현재 목업(토큰 인터셉터 미배선, 1.2 참조) — 백엔드 OAuth/JWT와 프론트엔드 연결은 미완. [High]
+
+### 3.4. 이메일 (SMTP)
+
+- `fastapi-mail`. dev=mailpit, prod=SMTP via env.
+- 환경변수: `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_STARTTLS`, `MAIL_SSL_TLS`.
+
+### 3.5. CORS
+
+- `CORSMiddleware`가 `settings.cors_origins_list`로 등록(`api/src/main.py`). 환경변수 `CORS_ORIGINS`.
+
+---
+
+## 4. LLM 프로바이더 (chat 도메인)
+
+LangChain + LiteLLM 추상화로 프로바이더를 교체식으로 라우팅. 단일 출처 어댑터 `api/src/infra/llm/provider_factory.py`(`make_chat_litellm` — 앱에서 `ChatLiteLLM()`을 생성하는 유일한 지점). 설정 `LLMSettings`(`api/src/core/config.py`).
+
+- **프로바이더 전환은 `LLM_PROVIDER` 환경변수만 바꾸면 됨** (코드 변경 불필요).
+- 지원 프로바이더(`LLMProvider` enum): `openai`, `anthropic`, `gemini`(Google), `azure`(Azure OpenAI), `ollama`(로컬).
+- LLM 환경변수: `LLM_PROVIDER`, `LLM_DEFAULT_MODEL`, `LLM_TEMPERATURE`, `LLM_MAX_TOKENS`, `LLM_STREAMING`. 프로바이더별 자격증명(alias, `LLM_` 미접두): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AZURE_OPENAI_API_KEY`(+ azure deployment/base/version), ollama는 `api_base`(`OLLAMA_BASE_URL`) + sentinel key.
+- 재시도: `tenacity`. 도메인 경계: chat 도메인은 포트/인터페이스(`LLMClientProtocol`)에만 의존, `langchain_litellm` 직접 의존은 infra 어댑터에 격리.
+
+### 4.1. chat 엔드포인트 + SSE 스트리밍
+
+라우터 `api/src/domains/chat/router/chat_router.py`, `chat_router`가 `/api/v1` 접두로 등록. 접두 `/chat`, tags `["chat"]`.
+
+- `POST /chat/complete` — 단발 완성.
+- `POST /chat/stream` — SSE 스트리밍(`sse-starlette`의 `EventSourceResponse`, 토큰 청크당 `data` 이벤트).
+- `GET /chat/provider` — 활성 프로바이더 조회.
+- 메시지 전송(SSE 스트리밍 + DB 영속) 엔드포인트 등 추가 라우트 존재.
+
+---
+
+## 5. 이미지 생성 — 계획됨, 미배선
+
+`docs/image-generation.md`에 따르면 이미지 생성은 **v2+ 범위로 미루어진 부가 기능이며 MVP 비범위**다. 문서 자체가 "구현 결정이 아닌 사전 검토"이고 다수 항목이 "미결정"으로 표기됨. 후보 해법(IP-Adapter/LoRA, 시드 고정, 상용 이미지 API 캐릭터 참조)만 검토 단계. **현재 코드베이스에 이미지 생성 프로바이더/클라이언트 배선 없음.** [High]
+
+---
+
+## 6. 헬스체크·관측성
+
+- `health_router`가 prefix 없이 등록(`api/src/main.py`).
+- `CorrelationIdMiddleware` + `structlog` JSON 로깅(correlation_id). `api/src/core/middleware.py`, `api/src/core/logging.py`.
+- rate limiting: `slowapi`(Redis 기반).
+
+웹훅(외부 → 시스템)은 발견되지 않음. OAuth 콜백(`*_REDIRECT_URI`)은 표준 redirect 플로우이며 일반적 의미의 webhook 수신 엔드포인트가 아니다. [Medium]

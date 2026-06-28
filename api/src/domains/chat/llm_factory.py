@@ -157,6 +157,10 @@ class ProviderFactory:
             deployment = azure_deployment.strip() or model
             return f"azure/{deployment}"
 
+        # ── OpenAI-compatible: route via litellm's openai/<model> ─────────
+        if provider_str == LLMProvider.openai_compatible.value:
+            return f"openai/{model}"
+
         # ── Standard providers: <provider>/<model> ────────────────────────
         return f"{provider_str}/{model}"
 

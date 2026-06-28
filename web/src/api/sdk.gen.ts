@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteAdminUsersByIdData, DeleteAdminUsersByIdResponses, DeleteCommentsByCommentIdData, DeleteCommentsByCommentIdReactionsData, DeleteCommentsByCommentIdReactionsResponses, DeleteCommentsByCommentIdResponses, DeletePostsByPostIdData, DeletePostsByPostIdReactionsData, DeletePostsByPostIdReactionsResponses, DeletePostsByPostIdResponses, DeleteSamplesByIdData, DeleteSamplesByIdResponses, GetAdminUsersByIdData, GetAdminUsersByIdResponses, GetAdminUsersData, GetAdminUsersResponses, GetBoardsByBoardIdData, GetBoardsByBoardIdPostsData, GetBoardsByBoardIdPostsResponses, GetBoardsByBoardIdResponses, GetPostsByPostIdCommentsData, GetPostsByPostIdCommentsResponses, GetPostsByPostIdData, GetPostsByPostIdResponses, GetSamplesData, GetSamplesResponses, PostAdminUsersByIdPasswordResetData, PostAdminUsersByIdPasswordResetResponses, PostAuthLoginData, PostAuthLoginResponses, PostAuthLogoutData, PostAuthLogoutResponses, PostAuthRefreshData, PostAuthRefreshResponses, PostAuthSignupData, PostAuthSignupResponses, PostBoardsByBoardIdPostsData, PostBoardsByBoardIdPostsResponses, PostBoardsData, PostBoardsResponses, PostPostsByPostIdCommentsData, PostPostsByPostIdCommentsResponses, PostSamplesData, PostSamplesResponses, PutCommentsByCommentIdReactionsData, PutCommentsByCommentIdReactionsResponses, PutPostsByPostIdData, PutPostsByPostIdReactionsData, PutPostsByPostIdReactionsResponses, PutPostsByPostIdResponses } from './types.gen';
+import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -18,12 +18,59 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
     meta?: Record<string, unknown>;
 };
 
-export const deletePostsByPostId = <ThrowOnError extends boolean = false>(options: Options<DeletePostsByPostIdData, ThrowOnError>): RequestResult<DeletePostsByPostIdResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeletePostsByPostIdResponses, unknown, ThrowOnError>({ url: '/posts/{postId}', ...options });
+/**
+ * Health check
+ *
+ * Return service health status.
+ *
+ * Used by docker-compose healthcheck, load balancers, and ``make health``.
+ *
+ * Response body::
+ *
+ * {"status": "ok", "env": "development"}
+ */
+export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/health',
+    ...options
+});
 
-export const getPostsByPostId = <ThrowOnError extends boolean = false>(options: Options<GetPostsByPostIdData, ThrowOnError>): RequestResult<GetPostsByPostIdResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetPostsByPostIdResponses, unknown, ThrowOnError>({ url: '/posts/{postId}', ...options });
+/**
+ * Readiness check
+ *
+ * Return service readiness — verifies DB, Redis, and SMTP are reachable.
+ *
+ * Local development runs FastAPI on the host while docker-compose exposes
+ * PostgreSQL, Redis, and Mailpit on localhost. This endpoint performs real
+ * network checks against those configured endpoints so ``make smoke-test``
+ * can prove the host-run app can reach the local infra stack.
+ *
+ * Returns 200 when all dependencies respond; 503 if any are unavailable.
+ */
+export const getReady = <ThrowOnError extends boolean = false>(options?: Options<GetReadyData, ThrowOnError>): RequestResult<GetReadyResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetReadyResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/ready',
+    ...options
+});
 
-export const putPostsByPostId = <ThrowOnError extends boolean = false>(options: Options<PutPostsByPostIdData, ThrowOnError>): RequestResult<PutPostsByPostIdResponses, unknown, ThrowOnError> => (options.client ?? client).put<PutPostsByPostIdResponses, unknown, ThrowOnError>({
-    url: '/posts/{postId}',
+/**
+ * Register a new user
+ *
+ * Register a new user account and send a verification email.
+ *
+ * FastAPI validates and normalizes ``payload`` before this handler delegates
+ * registration to the auth application service.  The response does NOT
+ * include a JWT — the user must verify their email first (or the calling
+ * client skips verification in non-prod envs).
+ *
+ * Raises
+ * ------
+ * 409
+ * If a user with the given email already exists.
+ */
+export const postApiV1AuthSignup = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthSignupData, ThrowOnError>): RequestResult<PostApiV1AuthSignupResponses, PostApiV1AuthSignupErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthSignupResponses, PostApiV1AuthSignupErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/signup',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -31,10 +78,25 @@ export const putPostsByPostId = <ThrowOnError extends boolean = false>(options: 
     }
 });
 
-export const deletePostsByPostIdReactions = <ThrowOnError extends boolean = false>(options: Options<DeletePostsByPostIdReactionsData, ThrowOnError>): RequestResult<DeletePostsByPostIdReactionsResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeletePostsByPostIdReactionsResponses, unknown, ThrowOnError>({ url: '/posts/{postId}/reactions', ...options });
+/**
+ * Verify email address
+ *
+ * Mark a user's email as verified using the token from the email link.
+ */
+export const postApiV1AuthVerifyEmailByToken = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthVerifyEmailByTokenData, ThrowOnError>): RequestResult<PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1AuthVerifyEmailByTokenErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1AuthVerifyEmailByTokenErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/verify-email/{token}',
+    ...options
+});
 
-export const putPostsByPostIdReactions = <ThrowOnError extends boolean = false>(options: Options<PutPostsByPostIdReactionsData, ThrowOnError>): RequestResult<PutPostsByPostIdReactionsResponses, unknown, ThrowOnError> => (options.client ?? client).put<PutPostsByPostIdReactionsResponses, unknown, ThrowOnError>({
-    url: '/posts/{postId}/reactions',
+/**
+ * Login and receive JWT pair
+ *
+ * Authenticate with email + password and receive an access + refresh JWT pair.
+ */
+export const postApiV1AuthLogin = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthLoginData, ThrowOnError>): RequestResult<PostApiV1AuthLoginResponses, PostApiV1AuthLoginErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthLoginResponses, PostApiV1AuthLoginErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/login',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -42,10 +104,22 @@ export const putPostsByPostIdReactions = <ThrowOnError extends boolean = false>(
     }
 });
 
-export const deleteCommentsByCommentIdReactions = <ThrowOnError extends boolean = false>(options: Options<DeleteCommentsByCommentIdReactionsData, ThrowOnError>): RequestResult<DeleteCommentsByCommentIdReactionsResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeleteCommentsByCommentIdReactionsResponses, unknown, ThrowOnError>({ url: '/comments/{commentId}/reactions', ...options });
-
-export const putCommentsByCommentIdReactions = <ThrowOnError extends boolean = false>(options: Options<PutCommentsByCommentIdReactionsData, ThrowOnError>): RequestResult<PutCommentsByCommentIdReactionsResponses, unknown, ThrowOnError> => (options.client ?? client).put<PutCommentsByCommentIdReactionsResponses, unknown, ThrowOnError>({
-    url: '/comments/{commentId}/reactions',
+/**
+ * Rotate refresh token
+ *
+ * Exchange a refresh token for a new access + refresh token pair.
+ *
+ * The old refresh token is immediately revoked.  Reuse of an already-rotated
+ * token triggers family revocation (all sessions for the user are terminated).
+ *
+ * Raises
+ * ------
+ * 401
+ * If the token is invalid, expired, revoked, or a reuse attack is detected.
+ */
+export const postApiV1AuthRefresh = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthRefreshData, ThrowOnError>): RequestResult<PostApiV1AuthRefreshResponses, PostApiV1AuthRefreshErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthRefreshResponses, PostApiV1AuthRefreshErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/refresh',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -53,10 +127,16 @@ export const putCommentsByCommentIdReactions = <ThrowOnError extends boolean = f
     }
 });
 
-export const getSamples = <ThrowOnError extends boolean = false>(options?: Options<GetSamplesData, ThrowOnError>): RequestResult<GetSamplesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetSamplesResponses, unknown, ThrowOnError>({ url: '/samples', ...options });
-
-export const postSamples = <ThrowOnError extends boolean = false>(options: Options<PostSamplesData, ThrowOnError>): RequestResult<PostSamplesResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostSamplesResponses, unknown, ThrowOnError>({
-    url: '/samples',
+/**
+ * Logout and revoke tokens
+ *
+ * Revoke the refresh token and blacklist the current access token.
+ *
+ * The client should discard both tokens after calling this endpoint.
+ */
+export const postApiV1AuthLogout = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthLogoutData, ThrowOnError>): RequestResult<PostApiV1AuthLogoutResponses, PostApiV1AuthLogoutErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthLogoutResponses, PostApiV1AuthLogoutErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/logout',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -64,10 +144,17 @@ export const postSamples = <ThrowOnError extends boolean = false>(options: Optio
     }
 });
 
-export const getPostsByPostIdComments = <ThrowOnError extends boolean = false>(options: Options<GetPostsByPostIdCommentsData, ThrowOnError>): RequestResult<GetPostsByPostIdCommentsResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetPostsByPostIdCommentsResponses, unknown, ThrowOnError>({ url: '/posts/{postId}/comments', ...options });
-
-export const postPostsByPostIdComments = <ThrowOnError extends boolean = false>(options: Options<PostPostsByPostIdCommentsData, ThrowOnError>): RequestResult<PostPostsByPostIdCommentsResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostPostsByPostIdCommentsResponses, unknown, ThrowOnError>({
-    url: '/posts/{postId}/comments',
+/**
+ * Request password-reset email
+ *
+ * Send a password-reset link to the given email.
+ *
+ * Always returns the same 202 response regardless of whether the email exists
+ * (prevents user enumeration).
+ */
+export const postApiV1AuthPasswordReset = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthPasswordResetData, ThrowOnError>): RequestResult<PostApiV1AuthPasswordResetResponses, PostApiV1AuthPasswordResetErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthPasswordResetResponses, PostApiV1AuthPasswordResetErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/password-reset',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -75,8 +162,14 @@ export const postPostsByPostIdComments = <ThrowOnError extends boolean = false>(
     }
 });
 
-export const postBoards = <ThrowOnError extends boolean = false>(options: Options<PostBoardsData, ThrowOnError>): RequestResult<PostBoardsResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostBoardsResponses, unknown, ThrowOnError>({
-    url: '/boards',
+/**
+ * Apply password-reset token
+ *
+ * Apply a password-reset token and set a new password.
+ */
+export const postApiV1AuthPasswordResetConfirm = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthPasswordResetConfirmData, ThrowOnError>): RequestResult<PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetConfirmErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/password-reset/confirm',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -84,10 +177,65 @@ export const postBoards = <ThrowOnError extends boolean = false>(options: Option
     }
 });
 
-export const getBoardsByBoardIdPosts = <ThrowOnError extends boolean = false>(options: Options<GetBoardsByBoardIdPostsData, ThrowOnError>): RequestResult<GetBoardsByBoardIdPostsResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetBoardsByBoardIdPostsResponses, unknown, ThrowOnError>({ url: '/boards/{boardId}/posts', ...options });
+/**
+ * Current authenticated user
+ *
+ * Return the profile of the currently authenticated user.
+ */
+export const getApiV1AuthMe = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1AuthMeData, ThrowOnError>): RequestResult<GetApiV1AuthMeResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiV1AuthMeResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/me',
+    ...options
+});
 
-export const postBoardsByBoardIdPosts = <ThrowOnError extends boolean = false>(options: Options<PostBoardsByBoardIdPostsData, ThrowOnError>): RequestResult<PostBoardsByBoardIdPostsResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostBoardsByBoardIdPostsResponses, unknown, ThrowOnError>({
-    url: '/boards/{boardId}/posts',
+/**
+ * OAuth2 authorization URL
+ *
+ * Generate an OAuth2 authorization URL for the given provider.
+ *
+ * The returned ``state`` nonce is stored in Redis for CSRF validation in the
+ * callback.  Supported providers: google,kakao,naver.
+ *
+ * Raises
+ * ------
+ * 400
+ * If *provider* is not configured or unsupported.
+ */
+export const getApiV1AuthOauthByProviderLogin = <ThrowOnError extends boolean = false>(options: Options<GetApiV1AuthOauthByProviderLoginData, ThrowOnError>): RequestResult<GetApiV1AuthOauthByProviderLoginResponses, GetApiV1AuthOauthByProviderLoginErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1AuthOauthByProviderLoginResponses, GetApiV1AuthOauthByProviderLoginErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/oauth/{provider}/login',
+    ...options
+});
+
+/**
+ * OAuth2 callback — exchange code for JWT
+ *
+ * Complete the OAuth2 flow by exchanging the code for user tokens.
+ *
+ * Validates the ``state`` nonce against Redis to prevent CSRF attacks.
+ *
+ * Raises
+ * ------
+ * 400
+ * If the state is invalid or expired.
+ * 502
+ * If the OAuth provider returns an error.
+ */
+export const getApiV1AuthOauthByProviderCallback = <ThrowOnError extends boolean = false>(options: Options<GetApiV1AuthOauthByProviderCallbackData, ThrowOnError>): RequestResult<GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderCallbackErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderCallbackErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/oauth/{provider}/callback',
+    ...options
+});
+
+/**
+ * Non-streaming chat completion
+ *
+ * Send a conversation to the active LLM provider and receive the full response in a single JSON body.  Provider is set via ``LLM_PROVIDER``.
+ */
+export const postApiV1ChatComplete = <ThrowOnError extends boolean = false>(options: Options<PostApiV1ChatCompleteData, ThrowOnError>): RequestResult<PostApiV1ChatCompleteResponses, PostApiV1ChatCompleteErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1ChatCompleteResponses, PostApiV1ChatCompleteErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/chat/complete',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -95,8 +243,14 @@ export const postBoardsByBoardIdPosts = <ThrowOnError extends boolean = false>(o
     }
 });
 
-export const postAuthSignup = <ThrowOnError extends boolean = false>(options: Options<PostAuthSignupData, ThrowOnError>): RequestResult<PostAuthSignupResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostAuthSignupResponses, unknown, ThrowOnError>({
-    url: '/auth/signup',
+/**
+ * Streaming chat completion (SSE)
+ *
+ * Stream the LLM response as Server-Sent Events.  Each ``data`` event carries a text chunk.  A final ``data: [DONE]`` event signals the end.
+ */
+export const postApiV1ChatStream = <ThrowOnError extends boolean = false>(options: Options<PostApiV1ChatStreamData, ThrowOnError>): RequestResult<PostApiV1ChatStreamResponses, PostApiV1ChatStreamErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1ChatStreamResponses, PostApiV1ChatStreamErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/chat/stream',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -104,8 +258,40 @@ export const postAuthSignup = <ThrowOnError extends boolean = false>(options: Op
     }
 });
 
-export const postAuthRefresh = <ThrowOnError extends boolean = false>(options: Options<PostAuthRefreshData, ThrowOnError>): RequestResult<PostAuthRefreshResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostAuthRefreshResponses, unknown, ThrowOnError>({
-    url: '/auth/refresh',
+/**
+ * Active LLM provider info
+ *
+ * Return the currently active LLM provider name, model, and full LiteLLM model identifier.  Useful for health checks and integration tests.
+ */
+export const getApiV1ChatProvider = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1ChatProviderData, ThrowOnError>): RequestResult<GetApiV1ChatProviderResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiV1ChatProviderResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/chat/provider',
+    ...options
+});
+
+/**
+ * List conversations for authenticated user
+ *
+ * Return all conversations for the authenticated user (newest first).
+ */
+export const getApiV1ChatConversations = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1ChatConversationsData, ThrowOnError>): RequestResult<GetApiV1ChatConversationsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiV1ChatConversationsResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/chat/conversations',
+    ...options
+});
+
+/**
+ * Create a new conversation
+ *
+ * Create a new conversation session for the authenticated user.
+ *
+ * Requires the ``chat:write`` permission.
+ */
+export const postApiV1ChatConversations = <ThrowOnError extends boolean = false>(options: Options<PostApiV1ChatConversationsData, ThrowOnError>): RequestResult<PostApiV1ChatConversationsResponses, PostApiV1ChatConversationsErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1ChatConversationsResponses, PostApiV1ChatConversationsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/chat/conversations',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -113,10 +299,54 @@ export const postAuthRefresh = <ThrowOnError extends boolean = false>(options: O
     }
 });
 
-export const postAuthLogout = <ThrowOnError extends boolean = false>(options?: Options<PostAuthLogoutData, ThrowOnError>): RequestResult<PostAuthLogoutResponses, unknown, ThrowOnError> => (options?.client ?? client).post<PostAuthLogoutResponses, unknown, ThrowOnError>({ url: '/auth/logout', ...options });
+/**
+ * Get a conversation
+ *
+ * Return a conversation owned by the authenticated user.
+ */
+export const getApiV1ChatConversationsByConversationId = <ThrowOnError extends boolean = false>(options: Options<GetApiV1ChatConversationsByConversationIdData, ThrowOnError>): RequestResult<GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsByConversationIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsByConversationIdErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/chat/conversations/{conversation_id}',
+    ...options
+});
 
-export const postAuthLogin = <ThrowOnError extends boolean = false>(options: Options<PostAuthLoginData, ThrowOnError>): RequestResult<PostAuthLoginResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostAuthLoginResponses, unknown, ThrowOnError>({
-    url: '/auth/login',
+/**
+ * List messages in a conversation
+ *
+ * Return all messages in a conversation (oldest first).
+ */
+export const getApiV1ChatConversationsByConversationIdMessages = <ThrowOnError extends boolean = false>(options: Options<GetApiV1ChatConversationsByConversationIdMessagesData, ThrowOnError>): RequestResult<GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdMessagesErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdMessagesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/chat/conversations/{conversation_id}/messages',
+    ...options
+});
+
+/**
+ * Send a message — SSE streaming + DB persistence
+ *
+ * Send a user message and receive an SSE-streamed assistant reply.
+ *
+ * Workflow
+ * --------
+ * 1. Verify conversation ownership.
+ * 2. Persist the user message.
+ * 3. Rebuild LangChain message list from conversation history.
+ * 4. Stream tokens from the LLM provider.
+ * 5. Collect all chunks; persist the completed assistant message.
+ * 6. If this is the first turn, auto-generate a title.
+ *
+ * Returns an :class:`~sse_starlette.sse.EventSourceResponse` when
+ * ``body.stream=True`` (default); returns a :class:`MessageResponse` JSON
+ * body when ``body.stream=False``.
+ *
+ * Requires the ``chat:write`` permission.
+ */
+export const postApiV1ChatConversationsByConversationIdMessages = <ThrowOnError extends boolean = false>(options: Options<PostApiV1ChatConversationsByConversationIdMessagesData, ThrowOnError>): RequestResult<PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsByConversationIdMessagesErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsByConversationIdMessagesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/chat/conversations/{conversation_id}/messages',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -124,16 +354,59 @@ export const postAuthLogin = <ThrowOnError extends boolean = false>(options: Opt
     }
 });
 
-export const postAdminUsersByIdPasswordReset = <ThrowOnError extends boolean = false>(options: Options<PostAdminUsersByIdPasswordResetData, ThrowOnError>): RequestResult<PostAdminUsersByIdPasswordResetResponses, unknown, ThrowOnError> => (options.client ?? client).post<PostAdminUsersByIdPasswordResetResponses, unknown, ThrowOnError>({ url: '/admin/users/{id}/password-reset', ...options });
+/**
+ * 내 작품 목록
+ */
+export const getApiV1Works = <ThrowOnError extends boolean = false>(options?: Options<GetApiV1WorksData, ThrowOnError>): RequestResult<GetApiV1WorksResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetApiV1WorksResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/works',
+    ...options
+});
 
-export const getBoardsByBoardId = <ThrowOnError extends boolean = false>(options: Options<GetBoardsByBoardIdData, ThrowOnError>): RequestResult<GetBoardsByBoardIdResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetBoardsByBoardIdResponses, unknown, ThrowOnError>({ url: '/boards/{boardId}', ...options });
+/**
+ * 작품 생성
+ */
+export const postApiV1Works = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksData, ThrowOnError>): RequestResult<PostApiV1WorksResponses, PostApiV1WorksErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksResponses, PostApiV1WorksErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/works',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
-export const getAdminUsers = <ThrowOnError extends boolean = false>(options?: Options<GetAdminUsersData, ThrowOnError>): RequestResult<GetAdminUsersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetAdminUsersResponses, unknown, ThrowOnError>({ url: '/admin/users', ...options });
+/**
+ * 작품 삭제
+ */
+export const deleteApiV1WorksByWorkId = <ThrowOnError extends boolean = false>(options: Options<DeleteApiV1WorksByWorkIdData, ThrowOnError>): RequestResult<DeleteApiV1WorksByWorkIdResponses, DeleteApiV1WorksByWorkIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiV1WorksByWorkIdResponses, DeleteApiV1WorksByWorkIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/works/{work_id}',
+    ...options
+});
 
-export const deleteAdminUsersById = <ThrowOnError extends boolean = false>(options: Options<DeleteAdminUsersByIdData, ThrowOnError>): RequestResult<DeleteAdminUsersByIdResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeleteAdminUsersByIdResponses, unknown, ThrowOnError>({ url: '/admin/users/{id}', ...options });
+/**
+ * 작품 단건 조회
+ */
+export const getApiV1WorksByWorkId = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdResponses, GetApiV1WorksByWorkIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdResponses, GetApiV1WorksByWorkIdErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/works/{work_id}',
+    ...options
+});
 
-export const getAdminUsersById = <ThrowOnError extends boolean = false>(options: Options<GetAdminUsersByIdData, ThrowOnError>): RequestResult<GetAdminUsersByIdResponses, unknown, ThrowOnError> => (options.client ?? client).get<GetAdminUsersByIdResponses, unknown, ThrowOnError>({ url: '/admin/users/{id}', ...options });
-
-export const deleteSamplesById = <ThrowOnError extends boolean = false>(options: Options<DeleteSamplesByIdData, ThrowOnError>): RequestResult<DeleteSamplesByIdResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeleteSamplesByIdResponses, unknown, ThrowOnError>({ url: '/samples/{id}', ...options });
-
-export const deleteCommentsByCommentId = <ThrowOnError extends boolean = false>(options: Options<DeleteCommentsByCommentIdData, ThrowOnError>): RequestResult<DeleteCommentsByCommentIdResponses, unknown, ThrowOnError> => (options.client ?? client).delete<DeleteCommentsByCommentIdResponses, unknown, ThrowOnError>({ url: '/comments/{commentId}', ...options });
+/**
+ * 작품 수정
+ */
+export const patchApiV1WorksByWorkId = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1WorksByWorkIdData, ThrowOnError>): RequestResult<PatchApiV1WorksByWorkIdResponses, PatchApiV1WorksByWorkIdErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1WorksByWorkIdResponses, PatchApiV1WorksByWorkIdErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/works/{work_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

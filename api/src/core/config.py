@@ -46,6 +46,9 @@ class LLMProvider(StrEnum):
     * ``gemini``    — Google Gemini (gemini-1.5-flash, gemini-2.0-flash, …)
     * ``azure``     — Azure OpenAI (uses deployment name instead of model)
     * ``ollama``    — Local Ollama inference server (no API key required)
+    * ``openai_compatible`` — any OpenAI-compatible endpoint (custom base URL),
+      e.g. z.ai/GLM coding plan. Routes via litellm's ``openai/<model>`` with a
+      configured ``api_base`` + ``api_key``.
     """
 
     openai = "openai"
@@ -53,6 +56,7 @@ class LLMProvider(StrEnum):
     gemini = "gemini"
     azure = "azure"
     ollama = "ollama"
+    openai_compatible = "openai_compatible"
 
 
 class LogFormat(StrEnum):
@@ -157,6 +161,19 @@ class LLMSettings(BaseSettings):
         alias="OLLAMA_BASE_URL",
     )
 
+    # OpenAI-compatible (custom endpoint — e.g. z.ai/GLM coding plan)
+    openai_compatible_base_url: str = Field(
+        default="",
+        alias="OPENAI_COMPATIBLE_BASE_URL",
+        description="Base URL of an OpenAI-compatible endpoint, e.g. "
+        "https://api.z.ai/api/coding/paas/v4",
+    )
+    openai_compatible_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        alias="OPENAI_COMPATIBLE_API_KEY",
+        description="API key for the OpenAI-compatible endpoint (Bearer token).",
+    )
+
     # ── Validators ────────────────────────────────────────────────────────────
 
     @field_validator("provider", mode="before")
@@ -203,6 +220,9 @@ class LLMSettings(BaseSettings):
             return f"azure/{deployment}"
         if self.provider == LLMProvider.gemini:
             return f"gemini/{self.default_model}"
+        if self.provider == LLMProvider.openai_compatible:
+            # litellm OpenAI-compatible route: openai/<model> + custom api_base
+            return f"openai/{self.default_model}"
         return f"{self.provider.value}/{self.default_model}"
 
     @property
@@ -217,6 +237,7 @@ class LLMSettings(BaseSettings):
             LLMProvider.gemini: self.gemini_api_key,
             LLMProvider.azure: self.azure_openai_api_key,
             LLMProvider.ollama: SecretStr(""),
+            LLMProvider.openai_compatible: self.openai_compatible_api_key,
         }
         return _map[self.provider].get_secret_value()
 
@@ -249,6 +270,11 @@ class LLMSettings(BaseSettings):
             kwargs["api_base"] = self.ollama_base_url
             # litellm accepts "ollama" as a sentinel when no key is needed
             kwargs["api_key"] = "ollama"
+
+        elif self.provider == LLMProvider.openai_compatible:
+            # OpenAI-compatible: openai/<model> + custom base URL + key
+            kwargs["api_base"] = self.openai_compatible_base_url
+            kwargs["api_key"] = self.active_api_key
 
         else:
             key = self.active_api_key

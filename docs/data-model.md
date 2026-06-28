@@ -17,10 +17,10 @@
 3. **상태/링크 (State & Link):** 타임라인 상태(Timeline State)와 씬-엔티티 링크(Scene-Entity Link). "언제 무엇이 어떻게 변했는가"와 "어느 씬에 누가 나오는가"를 잇는다.
 4. **벡터 (Embedding):** 엔티티 카드와 씬 본문을 청킹·임베딩해 의미 검색을 보조한다(메모리의 보조 근거).
 
-모든 데이터는 최상위 소유 단위인 **작품(Work)** 에 귀속되고, 작품은 **계정(Account)** 에 귀속된다. 이 두 단계의 소유 사슬이 멀티테넌시 격리의 근거다(7장).
+모든 데이터는 최상위 소유 단위인 **작품(Work)** 에 귀속되고, 작품은 **계정(= 인증 `users` 행)** 에 귀속된다. 이 두 단계의 소유 사슬이 멀티테넌시 격리의 근거다(7장). **테넌트 루트는 별도 `accounts` 테이블이 아니라 auth 도메인의 `users`다 — 회원=계정=사용자(동일인), ADR-0005.**
 
 ```
-계정(Account)
+사용자 계정(users)
    └─ 작품(Work)                         ← 멀티테넌시 격리 경계
         ├─ 시놉시스(Synopsis)            ← 작품당 1
         ├─ 부 → 챕터 → 씬(Scene)         ← 계층 본문
@@ -44,21 +44,21 @@
 
 ### 2.1. 테이블
 
-#### `accounts` (계정 — 테넌트)
-| 필드 | 타입 | 설명 |
-|---|---|---|
-| `id` | UUID PK | |
-| `email` | text unique | |
-| `created_at` | timestamptz | |
+> **테넌트 루트 = `users` (ADR-0005).** 별도 `accounts` 테이블은 두지 않는다. 인증 도메인의 `users`(id·email·display_name·roles·is_active 등)가 곧 테넌트다. 아래 모든 `→ users` FK가 격리의 뿌리다.
 
 #### `works` (작품)
 | 필드 | 타입 | 설명 |
 |---|---|---|
 | `id` | UUID PK | |
-| `account_id` | UUID FK → accounts | **소유 테넌트.** 모든 하위 데이터 격리의 뿌리 |
+| `user_id` | UUID FK → users | **소유 테넌트.** 모든 하위 데이터 격리의 뿌리 (ADR-0005) |
 | `title` | text | 작품 제목 |
+| `short_label` | text | 표지/사이드바용 한 글자 약자 |
 | `genre` | text | 무협·로판·판타지·회귀물 등 (온보딩 선택) |
+| `sub_genre` | text | '회귀' 등 라벨 (목업 `Work.subGenre`) |
+| `keywords` | text[] | 키워드 태그 |
 | `style` | text | 기본 문체 |
+| `status` | text | 연재 중 / 구상 / 초고 |
+| `cover_theme` | text | dark / green / orange |
 | `created_at` / `updated_at` | timestamptz | |
 
 #### `synopses` (시놉시스)
@@ -271,7 +271,7 @@ flowchart TD
 
 ## 7. 멀티테넌시 격리 (Multi-tenancy)
 
-상용 SaaS이므로 테넌트(계정) 간 데이터 격리는 필수다(PRD 4.5). 소유 사슬은 `embeddings/entities/scenes/... → works → accounts`다. 핵심 불변식: **모든 도메인 테이블이 `work_id`를 직접 보유하고, 모든 쿼리는 `work_id`(궁극적으로 `account_id`)로 스코프된다.** 메모리·벡터 검색 결과가 타 테넌트 데이터를 반환하지 않도록 한다.
+상용 SaaS이므로 테넌트(사용자 계정) 간 데이터 격리는 필수다(PRD 4.5). 소유 사슬은 `embeddings/entities/scenes/... → works → users`다. 핵심 불변식: **모든 도메인 테이블이 `work_id`를 직접 보유하고, 모든 쿼리는 `work_id`(궁극적으로 `user_id`)로 스코프된다.** 격리 enforcement는 애플리케이션 레이어 스코핑(now) + RLS(후속)다(ADR-0005). 메모리·벡터 검색 결과가 타 테넌트 데이터를 반환하지 않도록 한다.
 
 ### 7.1. 격리 책임 위치
 
@@ -362,7 +362,7 @@ flowchart LR
 
 ```mermaid
 erDiagram
-    accounts ||--o{ works : owns
+    users ||--o{ works : owns
     works ||--|| synopses : has
     works ||--o{ episodes : contains
     episodes ||--o{ chapters : contains
@@ -377,13 +377,13 @@ erDiagram
     scenes ||--o{ scene_entity_links : "등장"
     entities ||--o{ scene_entity_links : "등장"
 
-    accounts {
+    users {
         uuid id PK
         text email
     }
     works {
         uuid id PK
-        uuid account_id FK
+        uuid user_id FK
         text title
         text genre
         text style

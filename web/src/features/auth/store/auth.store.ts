@@ -15,10 +15,11 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: true,
-      user: { email: 'baekya@storyweaver.kr', role: 'USER' },
+      user: { email: 'baekya@storyweaver.kr', role: 'ADMIN' },
       login: (user) => set({ isAuthenticated: true, user }),
       logout: () => set({ isAuthenticated: false, user: null }),
     }),
-    { name: 'sw-auth' }
+    // 시드 역할(ADMIN) 변경이 기존 localStorage에 막히지 않도록 키를 버전업한다.
+    { name: 'sw-auth-v2' }
   )
 );

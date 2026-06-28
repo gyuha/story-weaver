@@ -419,7 +419,37 @@ class TestLLMProvider:
 
     def test_all_provider_values_in_enum(self) -> None:
         values = {p.value for p in LLMProvider}
-        assert values == {"openai", "anthropic", "gemini", "azure", "ollama"}
+        assert values == {"openai", "anthropic", "gemini", "azure", "ollama", "openai_compatible"}
+
+    def test_openai_compatible_litellm_model_uses_openai_prefix(self) -> None:
+        s = LLMSettings(
+            provider=LLMProvider.openai_compatible,
+            default_model="glm-4.6",
+            OPENAI_COMPATIBLE_BASE_URL="https://api.z.ai/api/coding/paas/v4",
+            OPENAI_COMPATIBLE_API_KEY="zai-test-key",
+        )
+        # litellm OpenAI-compatible route → openai/<model>, not openai_compatible/<model>
+        assert s.litellm_model == "openai/glm-4.6"
+
+    def test_openai_compatible_kwargs_carry_base_url_and_key(self) -> None:
+        s = LLMSettings(
+            provider=LLMProvider.openai_compatible,
+            default_model="glm-4.6",
+            OPENAI_COMPATIBLE_BASE_URL="https://api.z.ai/api/coding/paas/v4",
+            OPENAI_COMPATIBLE_API_KEY="zai-test-key",
+        )
+        kwargs = s.as_litellm_kwargs()
+        assert kwargs["model"] == "openai/glm-4.6"
+        assert kwargs["api_base"] == "https://api.z.ai/api/coding/paas/v4"
+        assert kwargs["api_key"] == "zai-test-key"
+
+    def test_openai_compatible_active_api_key(self) -> None:
+        s = LLMSettings(
+            provider=LLMProvider.openai_compatible,
+            default_model="glm-4.6",
+            OPENAI_COMPATIBLE_API_KEY="zai-test-key",
+        )
+        assert s.active_api_key == "zai-test-key"
 
     def test_provider_env_var_name_is_llm_provider(self) -> None:
         """LLM_PROVIDER is the canonical env var for provider selection."""

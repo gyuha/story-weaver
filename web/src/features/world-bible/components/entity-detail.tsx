@@ -1,6 +1,7 @@
 import type { Entity, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Clock, Pencil } from 'lucide-react';
 
 export function EntityDetail({ work, entity }: { work: Work; entity: Entity }) {
   const states = work.timeline
@@ -38,6 +39,15 @@ export function EntityDetail({ work, entity }: { work: Work; entity: Entity }) {
               <div className="text-[13px] leading-[1.4] text-faint">별칭 · {entity.alias}</div>
             )}
           </div>
+          <Link
+            to="/works/$workId/bible/edit"
+            params={{ workId: work.id }}
+            search={{ entity: entity.id }}
+            className="mt-[3px] ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-line-strong px-3.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-surface"
+          >
+            <Pencil className="size-[14px]" strokeWidth={2} />
+            수정
+          </Link>
         </div>
 
         <p className="my-[14px] mb-[26px] font-serif text-[15px] leading-[1.7] text-ink-soft">

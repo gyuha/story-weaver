@@ -158,6 +158,11 @@ tasks:
     cmds:
       - uv run mypy {{.SRC_DIR}}
 
+  openapi:
+    desc: Export the FastAPI OpenAPI spec to repo-root docs/openapi.json (frontend contract)
+    cmds:
+      - uv run python scripts/export_openapi.py
+
   # ── Alembic migrations ───────────────────────────────────────────────────────
   migrate:
     desc: Start local infra if needed, then apply all pending Alembic migrations
