@@ -12,26 +12,19 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { authApi } from '@/features/auth/api/auth.api';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useWorkspaceMeta } from '@/features/shared/store/selectors';
 import { type Theme, useTheme } from '@/hooks/use-theme';
 import { Link, useNavigate } from '@tanstack/react-router';
-import {
-  ChevronDown,
-  Library,
-  LogOut,
-  Monitor,
-  Moon,
-  Settings2,
-  ShieldCheck,
-  Sun,
-} from 'lucide-react';
+import { ChevronDown, Library, LogOut, Monitor, Moon, Settings2, Sun } from 'lucide-react';
 
 /** 상단 바 우측 인증 영역 — 비로그인: 로그인/회원가입, 로그인: 사용자 드롭다운(설정·테마·로그아웃) */
 export function UserMenu() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const clear = useAuthStore((s) => s.clear);
   const { workspaceName, authorInitial } = useWorkspaceMeta();
   const { theme, setTheme, isDark } = useTheme();
   const navigate = useNavigate();
@@ -49,9 +42,12 @@ export function UserMenu() {
     );
   }
 
-  const handleLogout = () => {
-    logout();
-    navigate({ to: '/' });
+  const handleLogout = async () => {
+    if (refreshToken) {
+      await authApi.logout({ body: { refresh_token: refreshToken } }).catch(() => {});
+    }
+    clear();
+    navigate({ to: '/auth/login' });
   };
 
   const ThemeIcon = theme === 'system' ? Monitor : isDark ? Moon : Sun;
@@ -80,12 +76,7 @@ export function UserMenu() {
           <Settings2 />
           설정
         </DropdownMenuItem>
-        {user?.role === 'ADMIN' && (
-          <DropdownMenuItem render={<Link to="/admin" />}>
-            <ShieldCheck />
-            관리자
-          </DropdownMenuItem>
-        )}
+        {/* 관리자 메뉴: role 정보 없음 — 서버측 권한 검사로 보호 */}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <ThemeIcon />

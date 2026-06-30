@@ -33,6 +33,8 @@ from domains.auth.email import AuthEmailSender, get_auth_email_service
 from domains.auth.models import User
 from domains.auth.repository import AuthRepository
 from domains.auth.schemas import (
+    ChangePasswordRequest,
+    ChangePasswordResponse,
     LoginRequest,
     LogoutRequest,
     OAuthLoginURLResponse,
@@ -242,6 +244,29 @@ async def confirm_password_reset(
         raise _app_error_to_http(exc) from exc
 
     return PasswordResetConfirmResponse()
+
+
+@router.post(
+    "/change-password",
+    response_model=ChangePasswordResponse,
+    summary="Change password (authenticated)",
+)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(_get_service),
+) -> ChangePasswordResponse:
+    """Change the authenticated user's password.
+
+    Verifies the current password, applies the signup password policy to the new
+    one, then revokes all of the user's sessions (the client must log in again).
+    """
+    try:
+        await service.change_password(current_user, body.current_password, body.new_password)
+    except AppError as exc:
+        raise _app_error_to_http(exc) from exc
+
+    return ChangePasswordResponse()
 
 
 @router.get(

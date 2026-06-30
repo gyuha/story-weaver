@@ -446,6 +446,10 @@ task infra        # docker-compose up -d (infra only, healthy 대기)
 task infra-down   # docker-compose down
 task migrate      # alembic upgrade head
 
+# 운영자 CLI (DB 기동 필요) — 상세는 아래 "관리자 CLI" 섹션
+task verify-email -- <email>   # 회원 이메일 인증 (is_verified=true)
+task grant-admin  -- <email>   # 회원에게 admin 역할 부여
+
 # 테스트 & 품질
 task test         # pytest (전체)
 task lint         # ruff check + mypy
@@ -805,6 +809,32 @@ sequenceDiagram
 | `POST` | `/api/v1/chat/conversations/{id}/messages` | 메시지 전송 (SSE 스트리밍) |
 
 
+
+---
+
+## 관리자 CLI (운영자 도구)
+
+운영자가 **이메일 인증 링크 없이** 회원을 수동 인증하거나 특정 회원에게 **admin 역할**을 부여하는 CLI입니다. `scripts/manage.py`(argparse)로 구현되며 `task`로 실행합니다. **DB가 기동돼 있어야 합니다**(`task infra` 또는 `task dev`).
+
+```bash
+# 회원 이메일 인증 (User.is_verified = true)
+task verify-email -- user@example.com
+
+# 회원에게 admin 역할 부여 (admin 역할이 없으면 생성 후 부여)
+task grant-admin -- admin@example.com
+
+# 저장소 루트에서는 api: 네임스페이스로
+task api:verify-email -- user@example.com
+task api:grant-admin  -- admin@example.com
+
+# 직접 실행도 가능
+uv run python scripts/manage.py verify-email user@example.com
+```
+
+- 두 명령 모두 **멱등**합니다 — 이미 인증된 계정/이미 admin인 계정은 변경 없이 안내만 출력합니다. 존재하지 않는 이메일은 오류 메시지 + 비정상 종료(exit 1)입니다.
+- 용도: dev에서 가입 후 "Email verification is required before login."으로 막힐 때 메일 없이 인증을 풀거나, 초기 운영자 계정에 admin 역할을 부여할 때.
+- 여기서 "회원 인증"은 **이메일 인증(`is_verified`)** 이며, 운영자 허가 절차인 **계정 승인**(pending→approved)과는 다른 축입니다.
+- `admin` 역할은 *이름*만 부여합니다(권한 매트릭스 시드는 별도). 향후 관리자 화면/권한 게이팅에서 이 역할을 기준으로 삼습니다.
 
 ---
 

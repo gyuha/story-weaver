@@ -134,6 +134,14 @@ class FakeAuthRepository:
     async def get_role_by_name(self, name: str) -> Any | None:
         return self.roles.get(name)
 
+    async def get_or_create_role(self, name: str) -> Any:
+        role = self.roles.get(name)
+        if role is None:
+            role = MagicMock()
+            role.name = name
+            self.roles[name] = role
+        return role
+
     async def assign_role_to_user(self, user: Any, role: Any) -> None:
         if role not in user.roles:
             user.roles.append(role)

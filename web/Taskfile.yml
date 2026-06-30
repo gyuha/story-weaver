@@ -53,6 +53,11 @@ tasks:
     cmds:
       - pnpm lint:fix
 
+  test:
+    desc: vitest 테스트 실행
+    cmds:
+      - pnpm test
+
   check:
     desc: 커밋 전 검증 (typecheck + lint)
     cmds:

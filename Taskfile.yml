@@ -68,3 +68,15 @@ tasks:
     desc: web 타입 검사 + 린트
     cmds:
       - task: web:check
+
+  contract:
+    desc: "API 계약 갱신: api OpenAPI export → web Hey API 재생성"
+    cmds:
+      - task: api:openapi
+      - task: web:generate
+
+  contract-check:
+    desc: 계약 갱신 후 web 타입체크·린트까지 검증
+    cmds:
+      - task: contract
+      - task: web:check

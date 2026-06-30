@@ -1,7 +1,8 @@
-import { Link, useNavigate } from '@tanstack/react-router';
-import { Check, Eye } from 'lucide-react';
+import { authApi } from '@/features/auth/api/auth.api';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { Link } from '@tanstack/react-router';
+import { Check, Eye, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { useAuthStore } from '../store/auth.store';
 import { OrDivider, SocialRow } from './auth-form-parts';
 import { AuthLayout } from './auth-layout';
 
@@ -12,21 +13,32 @@ const FEATURES = [
 ];
 
 export function SignupPage() {
-  const navigate = useNavigate();
-  const login = useAuthStore((s) => s.login);
-  const [penName, setPenName] = useState('백야');
-  const [email, setEmail] = useState('baekya@storyweaver.kr');
-  const [password, setPassword] = useState('storyweaver');
-  const [agreed, setAgreed] = useState(true);
+  const [penName, setPenName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const strength = Math.min(3, Math.floor(password.length / 4));
   const canSubmit = penName.trim() && email.trim() && password.length >= 8 && agreed;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    login({ email: email.trim(), role: 'USER' });
-    navigate({ to: '/works' });
+    setError('');
+    setLoading(true);
+    try {
+      await authApi.signup({
+        body: { email: email.trim(), password, display_name: penName.trim() },
+      });
+      setSent(true);
+    } catch (err) {
+      setError(apiErrorMessage(err, '가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,7 +70,23 @@ export function SignupPage() {
         </Link>
       </div>
 
-      <form onSubmit={submit} className="w-[360px]">
+      {sent ? (
+        <div className="flex w-[360px] flex-col items-center gap-4 text-center">
+          <Mail className="size-10 text-primary" strokeWidth={1.5} />
+          <p className="text-[15px] leading-[1.6] text-ink">
+            인증 메일을 보냈습니다 — 메일함을 확인해 주세요
+          </p>
+          <p className="text-[13px] text-muted-ink">
+            메일이 오지 않으면 스팸함을 확인하거나{' '}
+            <Link to="/auth/login" className="font-medium text-primary">
+              로그인
+            </Link>{' '}
+            페이지에서 재발송할 수 있습니다.
+          </p>
+        </div>
+      ) : null}
+
+      <form onSubmit={submit} className={sent ? 'hidden' : 'w-[360px]'}>
         <h1 className="mb-2 text-[26px] font-bold leading-[1.25] tracking-[-0.02em]">
           웹소설 창작을 시작하세요
         </h1>
@@ -116,12 +144,14 @@ export function SignupPage() {
           </span>
         </button>
 
+        {error && <p className="mb-3 text-[13px] text-danger">{error}</p>}
+
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={!canSubmit || loading}
           className="h-11 w-full rounded-md bg-primary text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-40"
         >
-          무료로 시작하기
+          {loading ? '처리 중…' : '무료로 시작하기'}
         </button>
       </form>
     </AuthLayout>

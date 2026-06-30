@@ -35,6 +35,21 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+def validate_password_strength(v: str) -> str:
+    """Require a production-grade password shape (signup + change-password)."""
+    if any(c.isspace() for c in v):
+        raise ValueError("Password must not contain whitespace.")
+    if not any(c.isupper() for c in v):
+        raise ValueError("Password must contain at least one uppercase letter.")
+    if not any(c.islower() for c in v):
+        raise ValueError("Password must contain at least one lowercase letter.")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain at least one digit.")
+    if not re.search(r"[^A-Za-z0-9\s]", v):
+        raise ValueError("Password must contain at least one special character.")
+    return v
+
+
 class SignupRequest(BaseModel):
     """Request body for POST /auth/signup."""
 
@@ -54,17 +69,7 @@ class SignupRequest(BaseModel):
     @classmethod
     def password_strength(cls, v: str) -> str:
         """Require a production-grade password shape for signup payloads."""
-        if any(c.isspace() for c in v):
-            raise ValueError("Password must not contain whitespace.")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter.")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter.")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit.")
-        if not re.search(r"[^A-Za-z0-9\s]", v):
-            raise ValueError("Password must contain at least one special character.")
-        return v
+        return validate_password_strength(v)
 
     @field_validator("display_name", mode="before")
     @classmethod
@@ -83,6 +88,25 @@ class SignupResponse(BaseModel):
 
     user: UserResponse
     message: str = "Verification email sent."
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request body for POST /auth/change-password (authenticated)."""
+
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_strength(cls, v: str) -> str:
+        """Apply the same strength policy as signup to the new password."""
+        return validate_password_strength(v)
+
+
+class ChangePasswordResponse(BaseModel):
+    """Response body for POST /auth/change-password."""
+
+    message: str = "Password changed. Please log in again."
 
 
 # ---------------------------------------------------------------------------

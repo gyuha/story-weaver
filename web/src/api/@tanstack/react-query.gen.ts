@@ -4,8 +4,8 @@ import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanst
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { deleteApiV1WorksByWorkId, getApiV1AuthMe, getApiV1AuthOauthByProviderCallback, getApiV1AuthOauthByProviderLogin, getApiV1ChatConversations, getApiV1ChatConversationsByConversationId, getApiV1ChatConversationsByConversationIdMessages, getApiV1ChatProvider, getApiV1Works, getApiV1WorksByWorkId, getHealth, getReady, type Options, patchApiV1WorksByWorkId, postApiV1AuthLogin, postApiV1AuthLogout, postApiV1AuthPasswordReset, postApiV1AuthPasswordResetConfirm, postApiV1AuthRefresh, postApiV1AuthSignup, postApiV1AuthVerifyEmailByToken, postApiV1ChatComplete, postApiV1ChatConversations, postApiV1ChatConversationsByConversationIdMessages, postApiV1ChatStream, postApiV1Works } from '../sdk.gen';
-import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdError, DeleteApiV1WorksByWorkIdResponse, GetApiV1AuthMeData, GetApiV1AuthMeResponse, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackError, GetApiV1AuthOauthByProviderCallbackResponse, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginError, GetApiV1AuthOauthByProviderLoginResponse, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdError, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesError, GetApiV1ChatConversationsByConversationIdMessagesResponse, GetApiV1ChatConversationsByConversationIdResponse, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponse, GetApiV1ChatProviderData, GetApiV1ChatProviderResponse, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdError, GetApiV1WorksByWorkIdResponse, GetApiV1WorksData, GetApiV1WorksResponse, GetHealthData, GetHealthResponse, GetReadyData, GetReadyResponse, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdError, PatchApiV1WorksByWorkIdResponse, PostApiV1AuthLoginData, PostApiV1AuthLoginError, PostApiV1AuthLoginResponse, PostApiV1AuthLogoutData, PostApiV1AuthLogoutError, PostApiV1AuthLogoutResponse, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmError, PostApiV1AuthPasswordResetConfirmResponse, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetError, PostApiV1AuthPasswordResetResponse, PostApiV1AuthRefreshData, PostApiV1AuthRefreshError, PostApiV1AuthRefreshResponse, PostApiV1AuthSignupData, PostApiV1AuthSignupError, PostApiV1AuthSignupResponse, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenError, PostApiV1AuthVerifyEmailByTokenResponse, PostApiV1ChatCompleteData, PostApiV1ChatCompleteError, PostApiV1ChatCompleteResponse, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesError, PostApiV1ChatConversationsData, PostApiV1ChatConversationsError, PostApiV1ChatConversationsResponse, PostApiV1ChatStreamData, PostApiV1ChatStreamError, PostApiV1WorksData, PostApiV1WorksError, PostApiV1WorksResponse } from '../types.gen';
+import { deleteApiV1WorksByWorkId, getApiV1AuthMe, getApiV1AuthOauthByProviderCallback, getApiV1AuthOauthByProviderLogin, getApiV1ChatConversations, getApiV1ChatConversationsByConversationId, getApiV1ChatConversationsByConversationIdMessages, getApiV1ChatProvider, getApiV1Works, getApiV1WorksByWorkId, getHealth, getReady, type Options, patchApiV1WorksByWorkId, postApiV1AuthChangePassword, postApiV1AuthLogin, postApiV1AuthLogout, postApiV1AuthPasswordReset, postApiV1AuthPasswordResetConfirm, postApiV1AuthRefresh, postApiV1AuthSignup, postApiV1AuthVerifyEmailByToken, postApiV1ChatComplete, postApiV1ChatConversations, postApiV1ChatConversationsByConversationIdMessages, postApiV1ChatStream, postApiV1Works } from '../sdk.gen';
+import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdError, DeleteApiV1WorksByWorkIdResponse, GetApiV1AuthMeData, GetApiV1AuthMeResponse, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackError, GetApiV1AuthOauthByProviderCallbackResponse, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginError, GetApiV1AuthOauthByProviderLoginResponse, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdError, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesError, GetApiV1ChatConversationsByConversationIdMessagesResponse, GetApiV1ChatConversationsByConversationIdResponse, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponse, GetApiV1ChatProviderData, GetApiV1ChatProviderResponse, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdError, GetApiV1WorksByWorkIdResponse, GetApiV1WorksData, GetApiV1WorksResponse, GetHealthData, GetHealthResponse, GetReadyData, GetReadyResponse, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdError, PatchApiV1WorksByWorkIdResponse, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordError, PostApiV1AuthChangePasswordResponse, PostApiV1AuthLoginData, PostApiV1AuthLoginError, PostApiV1AuthLoginResponse, PostApiV1AuthLogoutData, PostApiV1AuthLogoutError, PostApiV1AuthLogoutResponse, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmError, PostApiV1AuthPasswordResetConfirmResponse, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetError, PostApiV1AuthPasswordResetResponse, PostApiV1AuthRefreshData, PostApiV1AuthRefreshError, PostApiV1AuthRefreshResponse, PostApiV1AuthSignupData, PostApiV1AuthSignupError, PostApiV1AuthSignupResponse, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenError, PostApiV1AuthVerifyEmailByTokenResponse, PostApiV1ChatCompleteData, PostApiV1ChatCompleteError, PostApiV1ChatCompleteResponse, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesError, PostApiV1ChatConversationsData, PostApiV1ChatConversationsError, PostApiV1ChatConversationsResponse, PostApiV1ChatStreamData, PostApiV1ChatStreamError, PostApiV1WorksData, PostApiV1WorksError, PostApiV1WorksResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseURL' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -239,6 +239,28 @@ export const postApiV1AuthPasswordResetConfirmMutation = (options?: Partial<Opti
     const mutationOptions: UseMutationOptions<PostApiV1AuthPasswordResetConfirmResponse, AxiosError<PostApiV1AuthPasswordResetConfirmError>, Options<PostApiV1AuthPasswordResetConfirmData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await postApiV1AuthPasswordResetConfirm({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Change password (authenticated)
+ *
+ * Change the authenticated user's password.
+ *
+ * Verifies the current password, applies the signup password policy to the new
+ * one, then revokes all of the user's sessions (the client must log in again).
+ */
+export const postApiV1AuthChangePasswordMutation = (options?: Partial<Options<PostApiV1AuthChangePasswordData>>): UseMutationOptions<PostApiV1AuthChangePasswordResponse, AxiosError<PostApiV1AuthChangePasswordError>, Options<PostApiV1AuthChangePasswordData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1AuthChangePasswordResponse, AxiosError<PostApiV1AuthChangePasswordError>, Options<PostApiV1AuthChangePasswordData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await postApiV1AuthChangePassword({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -12,11 +12,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authApi } from '@/features/auth/api/auth.api';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { type Theme, useTheme } from '@/hooks/use-theme';
 import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
@@ -133,22 +136,40 @@ function ThemeSection() {
   );
 }
 
-function PasswordSection() {
+export function PasswordSection() {
   const provider = useSettingsStore((s) => s.profile.provider);
+  const navigate = useNavigate();
+  const clearSession = useAuthStore((s) => s.clear);
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors },
   } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { current: '', next: '', confirm: '' },
   });
 
-  const onSubmit = handleSubmit(() => {
-    toast.success('비밀번호를 변경했습니다');
-    reset();
+  const onSubmit = handleSubmit(async (values) => {
+    setFormError('');
+    setSubmitting(true);
+    try {
+      await authApi.changePassword({
+        body: { current_password: values.current, new_password: values.next },
+      });
+      // 변경 시 전체 세션이 무효화되므로 로컬 세션도 비우고 재로그인을 유도한다.
+      clearSession();
+      toast.success('비밀번호가 변경되어 다시 로그인해 주세요');
+      navigate({ to: '/auth/login' });
+    } catch (err) {
+      setFormError(
+        apiErrorMessage(err, '비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.')
+      );
+    } finally {
+      setSubmitting(false);
+    }
   });
 
   if (provider !== 'email') {
@@ -180,8 +201,11 @@ function PasswordSection() {
           <Input id="confirm" type="password" className="mt-1.5" {...register('confirm')} />
           <FieldError message={errors.confirm?.message} />
         </div>
+        {formError && <p className="text-[13px] text-danger">{formError}</p>}
         <div>
-          <Button type="submit">비밀번호 변경</Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? '변경 중…' : '비밀번호 변경'}
+          </Button>
         </div>
       </form>
     </SettingsSection>
@@ -190,10 +214,10 @@ function PasswordSection() {
 
 function DangerZone() {
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
+  const clear = useAuthStore((s) => s.clear);
 
   const onConfirm = () => {
-    logout();
+    clear();
     navigate({ to: '/auth/login' });
   };
 

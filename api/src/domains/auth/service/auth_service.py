@@ -421,6 +421,32 @@ class AuthService:
 
         logger.info("password_reset_completed", user_id=str(pr.user_id))
 
+    async def change_password(
+        self, user: User, current_password: str, new_password: str
+    ) -> None:
+        """Change an authenticated user's password and revoke all sessions.
+
+        Raises
+        ------
+        ConflictError
+            If the account has no password (social login), or the new password
+            equals the current one.
+        UnauthorizedError
+            If the current password is incorrect.
+        """
+        if not user.hashed_password:
+            raise ConflictError("This account has no password (social login).")
+        if not verify_password(current_password, user.hashed_password):
+            raise UnauthorizedError("Current password is incorrect.")
+        if verify_password(new_password, user.hashed_password):
+            raise ConflictError("New password must be different from the current password.")
+
+        hashed = hash_password(new_password)
+        await self._repo.update_user_password(user.id, hashed)
+        # Revoke all sessions for security (same as password reset)
+        await self._repo.revoke_all_user_refresh_tokens(user.id)
+        logger.info("password_changed", user_id=str(user.id))
+
     # ── OAuth provisioning ────────────────────────────────────────────────────
 
     async def oauth_provision_user(

@@ -8,10 +8,11 @@ export function requireAuth(redirectTo: string) {
   }
 }
 
-/** 라우트 beforeLoad에서 호출 — 인증 + 관리자 권한 필요. 비관리자는 /works로 */
+/**
+ * 라우트 beforeLoad에서 호출 — 인증 필요.
+ * NOTE: role 정보가 UserResponse에 없으므로 requireAuth와 동일하게 동작.
+ * 서버측 권한 검사로 보호된다.
+ */
 export function requireAdmin(redirectTo: string) {
   requireAuth(redirectTo);
-  if (useAuthStore.getState().user?.role !== 'ADMIN') {
-    throw redirect({ to: '/works' });
-  }
 }

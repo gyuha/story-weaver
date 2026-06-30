@@ -1,21 +1,50 @@
+import { authApi } from '@/features/auth/api/auth.api';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Eye } from 'lucide-react';
 import { useState } from 'react';
-import { useAuthStore } from '../store/auth.store';
 import { OrDivider, SocialRow } from './auth-form-parts';
 import { AuthLayout } from './auth-layout';
 
+// 백엔드는 잘못된 자격증명과 이메일 미인증을 둘 다 401로 주지만 detail이 다르다.
+// 알려진 사유는 사용자가 이해할 친절한 한국어로 매핑하고, 그 외 detail은
+// apiErrorMessage가 백엔드 문구를 그대로 노출한다(없으면 일반 문구).
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  'Invalid email or password.': '이메일 또는 비밀번호를 확인해주세요.',
+  'Email verification is required before login.':
+    '이메일 인증이 필요합니다. 가입 시 받은 인증 메일을 확인해 주세요.',
+};
+
 export function LoginPage({ redirect }: { redirect?: string }) {
   const navigate = useNavigate();
-  const login = useAuthStore((s) => s.login);
-  const [email, setEmail] = useState('baekya@storyweaver.kr');
-  const [password, setPassword] = useState('storyweaver');
+  const setSession = useAuthStore((s) => s.setSession);
+  const setUser = useAuthStore((s) => s.setUser);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    login({ email: email.trim(), role: 'USER' });
-    navigate({ to: redirect ?? '/works' });
+    setError('');
+    setLoading(true);
+    try {
+      const tokens = await authApi.login({ body: { email: email.trim(), password } });
+      setSession(tokens);
+      const user = await authApi.me();
+      setUser(user);
+      navigate({ to: redirect ?? '/works' });
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+      const mapped = typeof detail === 'string' ? LOGIN_ERROR_MESSAGES[detail] : undefined;
+      setError(
+        mapped ?? apiErrorMessage(err, '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,11 +111,14 @@ export function LoginPage({ redirect }: { redirect?: string }) {
           </div>
         </label>
 
+        {error && <p className="mb-3 text-[13px] text-danger">{error}</p>}
+
         <button
           type="submit"
-          className="h-11 w-full rounded-md bg-primary text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90"
+          disabled={loading}
+          className="h-11 w-full rounded-md bg-primary text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
         >
-          로그인
+          {loading ? '로그인 중…' : '로그인'}
         </button>
       </form>
     </AuthLayout>

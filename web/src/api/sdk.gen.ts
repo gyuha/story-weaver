@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses } from './types.gen';
+import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordErrors, PostApiV1AuthChangePasswordResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -170,6 +170,25 @@ export const postApiV1AuthPasswordReset = <ThrowOnError extends boolean = false>
 export const postApiV1AuthPasswordResetConfirm = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthPasswordResetConfirmData, ThrowOnError>): RequestResult<PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetConfirmErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetConfirmErrors, ThrowOnError>({
     responseType: 'json',
     url: '/api/v1/auth/password-reset/confirm',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Change password (authenticated)
+ *
+ * Change the authenticated user's password.
+ *
+ * Verifies the current password, applies the signup password policy to the new
+ * one, then revokes all of the user's sessions (the client must log in again).
+ */
+export const postApiV1AuthChangePassword = <ThrowOnError extends boolean = false>(options: Options<PostApiV1AuthChangePasswordData, ThrowOnError>): RequestResult<PostApiV1AuthChangePasswordResponses, PostApiV1AuthChangePasswordErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1AuthChangePasswordResponses, PostApiV1AuthChangePasswordErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/change-password',
     ...options,
     headers: {
         'Content-Type': 'application/json',

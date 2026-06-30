@@ -104,6 +104,16 @@ class AuthRepository:
         result = await self._session.execute(select(Role).where(Role.name == name))
         return result.scalar_one_or_none()
 
+    async def get_or_create_role(self, name: str) -> Role:
+        """Return the role named *name*, creating it if it does not exist."""
+        existing = await self.get_role_by_name(name)
+        if existing is not None:
+            return existing
+        role = Role(name=name)
+        self._session.add(role)
+        await self._session.flush()
+        return role
+
     async def assign_role_to_user(self, user: User, role: Role) -> None:
         if role not in user.roles:
             user.roles.append(role)

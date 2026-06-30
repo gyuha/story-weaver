@@ -163,6 +163,17 @@ tasks:
     cmds:
       - uv run python scripts/export_openapi.py
 
+  # ── 운영자 CLI (DB 기동 필요) ──────────────────────────────────────────────────
+  verify-email:
+    desc: "운영자 CLI — 회원 이메일 인증 (사용: task verify-email -- <email>)"
+    cmds:
+      - uv run python scripts/manage.py verify-email {{.CLI_ARGS}}
+
+  grant-admin:
+    desc: "운영자 CLI — 회원에게 admin 역할 부여 (사용: task grant-admin -- <email>)"
+    cmds:
+      - uv run python scripts/manage.py grant-admin {{.CLI_ARGS}}
+
   # ── Alembic migrations ───────────────────────────────────────────────────────
   migrate:
     desc: Start local infra if needed, then apply all pending Alembic migrations

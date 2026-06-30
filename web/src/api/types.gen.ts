@@ -5,6 +5,34 @@ export type ClientOptions = {
 };
 
 /**
+ * ChangePasswordRequest
+ *
+ * Request body for POST /auth/change-password (authenticated).
+ */
+export type ChangePasswordRequest = {
+    /**
+     * Current Password
+     */
+    current_password: string;
+    /**
+     * New Password
+     */
+    new_password: string;
+};
+
+/**
+ * ChangePasswordResponse
+ *
+ * Response body for POST /auth/change-password.
+ */
+export type ChangePasswordResponse = {
+    /**
+     * Message
+     */
+    message?: string;
+};
+
+/**
  * ChatMessage
  *
  * A single message in a conversation turn.
@@ -838,6 +866,31 @@ export type PostApiV1AuthPasswordResetConfirmResponses = {
 };
 
 export type PostApiV1AuthPasswordResetConfirmResponse = PostApiV1AuthPasswordResetConfirmResponses[keyof PostApiV1AuthPasswordResetConfirmResponses];
+
+export type PostApiV1AuthChangePasswordData = {
+    body: ChangePasswordRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/change-password';
+};
+
+export type PostApiV1AuthChangePasswordErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1AuthChangePasswordError = PostApiV1AuthChangePasswordErrors[keyof PostApiV1AuthChangePasswordErrors];
+
+export type PostApiV1AuthChangePasswordResponses = {
+    /**
+     * Successful Response
+     */
+    200: ChangePasswordResponse;
+};
+
+export type PostApiV1AuthChangePasswordResponse = PostApiV1AuthChangePasswordResponses[keyof PostApiV1AuthChangePasswordResponses];
 
 export type GetApiV1AuthMeData = {
     body?: never;
