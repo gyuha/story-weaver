@@ -433,6 +433,26 @@ export type TokenResponse = {
 };
 
 /**
+ * UpdateProfileRequest
+ *
+ * Request body for PATCH /auth/me (partial profile update).
+ */
+export type UpdateProfileRequest = {
+    /**
+     * Display Name
+     */
+    display_name?: string | null;
+    /**
+     * Avatar Emoji
+     */
+    avatar_emoji?: string | null;
+    /**
+     * Theme
+     */
+    theme?: 'light' | 'dark' | 'system' | null;
+};
+
+/**
  * UserResponse
  *
  * Public user representation — never includes hashed_password.
@@ -450,6 +470,14 @@ export type UserResponse = {
      * Display Name
      */
     display_name: string | null;
+    /**
+     * Avatar Emoji
+     */
+    avatar_emoji: string | null;
+    /**
+     * Theme
+     */
+    theme: 'light' | 'dark' | 'system';
     /**
      * Is Verified
      */
@@ -907,6 +935,31 @@ export type GetApiV1AuthMeResponses = {
 };
 
 export type GetApiV1AuthMeResponse = GetApiV1AuthMeResponses[keyof GetApiV1AuthMeResponses];
+
+export type PatchApiV1AuthMeData = {
+    body: UpdateProfileRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me';
+};
+
+export type PatchApiV1AuthMeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1AuthMeError = PatchApiV1AuthMeErrors[keyof PatchApiV1AuthMeErrors];
+
+export type PatchApiV1AuthMeResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserResponse;
+};
+
+export type PatchApiV1AuthMeResponse = PatchApiV1AuthMeResponses[keyof PatchApiV1AuthMeResponses];
 
 export type GetApiV1AuthOauthByProviderLoginData = {
     body?: never;

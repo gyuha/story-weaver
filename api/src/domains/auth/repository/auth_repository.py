@@ -17,6 +17,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,6 +98,9 @@ class AuthRepository:
         await self._session.execute(
             update(User).where(User.id == user_id).values(hashed_password=hashed_password)
         )
+
+    async def update_user_profile(self, user_id: uuid.UUID, **fields: Any) -> None:
+        await self._session.execute(update(User).where(User.id == user_id).values(**fields))
 
     # ── Roles ─────────────────────────────────────────────────────────────────
 

@@ -69,6 +69,8 @@ describe('auth store', () => {
       id: 'u1',
       email: 'test@example.com',
       display_name: '테스터',
+      avatar_emoji: null,
+      theme: 'system' as const,
       is_verified: true,
       is_active: true,
       created_at: '2026-01-01T00:00:00Z',

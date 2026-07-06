@@ -138,6 +138,8 @@ class User(Base):
     ------
     email:          Unique email address (lowercased on save).
     display_name:   Optional human-readable name.
+    avatar_emoji:   Optional emoji used as the user's avatar.
+    theme:          UI theme preference (``system`` | ``light`` | ``dark``).
     hashed_password: argon2 hash — ``None`` for OAuth-only accounts.
     is_verified:    ``True`` after the user clicks the verification link.
     is_active:      ``False`` = soft-deleted / banned.
@@ -149,6 +151,8 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     display_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    avatar_emoji: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    theme: Mapped[str] = mapped_column(String(16), nullable=False, server_default="system")
     hashed_password: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

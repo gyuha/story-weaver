@@ -30,9 +30,21 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: EmailStr
     display_name: str | None
+    avatar_emoji: str | None
+    theme: Literal["light", "dark", "system"]
     is_verified: bool
     is_active: bool
     created_at: datetime
+
+
+def normalize_display_name(v: object) -> object:
+    """Trim display_name and reject blank user-facing names."""
+    if isinstance(v, str):
+        display_name = v.strip()
+        if not display_name:
+            raise ValueError("Display name is required.")
+        return display_name
+    return v
 
 
 def validate_password_strength(v: str) -> str:
@@ -75,12 +87,7 @@ class SignupRequest(BaseModel):
     @classmethod
     def normalize_display_name(cls, v: object) -> object:
         """Trim display_name and reject blank user-facing names."""
-        if isinstance(v, str):
-            display_name = v.strip()
-            if not display_name:
-                raise ValueError("Display name is required.")
-            return display_name
-        return v
+        return normalize_display_name(v)
 
 
 class SignupResponse(BaseModel):
@@ -107,6 +114,22 @@ class ChangePasswordResponse(BaseModel):
     """Response body for POST /auth/change-password."""
 
     message: str = "Password changed. Please log in again."
+
+
+class UpdateProfileRequest(BaseModel):
+    """Request body for PATCH /auth/me (partial profile update)."""
+
+    display_name: str | None = None
+    avatar_emoji: str | None = None
+    theme: Literal["light", "dark", "system"] | None = None
+
+    @field_validator("display_name", mode="before")
+    @classmethod
+    def normalize_display_name(cls, v: object) -> object:
+        """Trim display_name and reject blank names; skip when unset."""
+        if v is None:
+            return v
+        return normalize_display_name(v)
 
 
 # ---------------------------------------------------------------------------

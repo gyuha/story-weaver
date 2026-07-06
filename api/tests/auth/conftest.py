@@ -113,6 +113,8 @@ class FakeAuthRepository:
         user.email = normalized_email
         user.hashed_password = hashed_password
         user.display_name = display_name.strip() if display_name is not None else None
+        user.avatar_emoji = None
+        user.theme = "system"
         user.is_verified = False
         user.is_active = True
         user.created_at = datetime.now(UTC)
@@ -130,6 +132,12 @@ class FakeAuthRepository:
         user = self.users_by_id.get(str(user_id))
         if user:
             user.hashed_password = hashed_password
+
+    async def update_user_profile(self, user_id: Any, **fields: Any) -> None:
+        user = self.users_by_id.get(str(user_id))
+        if user:
+            for key, value in fields.items():
+                setattr(user, key, value)
 
     async def get_role_by_name(self, name: str) -> Any | None:
         return self.roles.get(name)

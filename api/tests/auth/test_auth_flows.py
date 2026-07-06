@@ -16,6 +16,7 @@ Test classes
 * :class:`TestRefresh`      — token rotation + reuse detection
 * :class:`TestLogout`       — token revocation + Redis blacklisting
 * :class:`TestPasswordReset` — request + confirm flow
+* :class:`TestUpdateProfile` — partial profile update (display_name/avatar_emoji/theme)
 * :class:`TestRBAC`         — require_permission enforcement (unit)
 """
 
@@ -25,7 +26,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
+from domains.auth.schemas import UpdateProfileRequest
 from domains.auth.security import (
     create_access_token,
     create_refresh_token,
@@ -965,6 +968,56 @@ class TestPasswordReset:
 
         with pytest.raises(UnauthorizedError, match="Invalid"):
             await auth_service.confirm_password_reset("invalid-token", "NewPass1!")
+
+
+# ---------------------------------------------------------------------------
+# TestUpdateProfile
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateProfile:
+    """update_profile() — partial profile update (display_name/avatar_emoji/theme)."""
+
+    async def _registered_user(self, auth_service: AuthService, fake_repo: Any) -> Any:
+        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        await auth_service.verify_email(raw_token)
+        return user
+
+    async def test_partial_update_leaves_other_fields_untouched(
+        self,
+        auth_service: AuthService,
+        fake_repo: Any,
+    ) -> None:
+        user = await self._registered_user(auth_service, fake_repo)
+        user.avatar_emoji = "🐱"
+        user.theme = "dark"
+
+        updated = await auth_service.update_profile(
+            user, UpdateProfileRequest(display_name="New Name")
+        )
+
+        assert updated.display_name == "New Name"
+        assert updated.avatar_emoji == "🐱"
+        assert updated.theme == "dark"
+
+    def test_invalid_theme_rejected_by_schema(self) -> None:
+        with pytest.raises(ValidationError):
+            UpdateProfileRequest(theme="blue")  # type: ignore[arg-type]
+
+    async def test_all_none_patch_is_noop(
+        self,
+        auth_service: AuthService,
+        fake_repo: Any,
+    ) -> None:
+        from unittest.mock import AsyncMock
+
+        user = await self._registered_user(auth_service, fake_repo)
+        fake_repo.update_user_profile = AsyncMock()
+
+        updated = await auth_service.update_profile(user, UpdateProfileRequest())
+
+        fake_repo.update_user_profile.assert_not_awaited()
+        assert updated is user
 
 
 # ---------------------------------------------------------------------------

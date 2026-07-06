@@ -106,6 +106,8 @@ def test_signup_response_serializes_public_user_and_message_only() -> None:
         id=uuid4(),
         email="alice@example.com",
         display_name="Alice",
+        avatar_emoji=None,
+        theme="system",
         is_verified=False,
         is_active=True,
         created_at=datetime.now(UTC),

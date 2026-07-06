@@ -16,6 +16,12 @@ function resolveDark(theme: Theme): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
+/** localStorage에 테마를 저장하고 documentElement의 다크 클래스를 즉시 반영한다. */
+export function applyTheme(theme: Theme): void {
+  window.localStorage.setItem(STORAGE_KEY, theme);
+  document.documentElement.classList.toggle('dark', resolveDark(theme));
+}
+
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
   const [isDark, setIsDark] = useState<boolean>(() =>
@@ -23,9 +29,8 @@ export function useTheme() {
   );
 
   useEffect(() => {
-    const next = resolveDark(theme);
-    document.documentElement.classList.toggle('dark', next);
-    setIsDark(next);
+    applyTheme(theme);
+    setIsDark(resolveDark(theme));
 
     if (theme !== 'system') return;
 
@@ -39,7 +44,7 @@ export function useTheme() {
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
-    window.localStorage.setItem(STORAGE_KEY, next);
+    applyTheme(next);
     setThemeState(next);
   }, []);
 

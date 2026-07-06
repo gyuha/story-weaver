@@ -47,6 +47,8 @@ class FakeSignupService:
             id=uuid.uuid4(),
             email=email,
             display_name=display_name,
+            avatar_emoji=None,
+            theme="system",
             is_verified=False,
             is_active=True,
             created_at=datetime.now(UTC),

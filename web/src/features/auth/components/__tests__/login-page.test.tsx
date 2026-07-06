@@ -34,6 +34,11 @@ vi.mock('@/features/auth/api/auth.api', () => ({
   },
 }));
 
+const mockApplyTheme = vi.fn();
+vi.mock('@/hooks/use-theme', () => ({
+  applyTheme: (...args: unknown[]) => mockApplyTheme(...args),
+}));
+
 // --- helpers ---
 
 const TOKENS = {
@@ -91,6 +96,20 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/works' });
+    });
+  });
+
+  it('applies the theme returned by /me on login', async () => {
+    mockLogin.mockResolvedValue(TOKENS);
+    mockMe.mockResolvedValue({ ...USER, theme: 'dark' });
+
+    const { LoginPage } = await import('../login-page');
+    render(<LoginPage />);
+
+    await fillAndSubmit('writer@example.com', 'pass1234');
+
+    await waitFor(() => {
+      expect(mockApplyTheme).toHaveBeenCalledWith('dark');
     });
   });
 

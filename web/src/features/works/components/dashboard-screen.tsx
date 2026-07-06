@@ -1,8 +1,15 @@
+import type { WorkResponse } from '@/api';
 import { AppShell } from '@/components/layout/app-shell';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useUsage, useWorks } from '@/features/shared/store/selectors';
+import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Work } from '@/features/shared/types';
+import { worksQueries } from '@/features/works/api/works.api';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, CircleAlert, Plus, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
 import { NewWorkCard, WorkCard } from './work-card';
 
 /** stats.words를 만자 기준으로 정규화(천자 → /10) */
@@ -11,10 +18,52 @@ function toManja(work: Work): number {
   return work.stats.wordsUnit === '천자' ? v / 10 : v;
 }
 
+// eco: 챕터·엔티티·타임라인·충돌은 백엔드 하위 도메인 미구현 — 빈 배열로 시작(세션 내 로컬 편집)
+function toWork(response: WorkResponse): Work {
+  return { ...response, chapters: [], entities: [], timeline: [], conflicts: [] } as Work;
+}
+
 /** 작품 대시보드 화면 (셸 포함) — /works */
 export function DashboardScreen() {
+  const { data, isPending, isError } = useQuery(worksQueries.list());
+  const setWorks = useWorksStore((s) => s.setWorks);
   const works = useWorks();
   const usage = useUsage();
+
+  useEffect(() => {
+    if (data) setWorks(data.map(toWork));
+  }, [data, setWorks]);
+
+  if (isPending) {
+    return (
+      <AppShell>
+        <output
+          className="mx-auto block max-w-[1180px] p-[38px_40px]"
+          aria-label="작품 목록을 불러오는 중"
+        >
+          <Skeleton className="mb-6 h-8 w-40" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <Skeleton className="h-56 rounded-[12px]" />
+            <Skeleton className="h-56 rounded-[12px]" />
+            <Skeleton className="h-56 rounded-[12px]" />
+          </div>
+        </output>
+      </AppShell>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-[1180px] p-[38px_40px]">
+          <Alert variant="destructive">
+            <AlertTitle>작품 목록을 불러오지 못했습니다</AlertTitle>
+            <AlertDescription>잠시 후 다시 시도해 주세요.</AlertDescription>
+          </Alert>
+        </div>
+      </AppShell>
+    );
+  }
 
   const resume = works[0];
   const lastEdited = resume?.lastEditedLabel.split(' · ')[0] ?? '방금';

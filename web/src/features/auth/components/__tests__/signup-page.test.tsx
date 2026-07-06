@@ -53,6 +53,8 @@ describe('SignupPage', () => {
         id: 'u1',
         email: 'test@example.com',
         display_name: '테스터',
+        avatar_emoji: null,
+        theme: 'system',
         is_verified: false,
         is_active: true,
         created_at: '2026-01-01T00:00:00Z',

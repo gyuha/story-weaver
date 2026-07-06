@@ -1,6 +1,9 @@
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Genre, WritingStyle } from '@/features/shared/types';
+import type { Genre, Work, WritingStyle } from '@/features/shared/types';
+import { worksMutations } from '@/features/works/api/works.api';
 import { cn } from '@/lib/utils';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -24,12 +27,14 @@ const STYLES: { value: WritingStyle; sample: string }[] = [
 
 export function NewWorkModal() {
   const navigate = useNavigate();
-  const addWork = useWorksStore((s) => s.addWork);
+  const addWorkFromServer = useWorksStore((s) => s.addWorkFromServer);
+  const createWork = useMutation(worksMutations.create());
 
   const [genre, setGenre] = useState<Genre | null>('무협');
   const [keywords, setKeywords] = useState<string[]>(['회귀 / 환생']);
   const [style, setStyle] = useState<WritingStyle>('간결체');
   const [title, setTitle] = useState('');
+  const [error, setError] = useState('');
 
   const close = useCallback(() => navigate({ to: '/works' }), [navigate]);
 
@@ -42,12 +47,48 @@ export function NewWorkModal() {
   }, [close]);
 
   const step = !genre ? 1 : !style ? 2 : 3;
-  const canSubmit = !!genre && !!style && title.trim().length > 0;
+  const canSubmit = !!genre && !!style && title.trim().length > 0 && !createWork.isPending;
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit || !genre) return;
-    const id = addWork({ title: title.trim(), genre, keywords, style });
-    navigate({ to: '/works/$workId/write', params: { workId: id } });
+    setError('');
+    try {
+      const created = await createWork.mutateAsync({
+        body: { title: title.trim(), genre, keywords, style },
+      });
+      const work: Work = {
+        id: created.id,
+        title: created.title,
+        shortLabel: created.shortLabel,
+        genre,
+        subGenre: created.subGenre,
+        keywords: created.keywords,
+        style,
+        status: created.status as Work['status'], // 새 작품은 서버에서 항상 '구상' (works_service.py)
+        coverTheme: created.coverTheme as Work['coverTheme'], // 새 작품은 항상 'dark'
+        stats: {
+          chapters: created.stats.chapters ?? 0,
+          words: created.stats.words ?? '0',
+          wordsUnit: created.stats.wordsUnit ?? '천자',
+          characters: created.stats.characters ?? 0,
+          progress: created.stats.progress ?? 0,
+        },
+        lastEditedLabel: created.lastEditedLabel,
+        chapters: [],
+        entities: [],
+        timeline: [],
+        conflicts: [],
+        reviewSummary: {
+          scenes: created.reviewSummary.scenes ?? 0,
+          states: created.reviewSummary.states ?? 0,
+          conflicts: created.reviewSummary.conflicts ?? 0,
+        },
+      };
+      addWorkFromServer(work);
+      navigate({ to: '/works/$workId/write', params: { workId: work.id } });
+    } catch (err) {
+      setError(apiErrorMessage(err, '작품 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'));
+    }
   };
 
   const toggleKeyword = (k: string) =>
@@ -151,6 +192,7 @@ export function NewWorkModal() {
             placeholder="예: 검을 거꾸로 쥔 회귀자"
             className="h-[42px] w-full rounded-md border border-line-strong px-3.5 font-serif text-base font-semibold text-ink placeholder:font-normal placeholder:text-faintest focus:border-primary focus:shadow-[inset_0_0_0_2px_rgba(35,131,226,0.18)] focus:outline-none"
           />
+          {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
         </div>
 
         {/* footer */}
@@ -170,7 +212,7 @@ export function NewWorkModal() {
               disabled={!canSubmit}
               className="flex h-9 items-center gap-2 rounded-[5px] bg-primary px-[18px] text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-40"
             >
-              작품 시작
+              {createWork.isPending ? '만드는 중…' : '작품 시작'}
               <ArrowRight className="size-4" strokeWidth={2.2} />
             </button>
           </div>

@@ -6,6 +6,7 @@ import {
   type GetApiV1AuthOauthByProviderCallbackData,
   type GetApiV1AuthOauthByProviderLoginData,
   type Options,
+  type PatchApiV1AuthMeData,
   type PostApiV1AuthChangePasswordData,
   type PostApiV1AuthLoginData,
   type PostApiV1AuthLogoutData,
@@ -17,6 +18,7 @@ import {
   getApiV1AuthMe,
   getApiV1AuthOauthByProviderCallback,
   getApiV1AuthOauthByProviderLogin,
+  patchApiV1AuthMe,
   postApiV1AuthChangePassword,
   postApiV1AuthLogin,
   postApiV1AuthLogout,
@@ -30,6 +32,7 @@ import {
   getApiV1AuthMeOptions,
   getApiV1AuthOauthByProviderCallbackOptions,
   getApiV1AuthOauthByProviderLoginOptions,
+  patchApiV1AuthMeMutation,
   postApiV1AuthChangePasswordMutation,
   postApiV1AuthLoginMutation,
   postApiV1AuthLogoutMutation,
@@ -63,6 +66,10 @@ export const authApi = {
   },
   async me(options?: Options<GetApiV1AuthMeData>) {
     const { data } = await getApiV1AuthMe({ ...options, throwOnError: true });
+    return data;
+  },
+  async updateProfile(options: Options<PatchApiV1AuthMeData>) {
+    const { data } = await patchApiV1AuthMe({ ...options, throwOnError: true });
     return data;
   },
   async passwordReset(options: Options<PostApiV1AuthPasswordResetData>) {
@@ -99,6 +106,7 @@ export const authMutations = {
   login: postApiV1AuthLoginMutation,
   refresh: postApiV1AuthRefreshMutation,
   logout: postApiV1AuthLogoutMutation,
+  updateProfile: patchApiV1AuthMeMutation,
   passwordReset: postApiV1AuthPasswordResetMutation,
   passwordResetConfirm: postApiV1AuthPasswordResetConfirmMutation,
   changePassword: postApiV1AuthChangePasswordMutation,

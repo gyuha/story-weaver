@@ -5,7 +5,5 @@ export type QualityTier = 'economy' | 'balanced' | 'premium';
 export type AuthProvider = 'email' | 'google' | 'kakao' | 'naver';
 
 export interface ProfileSettings {
-  displayName: string;
-  avatarEmoji: string;
   provider: AuthProvider;
 }

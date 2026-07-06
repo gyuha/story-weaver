@@ -1,6 +1,7 @@
 import { authApi } from '@/features/auth/api/auth.api';
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { applyTheme } from '@/hooks/use-theme';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Eye } from 'lucide-react';
 import { useState } from 'react';
@@ -35,6 +36,7 @@ export function LoginPage({ redirect }: { redirect?: string }) {
       setSession(tokens);
       const user = await authApi.me();
       setUser(user);
+      if (user.theme) applyTheme(user.theme);
       navigate({ to: redirect ?? '/works' });
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;

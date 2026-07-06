@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useShallow } from 'zustand/react/shallow';
 import type { Chapter, Entity, Scene, Work } from '../types';
 import { useWorksStore } from './works.store';
@@ -11,11 +12,11 @@ export function useUsage() {
 }
 
 export function useWorkspaceMeta() {
-  return useWorksStore(
-    useShallow((s) => ({
-      workspaceName: s.workspaceName,
-      authorInitial: s.authorInitial,
-    }))
+  return useAuthStore(
+    useShallow((s) => {
+      const workspaceName = s.user?.display_name || '내 서재';
+      return { workspaceName, authorInitial: workspaceName.charAt(0) };
+    })
   );
 }
 

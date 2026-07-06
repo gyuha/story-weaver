@@ -38,6 +38,7 @@ from domains.auth.email import (
 )
 from domains.auth.models import RefreshToken, User
 from domains.auth.repository import AuthRepository, normalize_email
+from domains.auth.schemas import UpdateProfileRequest
 from domains.auth.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     blacklist_jti,
@@ -446,6 +447,22 @@ class AuthService:
         # Revoke all sessions for security (same as password reset)
         await self._repo.revoke_all_user_refresh_tokens(user.id)
         logger.info("password_changed", user_id=str(user.id))
+
+    async def update_profile(self, user: User, patch: UpdateProfileRequest) -> User:
+        """Apply a partial profile update (display_name / avatar_emoji / theme).
+
+        Unset fields are left untouched. If *patch* has no fields set, this is
+        a no-op and *user* is returned unchanged.
+        """
+        fields = patch.model_dump(exclude_none=True)
+        if not fields:
+            return user
+
+        await self._repo.update_user_profile(user.id, **fields)
+        for key, value in fields.items():
+            setattr(user, key, value)
+        logger.info("profile_updated", user_id=str(user.id), fields=list(fields.keys()))
+        return user
 
     # ── OAuth provisioning ────────────────────────────────────────────────────
 

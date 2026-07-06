@@ -1,23 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { authorInitial, seedUsage, seedWorks, workspaceName } from '../mock/works';
-import type {
-  Entity,
-  EntityField,
-  EntityRelation,
-  EntityType,
-  Genre,
-  Usage,
-  Work,
-  WritingStyle,
-} from '../types';
-
-export interface NewWorkInput {
-  title: string;
-  genre: Genre;
-  keywords: string[];
-  style: WritingStyle;
-}
+import { seedUsage } from '../mock/works';
+import type { Entity, EntityField, EntityRelation, EntityType, Usage, Work } from '../types';
 
 /** 새 엔티티 입력 — 공통 필드 + 유형별 필드(fields)·인물 전용(sampleLines/relations) */
 export interface NewEntityInput {
@@ -35,9 +19,10 @@ export interface NewEntityInput {
 interface WorksState {
   works: Work[];
   usage: Usage;
-  workspaceName: string;
-  authorInitial: string;
-  addWork: (input: NewWorkInput) => string;
+  /** 서버에서 조회한 작품 목록으로 교체 — 기존에 로컬로 채워진 nested 배열(챕터·엔티티 등)은 보존, 새 id는 빈 배열로 시작 */
+  setWorks: (serverWorks: Work[]) => void;
+  /** 서버에 생성된 작품(빈 nested 배열 포함 완성된 Work)을 그대로 목록에 추가 */
+  addWorkFromServer: (work: Work) => void;
   acceptSuggestion: (workId: string, sceneId: string) => void;
   dismissSuggestion: (workId: string, sceneId: string) => void;
   acceptInlineSuggestion: (workId: string, sceneId: string) => void;
@@ -65,39 +50,30 @@ interface WorksState {
   updateEntity: (workId: string, entityId: string, input: NewEntityInput) => void;
 }
 
-const SHORT_LABEL = (title: string) => title.trim().charAt(0) || '작';
-
 export const useWorksStore = create<WorksState>()(
   immer((set, get) => ({
-    works: seedWorks,
+    works: [],
     usage: seedUsage,
-    workspaceName,
-    authorInitial,
 
-    addWork: (input) => {
-      const id = `work-${Date.now().toString(36)}`;
+    setWorks: (serverWorks) =>
       set((state) => {
-        state.works.unshift({
-          id,
-          title: input.title,
-          shortLabel: SHORT_LABEL(input.title),
-          genre: input.genre,
-          subGenre: input.keywords[0] ?? input.genre,
-          keywords: input.keywords,
-          style: input.style,
-          status: '구상',
-          coverTheme: 'dark',
-          stats: { chapters: 0, words: '0', wordsUnit: '천자', characters: 0, progress: 0 },
-          lastEditedLabel: '방금 · 새 작품',
-          reviewSummary: { scenes: 0, states: 0, conflicts: 0 },
-          chapters: [],
-          entities: [],
-          timeline: [],
-          conflicts: [],
+        const existingById = new Map(state.works.map((w) => [w.id, w]));
+        state.works = serverWorks.map((work) => {
+          const existing = existingById.get(work.id);
+          return {
+            ...work,
+            chapters: existing?.chapters ?? [],
+            entities: existing?.entities ?? [],
+            timeline: existing?.timeline ?? [],
+            conflicts: existing?.conflicts ?? [],
+          };
         });
-      });
-      return id;
-    },
+      }),
+
+    addWorkFromServer: (work) =>
+      set((state) => {
+        state.works.unshift(work);
+      }),
 
     acceptSuggestion: (workId, sceneId) =>
       set((state) => {

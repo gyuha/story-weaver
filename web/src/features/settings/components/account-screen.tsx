@@ -61,10 +61,11 @@ export function AccountScreen() {
   );
 }
 
-function ProfileSection() {
-  const profile = useSettingsStore((s) => s.profile);
-  const updateProfile = useSettingsStore((s) => s.updateProfile);
-  const email = useAuthStore((s) => s.user?.email ?? '');
+const DEFAULT_AVATAR_EMOJI = '🖋️';
+
+export function ProfileSection() {
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
 
   const {
     register,
@@ -72,12 +73,22 @@ function ProfileSection() {
     formState: { errors },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { displayName: profile.displayName, avatarEmoji: profile.avatarEmoji },
+    defaultValues: {
+      displayName: user?.display_name ?? '',
+      avatarEmoji: user?.avatar_emoji ?? DEFAULT_AVATAR_EMOJI,
+    },
   });
 
-  const onSubmit = handleSubmit((values) => {
-    updateProfile(values);
-    toast.success('프로필을 저장했습니다');
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      const updated = await authApi.updateProfile({
+        body: { display_name: values.displayName, avatar_emoji: values.avatarEmoji },
+      });
+      setUser(updated);
+      toast.success('프로필을 저장했습니다');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, '프로필 저장에 실패했습니다. 잠시 후 다시 시도해주세요.'));
+    }
   });
 
   return (
@@ -85,7 +96,7 @@ function ProfileSection() {
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <div className="flex items-end gap-4">
           <div className="grid size-[58px] shrink-0 place-items-center rounded-xl bg-[#f1f1ef] text-[30px]">
-            {profile.avatarEmoji}
+            {user?.avatar_emoji ?? DEFAULT_AVATAR_EMOJI}
           </div>
           <div className="flex-1">
             <Label htmlFor="avatarEmoji">아바타 이모지</Label>
@@ -100,7 +111,7 @@ function ProfileSection() {
         </div>
         <div>
           <Label htmlFor="email">이메일</Label>
-          <Input id="email" className="mt-1.5" value={email} disabled />
+          <Input id="email" className="mt-1.5" value={user?.email ?? ''} disabled />
           <p className="mt-1 text-[12px] text-faint">이메일은 변경할 수 없습니다.</p>
         </div>
         <div>
@@ -111,8 +122,15 @@ function ProfileSection() {
   );
 }
 
-function ThemeSection() {
+export function ThemeSection() {
   const { theme, setTheme } = useTheme();
+
+  const selectTheme = (value: Theme) => {
+    setTheme(value);
+    // eco: 서버 저장 실패는 조용히 무시 — 로컬 테마 적용은 이미 끝났으므로 사용자 경험에 영향 없음.
+    authApi.updateProfile({ body: { theme: value } }).catch(() => {});
+  };
+
   return (
     <SettingsSection title="테마" description="선택 즉시 적용됩니다.">
       <div className="inline-flex gap-1 rounded-lg border border-line bg-surface p-1">
@@ -120,7 +138,7 @@ function ThemeSection() {
           <button
             key={value}
             type="button"
-            onClick={() => setTheme(value)}
+            onClick={() => selectTheme(value)}
             className={cn(
               'rounded-[5px] px-4 py-1.5 text-sm transition-colors',
               theme === value

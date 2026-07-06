@@ -10,6 +10,7 @@ POST   /auth/logout                     Revoke tokens
 POST   /auth/password-reset             Request password-reset email
 POST   /auth/password-reset/confirm     Apply reset token + new password
 GET    /auth/me                         Current authenticated user
+PATCH  /auth/me                         Update current user's profile (partial)
 
 GET    /auth/oauth/{provider}/login     OAuth2 authorization URL
 GET    /auth/oauth/{provider}/callback  OAuth2 callback — exchange code
@@ -46,6 +47,7 @@ from domains.auth.schemas import (
     SignupRequest,
     SignupResponse,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
     VerifyEmailResponse,
 )
@@ -277,6 +279,25 @@ async def change_password(
 async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     """Return the profile of the currently authenticated user."""
     return UserResponse.model_validate(current_user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    summary="Update current user's profile (partial)",
+)
+async def update_me(
+    body: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    service: AuthService = Depends(_get_service),
+) -> UserResponse:
+    """Apply a partial update to the authenticated user's profile."""
+    try:
+        user = await service.update_profile(current_user, body)
+    except AppError as exc:
+        raise _app_error_to_http(exc) from exc
+
+    return UserResponse.model_validate(user)
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordErrors, PostApiV1AuthChangePasswordResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses } from './types.gen';
+import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1AuthMeData, PatchApiV1AuthMeErrors, PatchApiV1AuthMeResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordErrors, PostApiV1AuthChangePasswordResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -206,6 +206,22 @@ export const getApiV1AuthMe = <ThrowOnError extends boolean = false>(options?: O
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/auth/me',
     ...options
+});
+
+/**
+ * Update current user's profile (partial)
+ *
+ * Apply a partial update to the authenticated user's profile.
+ */
+export const patchApiV1AuthMe = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1AuthMeData, ThrowOnError>): RequestResult<PatchApiV1AuthMeResponses, PatchApiV1AuthMeErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1AuthMeResponses, PatchApiV1AuthMeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/me',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
