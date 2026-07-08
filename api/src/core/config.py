@@ -269,7 +269,7 @@ class LLMSettings(BaseSettings):
         elif self.provider == LLMProvider.ollama:
             kwargs["api_base"] = self.ollama_base_url
             # litellm accepts "ollama" as a sentinel when no key is needed
-            kwargs["api_key"] = "ollama"
+            kwargs["api_key"] = "ollama"  # pragma: allowlist secret
 
         elif self.provider == LLMProvider.openai_compatible:
             # OpenAI-compatible: openai/<model> + custom base URL + key
@@ -402,6 +402,11 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2024-08-01-preview"
 
     ollama_base_url: str = "http://localhost:11434"
+
+    # ── Budget (M4-S2) ────────────────────────────────────────────────────────
+    # env: BUDGET_TOKEN_LIMIT — 사용자별 주기(budget 도메인 DEFAULT_PERIOD_SECONDS) 토큰
+    # 사용량 상한. 요금제별 실제 수치는 미결정(PRD 4.1) — 합리적 기본값으로 구조만 동작시킨다.
+    budget_token_limit: int = Field(default=100_000, gt=0)
 
     @field_validator("llm_provider", mode="before")
     @classmethod

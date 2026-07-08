@@ -2,7 +2,7 @@ import { entitiesByType } from '@/features/shared/store/selectors';
 import type { Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
-import { Plus, Search } from 'lucide-react';
+import { Network, Plus, Search } from 'lucide-react';
 
 export function EntityList({ work, selectedId }: { work: Work; selectedId?: string }) {
   const groups = entitiesByType(work.entities);
@@ -10,7 +10,17 @@ export function EntityList({ work, selectedId }: { work: Work; selectedId?: stri
   return (
     <div className="flex w-[266px] shrink-0 flex-col border-r border-ink/[0.06] bg-paper">
       <div className="px-[18px] pt-[18px] pb-3.5">
-        <div className="mb-[13px] text-[18px] font-bold leading-[1.2]">World Bible</div>
+        <div className="mb-[13px] flex items-center justify-between">
+          <span className="text-[18px] font-bold leading-[1.2]">World Bible</span>
+          <Link
+            to="/works/$workId/bible/relationships"
+            params={{ workId: work.id }}
+            className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-muted-ink transition-colors hover:bg-ink/[0.04] hover:text-ink"
+          >
+            <Network className="size-[13px]" strokeWidth={2} />
+            관계도
+          </Link>
+        </div>
         <div className="flex h-8 items-center gap-2 rounded-md border border-line bg-surface-soft px-[11px]">
           <Search className="size-[15px] text-faint" strokeWidth={2} />
           <span className="text-[13px] text-faintest">설정 검색</span>

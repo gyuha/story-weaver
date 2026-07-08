@@ -32,7 +32,9 @@ describe('works store', () => {
     const localWork = makeWork({
       id: 'w1',
       title: '로컬 제목',
-      chapters: [{ id: 'ch1', partLabel: '제1부', index: 1, title: '화', scenes: [] }],
+      chapters: [
+        { id: 'ch1', episodeId: 'ep1', partLabel: '제1부', index: 1, title: '화', scenes: [] },
+      ],
       entities: [
         {
           id: 'e1',
@@ -58,13 +60,11 @@ describe('works store', () => {
       conflicts: [
         {
           id: 'cf1',
+          entityId: 'e1',
           entityName: '캐릭터',
-          deadChapter: 1,
-          appearChapter: 2,
-          deadKey: 'k',
-          deadValue: 'v',
-          note: '노트',
-          axis: { from: 1, to: 2, total: 3 },
+          stateKey: 'k',
+          earlier: { sceneId: 'sc1', chapterRef: '1화', globalSeq: 1, stateValue: 'v1' },
+          later: { sceneId: 'sc2', chapterRef: '2화', globalSeq: 2, stateValue: 'v2' },
         },
       ],
     });

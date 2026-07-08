@@ -1,4 +1,5 @@
 // StoryWeaver 도메인 공통 타입 (docs/data-model.md 기반, MVP 범위)
+import type { AttributeChange, CandidateEntity, TimelineChange } from '@/api';
 
 export type Genre = '무협' | '로맨스 판타지' | '정통 판타지' | '현대 판타지' | 'SF' | '미스터리';
 
@@ -14,6 +15,12 @@ export interface Paragraph {
   text: string;
   dim?: boolean;
 }
+
+/** 씬 저장 후 추출된, 승인 대기 중인 동적 업데이트 제안 (kind별 payload 모양은 백엔드 스키마와 동일) */
+export type UpdateSuggestion =
+  | { id: string; kind: 'new_entity'; payload: CandidateEntity }
+  | { id: string; kind: 'attribute_change'; payload: AttributeChange }
+  | { id: string; kind: 'timeline_state'; payload: TimelineChange };
 
 /** 버전 기록의 한 스냅샷 — 작가 집필 시간축의 과거 본문 (타임라인 상태와 다른 축) */
 export interface SceneVersion {
@@ -32,8 +39,8 @@ export interface Scene {
   linkedEntityIds: string[];
   /** 벡터 유사도 보조로 끌어온 관련 엔티티 */
   vectorMemory: { entityId: string; score: number }[];
-  /** 집필 중 감지된 동적 업데이트 제안 */
-  updateSuggestion?: { entityId: string; body: string };
+  /** 집필 중 감지된 동적 업데이트 제안 — 승인/거절 대기 목록 */
+  pendingSuggestions?: UpdateSuggestion[];
   /** 인라인 AI 이어쓰기 고스트 텍스트 */
   aiSuggestion?: string;
   /** 버전 기록 — 최신순 스냅샷 (현재 본문은 paragraphs, 과거는 여기) */
@@ -42,6 +49,8 @@ export interface Scene {
 
 export interface Chapter {
   id: string;
+  /** 이 화가 속한 부(Episode)의 서버 id — 씬 본문 저장 등 실 API 경로 파라미터로 필요 */
+  episodeId: string;
   partLabel: string; // '제2부 혈산문편'
   index: number; // 화 번호
   title: string;
@@ -87,15 +96,20 @@ export interface TimelineState {
   pending?: boolean;
 }
 
+export interface ConflictSceneRef {
+  sceneId: string;
+  chapterRef: string; // '6화 씬1' — 매칭되는 화가 없으면 ''
+  globalSeq: number;
+  stateValue: string;
+}
+
 export interface Conflict {
   id: string;
+  entityId: string;
   entityName: string;
-  deadChapter: number;
-  appearChapter: number;
-  deadKey: string;
-  deadValue: string;
-  note: string;
-  axis: { from: number; to: number; total: number };
+  stateKey: string;
+  earlier: ConflictSceneRef;
+  later: ConflictSceneRef;
 }
 
 export interface WorkStats {

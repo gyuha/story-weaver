@@ -1,3 +1,4 @@
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { findSceneLocation, groupChaptersByPart } from '@/features/shared/store/selectors';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Work } from '@/features/shared/types';
@@ -13,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 interface WorkTreeProps {
   work: Work;
@@ -29,10 +31,15 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const deleteChapter = useWorksStore((s) => s.deleteChapter);
   const deletePart = useWorksStore((s) => s.deletePart);
+  const reorderChapters = useWorksStore((s) => s.reorderChapters);
+  const reorderParts = useWorksStore((s) => s.reorderParts);
   const openModal = useModal((s) => s.openModal);
   const closeModal = useModal((s) => s.closeModal);
   // 열린 ⋯ 메뉴 식별 키 (`part:<라벨>` / `ch:<id>`)
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  // 드래그 중인 부 라벨 / 화 id (같은 부 안에서만 화 재배치를 허용)
+  const [draggedPart, setDraggedPart] = useState<string | null>(null);
+  const [draggedChapterId, setDraggedChapterId] = useState<string | null>(null);
 
   // 활성 씬을 포함한 부는 펼친 상태로 시작. 활성 씬이 없으면 마지막 부를 펼친다.
   const [openParts, setOpenParts] = useState<Set<string>>(() => {
@@ -53,16 +60,24 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
     });
   };
 
-  const handleAddChapter = (part: string) => {
-    const id = addChapter(work.id, part);
-    setOpenParts((s) => new Set(s).add(part));
-    setEditingChapterId(id);
+  const handleAddChapter = async (part: string) => {
+    try {
+      const id = await addChapter(work.id, part);
+      setOpenParts((s) => new Set(s).add(part));
+      setEditingChapterId(id);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, '화 추가에 실패했습니다'));
+    }
   };
 
-  const handleAddPart = () => {
-    const label = addPart(work.id);
-    setOpenParts((s) => new Set(s).add(label));
-    setEditingPart(label);
+  const handleAddPart = async () => {
+    try {
+      const label = await addPart(work.id);
+      setOpenParts((s) => new Set(s).add(label));
+      setEditingPart(label);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, '부 추가에 실패했습니다'));
+    }
   };
 
   // 실수 추가 방지용 확인 다이얼로그 (삭제 수단이 없어 추가 전 한 번 확인)
@@ -99,7 +114,9 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
       txtCancel: '취소',
       handleOk: () => {
         closeModal();
-        deleteChapter(work.id, chapter.id);
+        deleteChapter(work.id, chapter.id).catch((err) => {
+          toast.error(apiErrorMessage(err, '화 삭제에 실패했습니다'));
+        });
       },
     });
 
@@ -111,25 +128,68 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
       txtCancel: '취소',
       handleOk: () => {
         closeModal();
-        deletePart(work.id, part);
-        setOpenParts((s) => {
-          const next = new Set(s);
-          next.delete(part);
-          return next;
-        });
+        deletePart(work.id, part)
+          .then(() => {
+            setOpenParts((s) => {
+              const next = new Set(s);
+              next.delete(part);
+              return next;
+            });
+          })
+          .catch((err) => {
+            toast.error(apiErrorMessage(err, '부 삭제에 실패했습니다'));
+          });
       },
     });
 
   const commitPartRename = (oldLabel: string, value: string) => {
     setEditingPart(null);
     if (value && value !== oldLabel) {
-      renamePart(work.id, oldLabel, value);
-      setOpenParts((s) => {
-        const next = new Set(s);
-        if (next.delete(oldLabel)) next.add(value);
-        return next;
-      });
+      renamePart(work.id, oldLabel, value)
+        .then(() => {
+          setOpenParts((s) => {
+            const next = new Set(s);
+            if (next.delete(oldLabel)) next.add(value);
+            return next;
+          });
+        })
+        .catch((err) => {
+          toast.error(apiErrorMessage(err, '부 이름 변경에 실패했습니다'));
+        });
     }
+  };
+
+  // 같은 부 안에서 화를 드롭 대상 위치로 옮기고 새 순서를 실 API로 반영한다.
+  const handleChapterDrop = (part: string, targetChapterId: string) => {
+    const chapterId = draggedChapterId;
+    setDraggedChapterId(null);
+    if (!chapterId || chapterId === targetChapterId) return;
+    const group = parts.find((p) => p.part === part);
+    const ids = group?.chapters.map((c) => c.id) ?? [];
+    const from = ids.indexOf(chapterId);
+    const to = ids.indexOf(targetChapterId);
+    if (from === -1 || to === -1) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    const episodeId = group?.chapters[0]?.episodeId;
+    if (!episodeId) return;
+    reorderChapters(work.id, episodeId, ids).catch((err) => {
+      toast.error(apiErrorMessage(err, '화 순서 변경에 실패했습니다'));
+    });
+  };
+
+  // 부를 드롭 대상 위치로 옮기고 새 순서를 실 API로 반영한다.
+  const handlePartDrop = (targetPart: string) => {
+    const source = draggedPart;
+    setDraggedPart(null);
+    if (!source || source === targetPart) return;
+    const order = parts.map((p) => p.part);
+    const from = order.indexOf(source);
+    const to = order.indexOf(targetPart);
+    if (from === -1 || to === -1) return;
+    order.splice(to, 0, order.splice(from, 1)[0]);
+    reorderParts(work.id, order).catch((err) => {
+      toast.error(apiErrorMessage(err, '부 순서 변경에 실패했습니다'));
+    });
   };
 
   return (
@@ -148,7 +208,16 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
                 />
               </div>
             ) : (
-              <div className="group mx-1.5 flex items-center rounded-[3px] transition-colors hover:bg-ink/[0.04]">
+              <div
+                draggable
+                onDragStart={() => setDraggedPart(part)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handlePartDrop(part);
+                }}
+                className="group mx-1.5 flex items-center rounded-[3px] transition-colors hover:bg-ink/[0.04]"
+              >
                 <button
                   type="button"
                   onClick={() => togglePart(part)}
@@ -183,7 +252,9 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
                       <InlineEdit
                         initial={chapter.title}
                         onCommit={(v) => {
-                          renameChapter(work.id, chapter.id, v || '새 화');
+                          renameChapter(work.id, chapter.id, v || '새 화').catch((err) => {
+                            toast.error(apiErrorMessage(err, '화 이름 변경에 실패했습니다'));
+                          });
                           setEditingChapterId(null);
                         }}
                         onCancel={() => setEditingChapterId(null)}
@@ -193,6 +264,13 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
                     // 회차 클릭 = 첫 씬 편집으로 바로 이동(씬 노드는 트리에 두지 않음). 더블클릭은 제목 편집.
                     <div
                       key={chapter.id}
+                      draggable
+                      onDragStart={() => setDraggedChapterId(chapter.id)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleChapterDrop(part, chapter.id);
+                      }}
                       className={cn(
                         'group mx-1.5 flex items-center rounded-[3px] transition-colors',
                         activeChapterId === chapter.id ? 'bg-primary/10' : 'hover:bg-ink/[0.04]'

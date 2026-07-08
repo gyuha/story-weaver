@@ -143,6 +143,31 @@ try:
     except ImportError:
         logger.debug("works models not found — skipping")
 
+    try:
+        from domains.manuscript import models as _manuscript_models  # noqa: F401
+    except ImportError:
+        logger.debug("manuscript models not found — skipping")
+
+    try:
+        from domains.worldbible import models as _worldbible_models  # noqa: F401
+    except ImportError:
+        logger.debug("worldbible models not found — skipping")
+
+    try:
+        from domains.timeline import models as _timeline_models  # noqa: F401
+    except ImportError:
+        logger.debug("timeline models not found — skipping")
+
+    try:
+        from domains.memory import models as _memory_models  # noqa: F401
+    except ImportError:
+        logger.debug("memory models not found — skipping")
+
+    try:
+        from domains.dynamic_update import models as _dynamic_update_models  # noqa: F401
+    except ImportError:
+        logger.debug("dynamic_update models not found — skipping")
+
     target_metadata = Base.metadata
 except ImportError:
     # Database module may not be created yet (bootstrapping phase).

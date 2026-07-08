@@ -1,5 +1,14 @@
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { memoryApi } from '@/features/memory/api/memory.api';
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Chapter, Entity, Scene, Work } from '@/features/shared/types';
+import type {
+  Chapter,
+  Entity,
+  MemoryReason,
+  Scene,
+  UpdateSuggestion,
+  Work,
+} from '@/features/shared/types';
 import { EntityDetail } from '@/features/world-bible/components/entity-detail';
 import { cn } from '@/lib/utils';
 import {
@@ -108,64 +117,92 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   const acceptSuggestion = useWorksStore((s) => s.acceptSuggestion);
   const dismissSuggestion = useWorksStore((s) => s.dismissSuggestion);
   const removeLink = useWorksStore((s) => s.removeSceneEntityLink);
-  const suggestionEntity = scene.updateSuggestion
-    ? entityMap.get(scene.updateSuggestion.entityId)
-    : undefined;
 
   const sceneIndex = chapter.scenes.findIndex((s) => s.id === scene.id) + 1;
   const [addOpen, setAddOpen] = useState(false);
   const [detailEntity, setDetailEntity] = useState<Entity | null>(null);
   // 자동 추천(벡터) 항목을 세션 내에서 제외 (영속화 없음 — 실 구현 시 dismiss 영속화 필요)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  // "AI 추천 받기"로 수동 트리거해 추가한 추천 (ephemeral, 자동 출처로 표시)
-  const [manualRecs, setManualRecs] = useState<{ entityId: string; score: number }[]>([]);
+  // "AI 추천 받기"로 실 메모리 API에서 받아 추가한 추천 (ephemeral, 자동 출처로 표시)
+  // reason: 'link'=1차(entity/timeline_state, 링크 근거) · 'vector'=보조(벡터 매칭)
+  const [manualRecs, setManualRecs] = useState<{ entityId: string; reason: MemoryReason }[]>([]);
+  const [recommending, setRecommending] = useState(false);
 
   // 표시 통합: 엔티티 1개당 카드 1개, 출처(수동/자동)는 모두 배지로. 데이터는 분리 보존(ADR-0002).
-  // 자동 후보 = 벡터 시드 + 수동 트리거 추천(manualRecs)
-  const autoPool = [...scene.vectorMemory, ...manualRecs];
-  const autoScores = new Map(autoPool.map((v) => [v.entityId, v.score]));
-  const items: { entity: Entity; manual: boolean; autoScore?: number }[] = [];
+  // 자동 후보 = 벡터 시드(스코어 배지) + AI 추천(1차/보조 배지)
+  type AutoBadge = { label: string; tone: MemoryReason };
+  const autoPool: { entityId: string; badge: AutoBadge }[] = [
+    ...scene.vectorMemory.map((v) => ({
+      entityId: v.entityId,
+      badge: { label: `추천 ${v.score}%`, tone: 'vector' as const },
+    })),
+    ...manualRecs.map((v) => ({
+      entityId: v.entityId,
+      badge:
+        v.reason === 'vector'
+          ? { label: '추천', tone: 'vector' as const }
+          : { label: '링크', tone: 'link' as const },
+    })),
+  ];
+  const autoBadges = new Map(autoPool.map((v) => [v.entityId, v.badge]));
+  const items: { entity: Entity; manual: boolean; autoBadge?: AutoBadge }[] = [];
   const seen = new Set<string>();
   for (const id of scene.linkedEntityIds) {
     const entity = entityMap.get(id);
     if (!entity || seen.has(id)) continue;
     seen.add(id);
-    items.push({ entity, manual: true, autoScore: autoScores.get(id) });
+    items.push({ entity, manual: true, autoBadge: autoBadges.get(id) });
   }
-  // 자동 전용(추천이지만 수동 링크 아님)은 유사도 내림차순, 세션 제외분 제거
-  for (const v of [...autoPool].sort((a, b) => b.score - a.score)) {
+  // 자동 전용(추천이지만 수동 링크 아님)은 도착 순서(백엔드 priority 순), 세션 제외분 제거
+  for (const v of autoPool) {
     const entity = entityMap.get(v.entityId);
     if (!entity || seen.has(v.entityId) || dismissed.has(v.entityId)) continue;
     seen.add(v.entityId);
-    items.push({ entity, manual: false, autoScore: v.score });
+    items.push({ entity, manual: false, autoBadge: v.badge });
   }
 
-  // 완전 제거: 수동분은 링크 해제, 자동분은 세션 dismiss — 둘 다면 둘 다 수행
-  const removeItem = (item: { entity: Entity; manual: boolean; autoScore?: number }) => {
-    if (item.manual) removeLink(work.id, scene.id, item.entity.id);
-    if (item.autoScore != null) setDismissed((s) => new Set(s).add(item.entity.id));
-    toast.success(`'${item.entity.name}' 참고를 제거했습니다`);
+  // 완전 제거: 수동분은 링크 해제(실 API), 자동분은 세션 dismiss — 둘 다면 둘 다 수행
+  const removeItem = (item: { entity: Entity; manual: boolean; autoBadge?: AutoBadge }) => {
+    if (item.autoBadge != null) setDismissed((s) => new Set(s).add(item.entity.id));
+    if (item.manual) {
+      removeLink(work.id, scene.id, item.entity.id)
+        .then(() => toast.success(`'${item.entity.name}' 참고를 제거했습니다`))
+        .catch((err) => toast.error(apiErrorMessage(err, '참고를 제거하지 못했습니다')));
+    } else {
+      toast.success(`'${item.entity.name}' 참고를 제거했습니다`);
+    }
   };
 
-  // AI 추천 받기 (mock): 아직 목록에 없는 엔티티 상위 3개를 결정적 점수로 추천 추가
-  // eco: 점수·후보는 mock. 실 구현 시 글 내용 임베딩 → 벡터 검색으로 교체.
-  const handleRecommend = () => {
-    const excluded = new Set<string>([
-      ...scene.linkedEntityIds,
-      ...autoPool.map((v) => v.entityId),
-      ...dismissed,
-    ]);
-    const candidates = work.entities.filter((e) => !excluded.has(e.id)).slice(0, 3);
-    if (candidates.length === 0) {
-      toast('추천할 설정이 없습니다');
-      return;
+  // AI 추천 받기: 실 메모리 검색 API(링크 엔티티+타임라인 상태+벡터 매칭) 호출 후
+  // type=entity/timeline_state는 1차(링크 배지), type=vector_match는 보조(추천 배지)로 추가한다.
+  const handleRecommend = async () => {
+    setRecommending(true);
+    try {
+      const results = await memoryApi.search({ path: { work_id: work.id, scene_id: scene.id } });
+      const excluded = new Set<string>([
+        ...scene.linkedEntityIds,
+        ...autoPool.map((v) => v.entityId),
+        ...dismissed,
+      ]);
+      const seenNew = new Set<string>();
+      const recs: { entityId: string; reason: MemoryReason }[] = [];
+      for (const result of results) {
+        const entityId = result.entityId;
+        if (!entityId || excluded.has(entityId) || seenNew.has(entityId)) continue;
+        seenNew.add(entityId);
+        recs.push({ entityId, reason: result.type === 'vector_match' ? 'vector' : 'link' });
+      }
+      if (recs.length === 0) {
+        toast('추천할 설정이 없습니다');
+        return;
+      }
+      setManualRecs((prev) => [...prev, ...recs]);
+      toast.success(`AI 추천 ${recs.length}개를 추가했습니다`);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'AI 추천을 가져오지 못했습니다'));
+    } finally {
+      setRecommending(false);
     }
-    const MOCK_SCORES = [88, 82, 75];
-    setManualRecs((prev) => [
-      ...prev,
-      ...candidates.map((e, i) => ({ entityId: e.id, score: MOCK_SCORES[i] ?? 70 })),
-    ]);
-    toast.success(`AI 추천 ${candidates.length}개를 추가했습니다`);
   };
 
   return (
@@ -182,8 +219,9 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
               entity={item.entity}
               badges={[
                 ...(item.manual ? [{ label: '링크', tone: 'link' as const }] : []),
-                ...(item.autoScore != null
-                  ? [{ label: `추천 ${item.autoScore}%`, tone: 'vector' as const }]
+                // 링크 배지와 중복되는 1차(link 톤) 자동 배지는 건너뛴다
+                ...(item.autoBadge && !(item.manual && item.autoBadge.tone === 'link')
+                  ? [item.autoBadge]
                   : []),
               ]}
               onClick={() => setDetailEntity(item.entity)}
@@ -219,42 +257,54 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
         <button
           type="button"
           onClick={handleRecommend}
-          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-ai/40 bg-ai/[0.06] text-[12.5px] font-medium text-ai transition-colors hover:bg-ai/[0.12]"
+          disabled={recommending}
+          className="flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-ai/40 bg-ai/[0.06] text-[12.5px] font-medium text-ai transition-colors hover:bg-ai/[0.12] disabled:opacity-50"
         >
           <Sparkles className="size-3.5" strokeWidth={2} />
-          AI 추천 받기
+          {recommending ? 'AI 추천 가져오는 중…' : 'AI 추천 받기'}
         </button>
       </div>
 
-      {scene.updateSuggestion && (
-        <div className="rounded-lg border border-ai/30 bg-ai-soft p-[12px_13px]">
-          <div className="mb-[7px] flex items-center gap-[7px]">
-            <Sparkles className="size-3.5 text-ai" strokeWidth={2} />
-            <span className="text-[12px] font-semibold text-ai">AI 동적 업데이트 제안</span>
-          </div>
-          <div className="mb-[11px] text-[12px] leading-[1.55] text-ink-soft">
-            <b className="font-semibold text-ink">{suggestionEntity?.name ?? '엔티티'}</b>이{' '}
-            {scene.updateSuggestion.body}
-          </div>
-          <div className="flex gap-[7px]">
-            <button
-              type="button"
-              onClick={() => {
-                acceptSuggestion(work.id, scene.id);
-                toast.success('엔티티 카드에 반영되었습니다');
-              }}
-              className="h-[30px] flex-1 rounded-[5px] bg-ai text-[12.5px] font-semibold text-white transition-colors hover:opacity-90"
+      {scene.pendingSuggestions && scene.pendingSuggestions.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          {scene.pendingSuggestions.map((suggestion) => (
+            <div
+              key={suggestion.id}
+              className="rounded-lg border border-ai/30 bg-ai-soft p-[12px_13px]"
             >
-              반영
-            </button>
-            <button
-              type="button"
-              onClick={() => dismissSuggestion(work.id, scene.id)}
-              className="h-[30px] rounded-[5px] border border-line-strong px-[13px] text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
-            >
-              무시
-            </button>
-          </div>
+              <div className="mb-[7px] flex items-center gap-[7px]">
+                <Sparkles className="size-3.5 text-ai" strokeWidth={2} />
+                <span className="text-[12px] font-semibold text-ai">AI 동적 업데이트 제안</span>
+              </div>
+              <div className="mb-[11px] text-[12px] leading-[1.55] text-ink-soft">
+                {describeSuggestion(suggestion, entityMap)}
+              </div>
+              <div className="flex gap-[7px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    acceptSuggestion(work.id, scene.id, suggestion.id)
+                      .then(() => toast.success('엔티티 카드에 반영되었습니다'))
+                      .catch((err) => toast.error(apiErrorMessage(err, '반영하지 못했습니다')));
+                  }}
+                  className="h-[30px] flex-1 rounded-[5px] bg-ai text-[12.5px] font-semibold text-white transition-colors hover:opacity-90"
+                >
+                  반영
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    dismissSuggestion(work.id, scene.id, suggestion.id).catch((err) =>
+                      toast.error(apiErrorMessage(err, '처리하지 못했습니다'))
+                    )
+                  }
+                  className="h-[30px] rounded-[5px] border border-line-strong px-[13px] text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
+                >
+                  무시
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -264,6 +314,38 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
       )}
     </div>
   );
+}
+
+/** 제안 kind별 payload를 사람이 읽을 문장으로 조립한다. attribute_change/timeline_state는
+ * entityId로 기존 엔티티 이름을 찾아 보여준다(백엔드가 확정 id만 주므로 이름 매칭 불필요). */
+function describeSuggestion(suggestion: UpdateSuggestion, entityMap: Map<string, Entity>) {
+  switch (suggestion.kind) {
+    case 'new_entity':
+      return (
+        <>
+          신규 엔티티 후보 <b className="font-semibold text-ink">{suggestion.payload.name}</b>
+          {suggestion.payload.summary ? ` — ${suggestion.payload.summary}` : ''}
+        </>
+      );
+    case 'attribute_change': {
+      const name = entityMap.get(suggestion.payload.entityId)?.name ?? '엔티티';
+      return (
+        <>
+          <b className="font-semibold text-ink">{name}</b>의 {suggestion.payload.attribute}이(가) '
+          {suggestion.payload.newValue}'로 바뀔 수 있습니다
+        </>
+      );
+    }
+    case 'timeline_state': {
+      const name = entityMap.get(suggestion.payload.entityId)?.name ?? '엔티티';
+      return (
+        <>
+          <b className="font-semibold text-ink">{name}</b>의 {suggestion.payload.stateKey}이(가) '
+          {suggestion.payload.stateValue}'로 바뀔 수 있습니다
+        </>
+      );
+    }
+  }
 }
 
 /** 설정 참고 추가 모달 — 검색 + 미링크 엔티티 체크박스 다중선택 → 일괄 추가 */
@@ -299,7 +381,11 @@ function AddReferenceModal({
     });
 
   const apply = () => {
-    if (checked.size) addLinks(work.id, scene.id, [...checked]);
+    if (checked.size) {
+      addLinks(work.id, scene.id, [...checked]).catch((err) => {
+        toast.error(apiErrorMessage(err, '설정 참고 추가에 실패했습니다'));
+      });
+    }
     onClose();
   };
 

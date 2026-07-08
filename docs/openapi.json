@@ -1133,10 +1133,2739 @@
           }
         }
       }
+    },
+    "/api/v1/works/{work_id}/beat-sheet": {
+      "post": {
+        "tags": [
+          "works"
+        ],
+        "summary": "비트 시트 생성 (고품질 티어)",
+        "operationId": "generate_beat_sheet_api_v1_works__work_id__beat_sheet_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeatSheetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/synopsis": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "시놉시스 조회",
+        "operationId": "get_synopsis_api_v1_works__work_id__synopsis_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SynopsisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "시놉시스 upsert",
+        "operationId": "upsert_synopsis_api_v1_works__work_id__synopsis_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SynopsisUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SynopsisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 목록",
+        "operationId": "list_episodes_api_v1_works__work_id__episodes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpisodeResponse"
+                  },
+                  "title": "Response List Episodes Api V1 Works  Work Id  Episodes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 생성",
+        "operationId": "create_episode_api_v1_works__work_id__episodes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EpisodeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/reorder": {
+      "patch": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 순서 변경",
+        "operationId": "reorder_episodes_api_v1_works__work_id__episodes_reorder_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EpisodeResponse"
+                  },
+                  "title": "Response Reorder Episodes Api V1 Works  Work Id  Episodes Reorder Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 단건 조회",
+        "operationId": "get_episode_api_v1_works__work_id__episodes__episode_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 수정",
+        "operationId": "update_episode_api_v1_works__work_id__episodes__episode_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EpisodeUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "부 삭제",
+        "operationId": "delete_episode_api_v1_works__work_id__episodes__episode_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 목록",
+        "operationId": "list_chapters_api_v1_works__work_id__episodes__episode_id__chapters_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChapterResponse"
+                  },
+                  "title": "Response List Chapters Api V1 Works  Work Id  Episodes  Episode Id  Chapters Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 생성",
+        "operationId": "create_chapter_api_v1_works__work_id__episodes__episode_id__chapters_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChapterCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/reorder": {
+      "patch": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 순서 변경",
+        "operationId": "reorder_chapters_api_v1_works__work_id__episodes__episode_id__chapters_reorder_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChapterResponse"
+                  },
+                  "title": "Response Reorder Chapters Api V1 Works  Work Id  Episodes  Episode Id  Chapters Reorder Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 단건 조회",
+        "operationId": "get_chapter_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 수정",
+        "operationId": "update_chapter_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChapterUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "챕터 삭제",
+        "operationId": "delete_chapter_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "씬 목록",
+        "operationId": "list_scenes_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SceneResponse"
+                  },
+                  "title": "Response List Scenes Api V1 Works  Work Id  Episodes  Episode Id  Chapters  Chapter Id  Scenes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "씬 생성",
+        "operationId": "create_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "씬 단건 조회",
+        "operationId": "get_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "씬 수정",
+        "operationId": "update_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "씬 삭제",
+        "operationId": "delete_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/entities": {
+      "get": {
+        "tags": [
+          "worldbible"
+        ],
+        "summary": "엔티티 카드 목록",
+        "operationId": "list_entities_api_v1_works__work_id__entities_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntityResponse"
+                  },
+                  "title": "Response List Entities Api V1 Works  Work Id  Entities Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "worldbible"
+        ],
+        "summary": "엔티티 카드 생성",
+        "operationId": "create_entity_api_v1_works__work_id__entities_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntityCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/entities/{entity_id}": {
+      "get": {
+        "tags": [
+          "worldbible"
+        ],
+        "summary": "엔티티 카드 단건 조회",
+        "operationId": "get_entity_api_v1_works__work_id__entities__entity_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "worldbible"
+        ],
+        "summary": "엔티티 카드 수정",
+        "operationId": "update_entity_api_v1_works__work_id__entities__entity_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "worldbible"
+        ],
+        "summary": "엔티티 카드 삭제",
+        "operationId": "delete_entity_api_v1_works__work_id__entities__entity_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/entities/{entity_id}/timeline-states": {
+      "post": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "타임라인 상태 생성",
+        "operationId": "create_timeline_state_api_v1_works__work_id__entities__entity_id__timeline_states_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimelineStateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "타임라인 상태 목록",
+        "operationId": "list_timeline_states_api_v1_works__work_id__entities__entity_id__timeline_states_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          },
+          {
+            "name": "up_to_scene_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Up To Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineStateResponse"
+                  },
+                  "title": "Response List Timeline States Api V1 Works  Work Id  Entities  Entity Id  Timeline States Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/links": {
+      "get": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "씬-엔티티 링크 목록",
+        "operationId": "list_links_api_v1_works__work_id__scenes__scene_id__links_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SceneEntityLinkResponse"
+                  },
+                  "title": "Response List Links Api V1 Works  Work Id  Scenes  Scene Id  Links Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "씬-엔티티 링크 생성(중복 시 기존 링크 반환)",
+        "operationId": "create_link_api_v1_works__work_id__scenes__scene_id__links_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneEntityLinkCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneEntityLinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/links/{entity_id}": {
+      "delete": {
+        "tags": [
+          "timeline"
+        ],
+        "summary": "씬-엔티티 링크 삭제",
+        "operationId": "delete_link_api_v1_works__work_id__scenes__scene_id__links__entity_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/memory": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "현재 씬의 메모리 검색",
+        "operationId": "search_memory_api_v1_works__work_id__scenes__scene_id__memory_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryItemResponse"
+                  },
+                  "title": "Response Search Memory Api V1 Works  Work Id  Scenes  Scene Id  Memory Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/continue": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "이어쓰기 (SSE)",
+        "operationId": "assist_continue_api_v1_works__work_id__scenes__scene_id__assist_continue_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContinueRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/infill": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "인필링 (SSE)",
+        "operationId": "assist_infill_api_v1_works__work_id__scenes__scene_id__assist_infill_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InfillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/dialogue": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "지문/대사 변환 (SSE)",
+        "operationId": "assist_dialogue_api_v1_works__work_id__scenes__scene_id__assist_dialogue_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DialogueRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/style": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "문체 변환 (SSE)",
+        "operationId": "assist_style_api_v1_works__work_id__scenes__scene_id__assist_style_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StyleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/correct": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "교정 (SSE)",
+        "operationId": "assist_correct_api_v1_works__work_id__scenes__scene_id__assist_correct_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates": {
+      "post": {
+        "tags": [
+          "dynamic-update"
+        ],
+        "summary": "씬 본문에서 신규 설정 후보 추출 + 제안 저장",
+        "operationId": "extract_updates_api_v1_works__work_id__scenes__scene_id__extract_updates_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractUpdatesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions": {
+      "get": {
+        "tags": [
+          "dynamic-update"
+        ],
+        "summary": "업데이트 제안 목록",
+        "operationId": "list_update_suggestions_api_v1_works__work_id__scenes__scene_id__update_suggestions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UpdateSuggestionResponse"
+                  },
+                  "title": "Response List Update Suggestions Api V1 Works  Work Id  Scenes  Scene Id  Update Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/approve": {
+      "post": {
+        "tags": [
+          "dynamic-update"
+        ],
+        "summary": "업데이트 제안 승인 — 엔티티/타임라인 상태에 반영",
+        "operationId": "approve_update_suggestion_api_v1_works__work_id__scenes__scene_id__update_suggestions__suggestion_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          },
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSuggestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/reject": {
+      "post": {
+        "tags": [
+          "dynamic-update"
+        ],
+        "summary": "업데이트 제안 거절 — 데이터 변경 없음",
+        "operationId": "reject_update_suggestion_api_v1_works__work_id__scenes__scene_id__update_suggestions__suggestion_id__reject_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          },
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSuggestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/conflicts": {
+      "get": {
+        "tags": [
+          "conflicts"
+        ],
+        "summary": "설정 충돌 목록",
+        "operationId": "list_conflicts_api_v1_works__work_id__conflicts_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConflictResponse"
+                  },
+                  "title": "Response List Conflicts Api V1 Works  Work Id  Conflicts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/relationships": {
+      "get": {
+        "tags": [
+          "relationships"
+        ],
+        "summary": "캐릭터 관계도",
+        "operationId": "get_relationships_api_v1_works__work_id__relationships_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "up_to_scene_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Up To Scene Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipGraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AttributeChange": {
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "title": "Entityid"
+          },
+          "attribute": {
+            "type": "string",
+            "title": "Attribute"
+          },
+          "newValue": {
+            "type": "string",
+            "title": "Newvalue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entityId",
+          "attribute",
+          "newValue"
+        ],
+        "title": "AttributeChange",
+        "description": "기존 엔티티의 속성 변경 후보."
+      },
+      "BeatSheetResponse": {
+        "properties": {
+          "beats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Beats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "beats"
+        ],
+        "title": "BeatSheetResponse",
+        "description": "비트 시트 생성 응답 — 회차별 비트를 한 줄씩 담는다(예: \"1화: 발단 — ...\")."
+      },
+      "CandidateEntity": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CandidateEntity",
+        "description": "LLM이 발견한, 아직 카드가 없는 신규 엔티티 후보."
+      },
       "ChangePasswordRequest": {
         "properties": {
           "current_password": {
@@ -1171,6 +3900,97 @@
         "type": "object",
         "title": "ChangePasswordResponse",
         "description": "Response body for POST /auth/change-password."
+      },
+      "ChapterCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "orderIndex"
+        ],
+        "title": "ChapterCreate",
+        "description": "챕터 생성 입력."
+      },
+      "ChapterResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "episodeId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episodeid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "episodeId",
+          "title",
+          "orderIndex"
+        ],
+        "title": "ChapterResponse",
+        "description": "챕터 응답."
+      },
+      "ChapterUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "orderIndex": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "title": "ChapterUpdate",
+        "description": "챕터 수정 입력 — 모든 필드 선택(PATCH)."
       },
       "ChatMessage": {
         "properties": {
@@ -1243,6 +4063,89 @@
         ],
         "title": "ChatResponse",
         "description": "Response body for the non-streaming ``/complete`` endpoint.\n\nAttributes\n----------\ncontent:\n    The model's full reply text.\nmodel:\n    Active LiteLLM model identifier, e.g. ``\"openai/gpt-4o-mini\"``.\n    Included for debugging and provider-routing verification."
+      },
+      "ConflictResponse": {
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entityid"
+          },
+          "entityName": {
+            "type": "string",
+            "title": "Entityname"
+          },
+          "stateKey": {
+            "type": "string",
+            "title": "Statekey"
+          },
+          "earlier": {
+            "$ref": "#/components/schemas/ConflictStateRef"
+          },
+          "later": {
+            "$ref": "#/components/schemas/ConflictStateRef"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entityId",
+          "entityName",
+          "stateKey",
+          "earlier",
+          "later"
+        ],
+        "title": "ConflictResponse",
+        "description": "설정 충돌 1건 — 같은 엔티티·같은 예약 state_key에 대한 시점 역행 모순 쌍."
+      },
+      "ConflictStateRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "sceneId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sceneid"
+          },
+          "globalSeq": {
+            "type": "integer",
+            "title": "Globalseq"
+          },
+          "stateValue": {
+            "type": "string",
+            "title": "Statevalue"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sceneId",
+          "globalSeq",
+          "stateValue",
+          "createdAt"
+        ],
+        "title": "ConflictStateRef",
+        "description": "충돌 쌍의 한쪽 타임라인 상태."
+      },
+      "ContinueRequest": {
+        "properties": {
+          "cursorText": {
+            "type": "string",
+            "title": "Cursortext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cursorText"
+        ],
+        "title": "ContinueRequest"
       },
       "ConversationCreate": {
         "properties": {
@@ -1342,6 +4245,326 @@
         ],
         "title": "ConversationResponse"
       },
+      "CorrectRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CorrectRequest"
+      },
+      "DialogueRequest": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "title": "Intent"
+          },
+          "targetEntityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetentityid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent",
+          "targetEntityId"
+        ],
+        "title": "DialogueRequest"
+      },
+      "EmbeddingSourceType": {
+        "type": "string",
+        "enum": [
+          "entity",
+          "scene"
+        ],
+        "title": "EmbeddingSourceType",
+        "description": "임베딩 출처 판별 타입 (data-model.md 6장)."
+      },
+      "EntityCreate": {
+        "properties": {
+          "entityType": {
+            "$ref": "#/components/schemas/EntityType"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entityType",
+          "name"
+        ],
+        "title": "EntityCreate",
+        "description": "엔티티 카드 생성 입력. ``attributes``는 서비스 레벨에서 ``entity_type``별로 검증한다."
+      },
+      "EntityResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "entityType": {
+            "$ref": "#/components/schemas/EntityType"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "entityType",
+          "name",
+          "aliases",
+          "summary",
+          "attributes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "EntityResponse",
+        "description": "엔티티 카드 응답."
+      },
+      "EntityType": {
+        "type": "string",
+        "enum": [
+          "character",
+          "location",
+          "event",
+          "item"
+        ],
+        "title": "EntityType",
+        "description": "엔티티 카드 판별 타입 (data-model.md 3.1)."
+      },
+      "EntityUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "aliases": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aliases"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "title": "EntityUpdate",
+        "description": "엔티티 카드 수정 입력 — 모든 필드 선택(PATCH).\n\n``entity_type``은 생성 후 불변이라 필드 자체가 없다 — 웹 mock ``updateEntity``의\n\"type(카테고리)은 변경 불가\" 규칙과 동일하게, 페이로드에 담겨도 무시된다."
+      },
+      "EpisodeCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "orderIndex"
+        ],
+        "title": "EpisodeCreate",
+        "description": "부 생성 입력."
+      },
+      "EpisodeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "title",
+          "orderIndex"
+        ],
+        "title": "EpisodeResponse",
+        "description": "부 응답."
+      },
+      "EpisodeUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "orderIndex": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderindex"
+          }
+        },
+        "type": "object",
+        "title": "EpisodeUpdate",
+        "description": "부 수정 입력 — 모든 필드 선택(PATCH)."
+      },
+      "ExtractUpdatesResponse": {
+        "properties": {
+          "candidateEntities": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateEntity"
+            },
+            "type": "array",
+            "title": "Candidateentities"
+          },
+          "attributeChanges": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeChange"
+            },
+            "type": "array",
+            "title": "Attributechanges"
+          },
+          "timelineChanges": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineChange"
+            },
+            "type": "array",
+            "title": "Timelinechanges"
+          }
+        },
+        "type": "object",
+        "title": "ExtractUpdatesResponse",
+        "description": "추출 결과 — 3개 카테고리. 파싱 실패 시 모두 빈 리스트."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1354,6 +4577,24 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InfillRequest": {
+        "properties": {
+          "beforeText": {
+            "type": "string",
+            "title": "Beforetext"
+          },
+          "afterText": {
+            "type": "string",
+            "title": "Aftertext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "beforeText",
+          "afterText"
+        ],
+        "title": "InfillRequest"
       },
       "LoginRequest": {
         "properties": {
@@ -1389,6 +4630,134 @@
         ],
         "title": "LogoutRequest",
         "description": "Request body for POST /auth/logout."
+      },
+      "MemoryItemResponse": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/MemoryItemType"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "entityId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entityid"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "stateKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statekey"
+          },
+          "stateValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statevalue"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmbeddingSourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceid"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "priority"
+        ],
+        "title": "MemoryItemResponse",
+        "description": "메모리 검색 결과 1건. ``priority``: 1=링크 엔티티, 2=타임라인 상태, 3=벡터 매칭."
+      },
+      "MemoryItemType": {
+        "type": "string",
+        "enum": [
+          "entity",
+          "timeline_state",
+          "vector_match"
+        ],
+        "title": "MemoryItemType",
+        "description": "병합된 메모리 항목의 종류."
       },
       "MessageResponse": {
         "properties": {
@@ -1568,6 +4937,82 @@
         "title": "RefreshRequest",
         "description": "Request body for POST /auth/refresh."
       },
+      "RelationshipEdge": {
+        "properties": {
+          "sourceEntityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceentityid"
+          },
+          "sourceName": {
+            "type": "string",
+            "title": "Sourcename"
+          },
+          "targetEntityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Targetentityid"
+          },
+          "targetName": {
+            "type": "string",
+            "title": "Targetname"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceEntityId",
+          "sourceName",
+          "targetEntityId",
+          "targetName",
+          "type",
+          "note"
+        ],
+        "title": "RelationshipEdge",
+        "description": "관계 그래프의 방향성 있는 엣지 한 건."
+      },
+      "RelationshipGraphResponse": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/RelationshipEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "edges"
+        ],
+        "title": "RelationshipGraphResponse",
+        "description": "관계 그래프 응답 — ``up_to_scene_id`` 미지정 시 ``summary``는 null."
+      },
       "ReviewSummary": {
         "properties": {
           "scenes": {
@@ -1588,6 +5033,213 @@
         },
         "type": "object",
         "title": "ReviewSummary"
+      },
+      "SceneCreate": {
+        "properties": {
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Orderindex"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "orderIndex"
+        ],
+        "title": "SceneCreate",
+        "description": "씬 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다."
+      },
+      "SceneEntityLinkCreate": {
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entityid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entityId"
+        ],
+        "title": "SceneEntityLinkCreate",
+        "description": "씬-엔티티 링크 생성 입력. ``source``는 서비스에서 ``author``로 고정된다."
+      },
+      "SceneEntityLinkResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "sceneId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sceneid"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entityid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SceneEntityLinkSource"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "sceneId",
+          "entityId",
+          "source",
+          "createdAt"
+        ],
+        "title": "SceneEntityLinkResponse",
+        "description": "씬-엔티티 링크 응답."
+      },
+      "SceneEntityLinkSource": {
+        "type": "string",
+        "enum": [
+          "author",
+          "ai_extracted"
+        ],
+        "title": "SceneEntityLinkSource",
+        "description": "씬-엔티티 링크 출처 (data-model.md 5.1). 이 슬라이스는 ``author``만 기록한다."
+      },
+      "SceneResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "title": "Orderindex"
+          },
+          "globalSeq": {
+            "type": "integer",
+            "title": "Globalseq"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "chapterId",
+          "orderIndex",
+          "globalSeq",
+          "title",
+          "body",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "SceneResponse",
+        "description": "씬 응답."
+      },
+      "SceneUpdate": {
+        "properties": {
+          "orderIndex": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orderindex"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "title": "SceneUpdate",
+        "description": "씬 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가."
       },
       "SendMessageRequest": {
         "properties": {
@@ -1657,6 +5309,220 @@
         ],
         "title": "SignupResponse",
         "description": "Response body for POST /auth/signup."
+      },
+      "StyleRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "targetStyle": {
+            "type": "string",
+            "title": "Targetstyle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "targetStyle"
+        ],
+        "title": "StyleRequest"
+      },
+      "SuggestionKind": {
+        "type": "string",
+        "enum": [
+          "new_entity",
+          "attribute_change",
+          "timeline_state"
+        ],
+        "title": "SuggestionKind",
+        "description": "제안 종류 (plan.md M3-S2)."
+      },
+      "SuggestionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "title": "SuggestionStatus",
+        "description": "제안 검토 상태."
+      },
+      "SynopsisResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "body"
+        ],
+        "title": "SynopsisResponse",
+        "description": "시놉시스 응답."
+      },
+      "SynopsisUpdate": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "SynopsisUpdate",
+        "description": "시놉시스 upsert 입력."
+      },
+      "TimelineChange": {
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "title": "Entityid"
+          },
+          "stateKey": {
+            "type": "string",
+            "title": "Statekey"
+          },
+          "stateValue": {
+            "type": "string",
+            "title": "Statevalue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entityId",
+          "stateKey",
+          "stateValue"
+        ],
+        "title": "TimelineChange",
+        "description": "기존 엔티티의 타임라인 상태 변화 후보(예: life_status=dead)."
+      },
+      "TimelineStateCreate": {
+        "properties": {
+          "sceneId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sceneid"
+          },
+          "stateKey": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Statekey"
+          },
+          "stateValue": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Statevalue"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sceneId",
+          "stateKey",
+          "stateValue"
+        ],
+        "title": "TimelineStateCreate",
+        "description": "타임라인 상태 생성 입력. ``source``는 서비스에서 ``author``로 고정된다."
+      },
+      "TimelineStateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entityid"
+          },
+          "sceneId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sceneid"
+          },
+          "stateKey": {
+            "type": "string",
+            "title": "Statekey"
+          },
+          "stateValue": {
+            "type": "string",
+            "title": "Statevalue"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TimelineStateSource"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "entityId",
+          "sceneId",
+          "stateKey",
+          "stateValue",
+          "note",
+          "source",
+          "createdAt"
+        ],
+        "title": "TimelineStateResponse",
+        "description": "타임라인 상태 응답."
+      },
+      "TimelineStateSource": {
+        "type": "string",
+        "enum": [
+          "author",
+          "ai_suggested"
+        ],
+        "title": "TimelineStateSource",
+        "description": "타임라인 상태 출처 (data-model.md 4.1). 이 슬라이스는 ``author``만 기록한다."
       },
       "TokenResponse": {
         "properties": {
@@ -1736,6 +5602,53 @@
         "type": "object",
         "title": "UpdateProfileRequest",
         "description": "Request body for PATCH /auth/me (partial profile update)."
+      },
+      "UpdateSuggestionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "workId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workid"
+          },
+          "sceneId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sceneid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SuggestionKind"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SuggestionStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workId",
+          "sceneId",
+          "kind",
+          "payload",
+          "status",
+          "createdAt"
+        ],
+        "title": "UpdateSuggestionResponse",
+        "description": "업데이트 제안 응답 (plan.md M3-S2). ``payload`` 모양은 ``kind``에 따라 다르다."
       },
       "UserResponse": {
         "properties": {

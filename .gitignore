@@ -3,3 +3,4 @@
 
 # Forge volatile quick-lane log
 .forge/quick/
+.gstack/

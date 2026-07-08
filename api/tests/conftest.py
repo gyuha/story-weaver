@@ -10,14 +10,25 @@ Shared fixtures available across all test modules:
   variable sets for each LLM provider.  These are defined in
   ``tests/chat/conftest.py`` and may be referenced by chat test modules.
 
-No network calls, DB connections, or Redis connections are made in this file.
+* :func:`_close_redis_between_tests` — closes ``core.redis``'s shared client
+  singleton after every test (no-op if a test never touched Redis). Needed
+  because pytest-asyncio gives each test its own event loop, but the
+  singleton is created once and bound to whichever loop first used it —
+  without this, a later test reusing the singleton on a different loop fails
+  with "Future attached to a different loop".
+
+This file itself makes no network/DB/Redis calls — it only tears down
+connections that application code under test may have created.
 """
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+
 import pytest
 
 from core.config import get_settings
+from core.redis import close_redis_client
 
 # ---------------------------------------------------------------------------
 # Settings cache isolation
@@ -48,3 +59,19 @@ def settings_cache_clear() -> None:  # type: ignore[misc]
     get_settings.cache_clear()
     yield  # type: ignore[misc]
     get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# Redis singleton isolation (per-test event loop)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+async def _close_redis_between_tests() -> AsyncIterator[None]:
+    """Close the shared Redis client singleton after every test.
+
+    See module docstring — prevents "Future attached to a different loop"
+    when a later test reuses a singleton created on a previous test's loop.
+    """
+    yield
+    await close_redis_client()

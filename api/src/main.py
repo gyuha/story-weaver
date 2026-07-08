@@ -27,16 +27,15 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from core.config import settings
 from core.exceptions import register_exception_handlers
 from core.logging import configure_logging
 from core.middleware import CorrelationIdMiddleware
+from core.rate_limit import limiter, rate_limit_exceeded_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -90,19 +89,6 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
 # ---------------------------------------------------------------------------
 
 
-def _get_user_key(request: Request) -> str:
-    """Rate-limit key: use authenticated user ID if available, else remote IP."""
-    # Try to extract user from request state (set by auth middleware / dependency)
-    user = getattr(request.state, "user", None)
-    if user is not None and hasattr(user, "id"):
-        return f"user:{user.id}"
-    return get_remote_address(request)
-
-
-#: Shared Limiter instance — routers import this to apply per-route limits.
-limiter = Limiter(key_func=_get_user_key)
-
-
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     application = FastAPI(
@@ -120,7 +106,7 @@ def create_app() -> FastAPI:
 
     # ── Rate limiter state ────────────────────────────────────────────────────
     application.state.limiter = limiter
-    application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    application.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
     # ── Middleware (outermost to innermost) ───────────────────────────────────
     # 1. Correlation-ID header injection + structlog context binding
@@ -248,6 +234,93 @@ def _register_routers(application: FastAPI) -> None:
         logger.debug("router_registered", prefix="/api/v1/works")
     except ImportError:
         logger.debug("works_router_not_found", note="Will be added in later phase")
+
+    # Manuscript domain (synopsis·episodes·chapters·scenes)
+    try:
+        from domains.manuscript.router import router as manuscript_router
+
+        application.include_router(manuscript_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/synopsis")
+    except ImportError:
+        logger.debug("manuscript_router_not_found", note="Will be added in later phase")
+
+    # World Bible domain (엔티티 카드: 인물·장소·사건·아이템)
+    try:
+        from domains.worldbible.router import router as worldbible_router
+
+        application.include_router(worldbible_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/entities")
+    except ImportError:
+        logger.debug("worldbible_router_not_found", note="Will be added in later phase")
+
+    # Timeline domain (타임라인 상태)
+    try:
+        from domains.timeline.router import router as timeline_router
+
+        application.include_router(timeline_router, prefix="/api/v1")
+        logger.debug(
+            "router_registered",
+            prefix="/api/v1/works/{work_id}/entities/{entity_id}/timeline-states",
+        )
+    except ImportError:
+        logger.debug("timeline_router_not_found", note="Will be added in later phase")
+
+    # Timeline domain (씬-엔티티 링크)
+    try:
+        from domains.timeline.router import links_router as timeline_links_router
+
+        application.include_router(timeline_links_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/links")
+    except ImportError:
+        logger.debug("timeline_links_router_not_found", note="Will be added in later phase")
+
+    # Memory domain (메모리 검색)
+    try:
+        from domains.memory.router import router as memory_router
+
+        application.include_router(memory_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/memory")
+    except ImportError:
+        logger.debug("memory_router_not_found", note="Will be added in later phase")
+
+    # Assist domain (집필 보조: 이어쓰기·인필링·지문/대사변환·문체변환·교정)
+    try:
+        from domains.assist.router import router as assist_router
+
+        application.include_router(assist_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/assist")
+    except ImportError:
+        logger.debug("assist_router_not_found", note="Will be added in later phase")
+
+    # Dynamic update domain (씬 저장 시 신규 설정 후보 추출)
+    try:
+        from domains.dynamic_update.router import router as dynamic_update_router
+
+        application.include_router(dynamic_update_router, prefix="/api/v1")
+        logger.debug(
+            "router_registered",
+            prefix="/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates",
+        )
+    except ImportError:
+        logger.debug("dynamic_update_router_not_found", note="Will be added in later phase")
+
+    # Conflicts domain (설정 충돌 자동 감지)
+    try:
+        from domains.conflicts.router import router as conflicts_router
+
+        application.include_router(conflicts_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/conflicts")
+    except ImportError:
+        logger.debug("conflicts_router_not_found", note="Will be added in later phase")
+
+    # Relationships domain (캐릭터 관계도 — v2-C)
+    try:
+        from domains.relationships.router import router as relationships_router
+
+        application.include_router(relationships_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/relationships")
+    except ImportError:
+        logger.debug("relationships_router_not_found", note="Will be added in later phase")
 
 
 # ---------------------------------------------------------------------------

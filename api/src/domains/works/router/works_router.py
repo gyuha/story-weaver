@@ -10,16 +10,29 @@ from __future__ import annotations
 import uuid
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.rate_limit import LLM_RATE_LIMIT, limiter
+from domains.assist.tier_routing import Tier, get_client_for_tier
 from domains.auth.models import User
 from domains.auth.security import get_current_user
+from domains.budget.dependency import require_budget_available
+from domains.budget.service import estimate_tokens, record_usage
+from domains.chat.ports import AbstractLLMPort
+from domains.moderation.service import (
+    PRECHECK_DECLINE_MESSAGE,
+    RETRY_DECLINE_MESSAGE,
+    invoke_with_retry,
+    is_explicit_content,
+)
 from domains.works.models import Work
 from domains.works.repository import WorksRepository
 from domains.works.schemas import (
+    BeatSheetResponse,
     ReviewSummary,
     WorkCreate,
     WorkResponse,
@@ -121,3 +134,74 @@ async def delete_work(
         await service.delete_work(work_id, current_user.id)
     except AppError as exc:
         _raise_http(exc)
+
+
+# ---------------------------------------------------------------------------
+# 비트 시트 생성 (plan.md v2-A S3) — HIGH_QUALITY 티어, assist_router.py/
+# dynamic_update_router.py와 동일한 게이트 구성(precheck→budget→rate→완화 재시도).
+# ---------------------------------------------------------------------------
+
+
+def _beat_sheet_llm_client() -> AbstractLLMPort:
+    return get_client_for_tier(Tier.high_quality)
+
+
+async def _bind_rate_limit_user(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> None:
+    """slowapi 키 함수(``core.rate_limit._get_user_key``)가 읽는
+    ``request.state.user``를 인증된 사용자로 채운다(assist_router.py와 동일 패턴).
+    """
+    request.state.user = current_user
+
+
+def _build_beat_sheet_messages(work: Work) -> list[BaseMessage]:
+    keywords = ", ".join(work.keywords) if work.keywords else "(없음)"
+    system = (
+        "당신은 웹소설 비트 시트(회차별 전개 개요)를 설계하는 보조 AI입니다. "
+        f"장르 '{work.genre}', 키워드 [{keywords}], 문체 '{work.style}'에 맞춰 "
+        "1화부터 시작하는 회차별 비트를 한 줄씩 생성하세요. 각 줄은 "
+        "'N화: 단계 — 설명' 형식으로 쓰고, 다른 설명 없이 줄 목록만 출력하세요."
+    )
+    return [SystemMessage(content=system), HumanMessage(content="비트 시트를 생성해줘.")]
+
+
+def _parse_beats(raw_text: str) -> list[str]:
+    return [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+
+@router.post(
+    "/{work_id}/beat-sheet",
+    response_model=BeatSheetResponse,
+    summary="비트 시트 생성 (고품질 티어)",
+    dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def generate_beat_sheet(
+    request: Request,
+    response: Response,
+    work_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: WorksService = Depends(_get_service),
+    llm: AbstractLLMPort = Depends(_beat_sheet_llm_client),
+) -> BeatSheetResponse:
+    try:
+        work = await service.get_work(work_id, current_user.id)
+    except AppError as exc:
+        _raise_http(exc)
+
+    # S1 선제 가드 — 장르/키워드/문체는 실무상 19금 수위가 아니지만 일관성 있게 검사한다.
+    precheck_text = f"{work.genre} {' '.join(work.keywords)} {work.style}"
+    if is_explicit_content(precheck_text):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=PRECHECK_DECLINE_MESSAGE
+        )
+
+    # S2 완화 재시도 — 거절/빈 응답이면 완화 프롬프트로 1회 재시도(moderation_service).
+    outcome = await invoke_with_retry(llm, _build_beat_sheet_messages(work))
+    if outcome.declined:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=RETRY_DECLINE_MESSAGE)
+
+    raw_text = outcome.chunks[0]
+    await record_usage(current_user.id, estimate_tokens(raw_text))
+    return BeatSheetResponse(beats=_parse_beats(raw_text))

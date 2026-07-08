@@ -1,3 +1,7 @@
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { useAssistStream } from '@/features/editor/api/assist.api';
+import { manuscriptApi } from '@/features/editor/api/manuscript.api';
+import { toParagraphs } from '@/features/editor/lib/hydrate-chapters';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Scene, SceneVersion, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
@@ -34,10 +38,6 @@ import { VersionHistoryModal } from './version-history-modal';
 const QUALITY_TIERS = ['저비용', '균형', '고품질'] as const;
 type QualityTier = (typeof QUALITY_TIERS)[number];
 
-/** AI 초안 생성 목업 — 빈 씬을 채우거나 현재 위치에 단락을 덧댄다. */
-const MOCK_DRAFT =
-  '<p>그녀는 잠시 숨을 골랐다. 낯선 별빛 아래에서, 익숙한 두려움과 낯선 설렘이 동시에 차올랐다.</p><p>「돌아갈 길은 없겠지.」 유하린은 나직이 중얼거리며 한 걸음을 더 내디뎠다.</p>';
-
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -52,8 +52,13 @@ export function ManuscriptEditor({
 }) {
   const [tier, setTier] = useState<QualityTier>('고품질');
   const [showHistory, setShowHistory] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(chapter.title);
+  const [showDraft, setShowDraft] = useState(false);
+  const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreSceneVersion = useWorksStore((s) => s.restoreSceneVersion);
+  const setSceneParagraphs = useWorksStore((s) => s.setSceneParagraphs);
+  const extractSceneUpdates = useWorksStore((s) => s.extractSceneUpdates);
 
   const initialContent = scene.paragraphs.length
     ? scene.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
@@ -92,9 +97,51 @@ export function ManuscriptEditor({
   const chars = state?.chars ?? 0;
   const readMin = Math.max(1, Math.ceil(chars / 500));
 
-  const generateDraft = () => {
-    editor?.chain().focus().insertContent(MOCK_DRAFT).run();
-    toast.success('AI 초안을 생성했습니다');
+  const runContinue = () => {
+    if (!editor) return;
+    const cursorText = editor.state.doc.textBetween(0, editor.state.selection.from, '\n');
+    setShowDraft(true);
+    assist.start('continue', { workId: work.id, sceneId: scene.id, payload: { cursorText } });
+  };
+
+  const acceptDraft = () => {
+    editor?.chain().focus().insertContent(assist.text).run();
+    setShowDraft(false);
+  };
+
+  const dismissDraft = () => setShowDraft(false);
+
+  const saveScene = async () => {
+    if (!editor) return;
+    const body = editor.getText({ blockSeparator: '\n' });
+    try {
+      await manuscriptApi.updateScene({
+        path: {
+          work_id: work.id,
+          episode_id: chapter.episodeId,
+          chapter_id: chapter.id,
+          scene_id: scene.id,
+        },
+        body: { body },
+      });
+      setSceneParagraphs(work.id, scene.id, toParagraphs(body));
+      toast.success('저장했습니다');
+      // 신규 설정 추출·제안 — 저장 자체와 독립된 후속 작업이라 실패해도 저장 성공은 유지한다.
+      extractSceneUpdates(work.id, scene.id).catch((err) => {
+        toast.error(apiErrorMessage(err, '설정 변경 감지에 실패했습니다'));
+      });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, '저장하지 못했습니다. 다시 시도해 주세요.'));
+    }
+  };
+
+  const commitTitle = () => {
+    const title = titleDraft.trim() || '새 화';
+    setTitleDraft(title);
+    if (title === chapter.title) return;
+    renameChapter(work.id, chapter.id, title).catch((err) => {
+      toast.error(apiErrorMessage(err, '화 제목을 저장하지 못했습니다'));
+    });
   };
 
   const restoreVersion = (version: SceneVersion) => {
@@ -125,8 +172,10 @@ export function ManuscriptEditor({
             <h1 className="flex min-w-0 flex-1 items-baseline gap-2 font-serif text-[30px] font-bold leading-[1.3] tracking-[-0.01em] text-ink">
               <span className="shrink-0 text-faint">{chapter.index}화</span>
               <input
-                value={chapter.title}
-                onChange={(e) => renameChapter(work.id, chapter.id, e.target.value)}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 aria-label="챕터 제목"
                 placeholder="제목 없음"
                 className="min-w-0 flex-1 rounded-md bg-transparent px-1 font-serif font-bold outline-none transition-colors placeholder:text-faintest hover:bg-surface focus:bg-surface"
@@ -147,7 +196,7 @@ export function ManuscriptEditor({
 
           {/* 액션 칩 + 품질 티어 */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <ActionChip icon={Save} label="저장" onClick={() => toast.success('저장됨 (목업)')} />
+            <ActionChip icon={Save} label="저장" onClick={saveScene} />
             <ActionChip
               icon={ClipboardList}
               label="요약"
@@ -187,15 +236,48 @@ export function ManuscriptEditor({
             </div>
           </div>
 
-          {/* AI 초안 생성 */}
+          {/* AI 이어쓰기 */}
           <button
             type="button"
-            onClick={generateDraft}
-            className="mt-3 flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+            onClick={runContinue}
+            disabled={assist.isStreaming}
+            className="mt-3 flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-60"
           >
             <Sparkles className="size-[17px]" strokeWidth={2} />
-            AI 초안 생성
+            AI 이어쓰기
           </button>
+
+          {showDraft && (
+            <div className="mt-2 rounded-lg border border-line bg-paper p-3 shadow-sm">
+              <div className="mb-1.5 text-[11.5px] font-semibold text-ai">
+                AI 이어쓰기{assist.isStreaming ? ' · 생성 중…' : ''}
+              </div>
+              {assist.error ? (
+                <div className="mb-2.5 text-[13px] text-danger">{assist.error.message}</div>
+              ) : (
+                <div className="mb-2.5 max-h-40 overflow-y-auto text-[13px] leading-[1.6] text-ink">
+                  {assist.text}
+                </div>
+              )}
+              <div className="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={dismissDraft}
+                  className="h-8 rounded-[5px] border border-line-strong px-3 text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={acceptDraft}
+                  disabled={assist.isStreaming || !!assist.error}
+                  className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-40"
+                >
+                  적용
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 서식 툴바 */}
           <div className="mt-6 flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface-soft px-2 py-1.5">
@@ -267,7 +349,7 @@ export function ManuscriptEditor({
           {/* 본문 에디터 */}
           <div className="mt-6">
             <EditorContent editor={editor} />
-            <SelectionAiMenu editor={editor} />
+            <SelectionAiMenu editor={editor} workId={work.id} sceneId={scene.id} />
           </div>
         </div>
       </div>

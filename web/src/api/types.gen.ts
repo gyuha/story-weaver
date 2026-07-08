@@ -5,6 +5,54 @@ export type ClientOptions = {
 };
 
 /**
+ * AttributeChange
+ *
+ * 기존 엔티티의 속성 변경 후보.
+ */
+export type AttributeChange = {
+    /**
+     * Entityid
+     */
+    entityId: string;
+    /**
+     * Attribute
+     */
+    attribute: string;
+    /**
+     * Newvalue
+     */
+    newValue: string;
+};
+
+/**
+ * BeatSheetResponse
+ *
+ * 비트 시트 생성 응답 — 회차별 비트를 한 줄씩 담는다(예: "1화: 발단 — ...").
+ */
+export type BeatSheetResponse = {
+    /**
+     * Beats
+     */
+    beats: Array<string>;
+};
+
+/**
+ * CandidateEntity
+ *
+ * LLM이 발견한, 아직 카드가 없는 신규 엔티티 후보.
+ */
+export type CandidateEntity = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Summary
+     */
+    summary?: string;
+};
+
+/**
  * ChangePasswordRequest
  *
  * Request body for POST /auth/change-password (authenticated).
@@ -30,6 +78,66 @@ export type ChangePasswordResponse = {
      * Message
      */
     message?: string;
+};
+
+/**
+ * ChapterCreate
+ *
+ * 챕터 생성 입력.
+ */
+export type ChapterCreate = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+};
+
+/**
+ * ChapterResponse
+ *
+ * 챕터 응답.
+ */
+export type ChapterResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Episodeid
+     */
+    episodeId: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+};
+
+/**
+ * ChapterUpdate
+ *
+ * 챕터 수정 입력 — 모든 필드 선택(PATCH).
+ */
+export type ChapterUpdate = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Orderindex
+     */
+    orderIndex?: number | null;
 };
 
 /**
@@ -105,6 +213,66 @@ export type ChatResponse = {
 };
 
 /**
+ * ConflictResponse
+ *
+ * 설정 충돌 1건 — 같은 엔티티·같은 예약 state_key에 대한 시점 역행 모순 쌍.
+ */
+export type ConflictResponse = {
+    /**
+     * Entityid
+     */
+    entityId: string;
+    /**
+     * Entityname
+     */
+    entityName: string;
+    /**
+     * Statekey
+     */
+    stateKey: string;
+    earlier: ConflictStateRef;
+    later: ConflictStateRef;
+};
+
+/**
+ * ConflictStateRef
+ *
+ * 충돌 쌍의 한쪽 타임라인 상태.
+ */
+export type ConflictStateRef = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Sceneid
+     */
+    sceneId: string;
+    /**
+     * Globalseq
+     */
+    globalSeq: number;
+    /**
+     * Statevalue
+     */
+    stateValue: string;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+};
+
+/**
+ * ContinueRequest
+ */
+export type ContinueRequest = {
+    /**
+     * Cursortext
+     */
+    cursorText: string;
+};
+
+/**
  * ConversationCreate
  *
  * Request body for POST /chat/conversations.
@@ -155,6 +323,219 @@ export type ConversationResponse = {
 };
 
 /**
+ * CorrectRequest
+ */
+export type CorrectRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * DialogueRequest
+ */
+export type DialogueRequest = {
+    /**
+     * Intent
+     */
+    intent: string;
+    /**
+     * Targetentityid
+     */
+    targetEntityId: string;
+};
+
+/**
+ * EmbeddingSourceType
+ *
+ * 임베딩 출처 판별 타입 (data-model.md 6장).
+ */
+export type EmbeddingSourceType = 'entity' | 'scene';
+
+/**
+ * EntityCreate
+ *
+ * 엔티티 카드 생성 입력. ``attributes``는 서비스 레벨에서 ``entity_type``별로 검증한다.
+ */
+export type EntityCreate = {
+    entityType: EntityType;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Aliases
+     */
+    aliases?: Array<string>;
+    /**
+     * Summary
+     */
+    summary?: string;
+    /**
+     * Attributes
+     */
+    attributes?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * EntityResponse
+ *
+ * 엔티티 카드 응답.
+ */
+export type EntityResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    entityType: EntityType;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Aliases
+     */
+    aliases: Array<string>;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Attributes
+     */
+    attributes: {
+        [key: string]: unknown;
+    };
+    /**
+     * Createdat
+     */
+    createdAt: string;
+    /**
+     * Updatedat
+     */
+    updatedAt: string;
+};
+
+/**
+ * EntityType
+ *
+ * 엔티티 카드 판별 타입 (data-model.md 3.1).
+ */
+export type EntityType = 'character' | 'location' | 'event' | 'item';
+
+/**
+ * EntityUpdate
+ *
+ * 엔티티 카드 수정 입력 — 모든 필드 선택(PATCH).
+ *
+ * ``entity_type``은 생성 후 불변이라 필드 자체가 없다 — 웹 mock ``updateEntity``의
+ * "type(카테고리)은 변경 불가" 규칙과 동일하게, 페이로드에 담겨도 무시된다.
+ */
+export type EntityUpdate = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Aliases
+     */
+    aliases?: Array<string> | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+    /**
+     * Attributes
+     */
+    attributes?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
+ * EpisodeCreate
+ *
+ * 부 생성 입력.
+ */
+export type EpisodeCreate = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+};
+
+/**
+ * EpisodeResponse
+ *
+ * 부 응답.
+ */
+export type EpisodeResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+};
+
+/**
+ * EpisodeUpdate
+ *
+ * 부 수정 입력 — 모든 필드 선택(PATCH).
+ */
+export type EpisodeUpdate = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Orderindex
+     */
+    orderIndex?: number | null;
+};
+
+/**
+ * ExtractUpdatesResponse
+ *
+ * 추출 결과 — 3개 카테고리. 파싱 실패 시 모두 빈 리스트.
+ */
+export type ExtractUpdatesResponse = {
+    /**
+     * Candidateentities
+     */
+    candidateEntities?: Array<CandidateEntity>;
+    /**
+     * Attributechanges
+     */
+    attributeChanges?: Array<AttributeChange>;
+    /**
+     * Timelinechanges
+     */
+    timelineChanges?: Array<TimelineChange>;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -162,6 +543,20 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * InfillRequest
+ */
+export type InfillRequest = {
+    /**
+     * Beforetext
+     */
+    beforeText: string;
+    /**
+     * Aftertext
+     */
+    afterText: string;
 };
 
 /**
@@ -191,6 +586,59 @@ export type LogoutRequest = {
      */
     refresh_token: string;
 };
+
+/**
+ * MemoryItemResponse
+ *
+ * 메모리 검색 결과 1건. ``priority``: 1=링크 엔티티, 2=타임라인 상태, 3=벡터 매칭.
+ */
+export type MemoryItemResponse = {
+    type: MemoryItemType;
+    /**
+     * Priority
+     */
+    priority: number;
+    /**
+     * Entityid
+     */
+    entityId?: string | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+    /**
+     * Statekey
+     */
+    stateKey?: string | null;
+    /**
+     * Statevalue
+     */
+    stateValue?: string | null;
+    /**
+     * Note
+     */
+    note?: string | null;
+    sourceType?: EmbeddingSourceType | null;
+    /**
+     * Sourceid
+     */
+    sourceId?: string | null;
+    /**
+     * Content
+     */
+    content?: string | null;
+};
+
+/**
+ * MemoryItemType
+ *
+ * 병합된 메모리 항목의 종류.
+ */
+export type MemoryItemType = 'entity' | 'timeline_state' | 'vector_match';
 
 /**
  * MessageResponse
@@ -338,6 +786,54 @@ export type RefreshRequest = {
 };
 
 /**
+ * RelationshipEdge
+ *
+ * 관계 그래프의 방향성 있는 엣지 한 건.
+ */
+export type RelationshipEdge = {
+    /**
+     * Sourceentityid
+     */
+    sourceEntityId: string;
+    /**
+     * Sourcename
+     */
+    sourceName: string;
+    /**
+     * Targetentityid
+     */
+    targetEntityId: string;
+    /**
+     * Targetname
+     */
+    targetName: string;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Note
+     */
+    note: string | null;
+};
+
+/**
+ * RelationshipGraphResponse
+ *
+ * 관계 그래프 응답 — ``up_to_scene_id`` 미지정 시 ``summary``는 null.
+ */
+export type RelationshipGraphResponse = {
+    /**
+     * Edges
+     */
+    edges: Array<RelationshipEdge>;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+};
+
+/**
  * ReviewSummary
  */
 export type ReviewSummary = {
@@ -353,6 +849,138 @@ export type ReviewSummary = {
      * Conflicts
      */
     conflicts?: number;
+};
+
+/**
+ * SceneCreate
+ *
+ * 씬 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다.
+ */
+export type SceneCreate = {
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Body
+     */
+    body?: string;
+};
+
+/**
+ * SceneEntityLinkCreate
+ *
+ * 씬-엔티티 링크 생성 입력. ``source``는 서비스에서 ``author``로 고정된다.
+ */
+export type SceneEntityLinkCreate = {
+    /**
+     * Entityid
+     */
+    entityId: string;
+};
+
+/**
+ * SceneEntityLinkResponse
+ *
+ * 씬-엔티티 링크 응답.
+ */
+export type SceneEntityLinkResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Sceneid
+     */
+    sceneId: string;
+    /**
+     * Entityid
+     */
+    entityId: string;
+    source: SceneEntityLinkSource;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+};
+
+/**
+ * SceneEntityLinkSource
+ *
+ * 씬-엔티티 링크 출처 (data-model.md 5.1). 이 슬라이스는 ``author``만 기록한다.
+ */
+export type SceneEntityLinkSource = 'author' | 'ai_extracted';
+
+/**
+ * SceneResponse
+ *
+ * 씬 응답.
+ */
+export type SceneResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Chapterid
+     */
+    chapterId: string;
+    /**
+     * Orderindex
+     */
+    orderIndex: number;
+    /**
+     * Globalseq
+     */
+    globalSeq: number;
+    /**
+     * Title
+     */
+    title: string | null;
+    /**
+     * Body
+     */
+    body: string;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+    /**
+     * Updatedat
+     */
+    updatedAt: string;
+};
+
+/**
+ * SceneUpdate
+ *
+ * 씬 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가.
+ */
+export type SceneUpdate = {
+    /**
+     * Orderindex
+     */
+    orderIndex?: number | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Body
+     */
+    body?: string | null;
 };
 
 /**
@@ -407,6 +1035,158 @@ export type SignupResponse = {
 };
 
 /**
+ * StyleRequest
+ */
+export type StyleRequest = {
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Targetstyle
+     */
+    targetStyle: string;
+};
+
+/**
+ * SuggestionKind
+ *
+ * 제안 종류 (plan.md M3-S2).
+ */
+export type SuggestionKind = 'new_entity' | 'attribute_change' | 'timeline_state';
+
+/**
+ * SuggestionStatus
+ *
+ * 제안 검토 상태.
+ */
+export type SuggestionStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * SynopsisResponse
+ *
+ * 시놉시스 응답.
+ */
+export type SynopsisResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Body
+     */
+    body: string;
+};
+
+/**
+ * SynopsisUpdate
+ *
+ * 시놉시스 upsert 입력.
+ */
+export type SynopsisUpdate = {
+    /**
+     * Body
+     */
+    body?: string;
+};
+
+/**
+ * TimelineChange
+ *
+ * 기존 엔티티의 타임라인 상태 변화 후보(예: life_status=dead).
+ */
+export type TimelineChange = {
+    /**
+     * Entityid
+     */
+    entityId: string;
+    /**
+     * Statekey
+     */
+    stateKey: string;
+    /**
+     * Statevalue
+     */
+    stateValue: string;
+};
+
+/**
+ * TimelineStateCreate
+ *
+ * 타임라인 상태 생성 입력. ``source``는 서비스에서 ``author``로 고정된다.
+ */
+export type TimelineStateCreate = {
+    /**
+     * Sceneid
+     */
+    sceneId: string;
+    /**
+     * Statekey
+     */
+    stateKey: string;
+    /**
+     * Statevalue
+     */
+    stateValue: string;
+    /**
+     * Note
+     */
+    note?: string | null;
+};
+
+/**
+ * TimelineStateResponse
+ *
+ * 타임라인 상태 응답.
+ */
+export type TimelineStateResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Entityid
+     */
+    entityId: string;
+    /**
+     * Sceneid
+     */
+    sceneId: string;
+    /**
+     * Statekey
+     */
+    stateKey: string;
+    /**
+     * Statevalue
+     */
+    stateValue: string;
+    /**
+     * Note
+     */
+    note: string | null;
+    source: TimelineStateSource;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+};
+
+/**
+ * TimelineStateSource
+ *
+ * 타임라인 상태 출처 (data-model.md 4.1). 이 슬라이스는 ``author``만 기록한다.
+ */
+export type TimelineStateSource = 'author' | 'ai_suggested';
+
+/**
  * TokenResponse
  *
  * JWT pair returned by login and refresh endpoints.
@@ -450,6 +1230,38 @@ export type UpdateProfileRequest = {
      * Theme
      */
     theme?: 'light' | 'dark' | 'system' | null;
+};
+
+/**
+ * UpdateSuggestionResponse
+ *
+ * 업데이트 제안 응답 (plan.md M3-S2). ``payload`` 모양은 ``kind``에 따라 다르다.
+ */
+export type UpdateSuggestionResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workid
+     */
+    workId: string;
+    /**
+     * Sceneid
+     */
+    sceneId: string;
+    kind: SuggestionKind;
+    /**
+     * Payload
+     */
+    payload: {
+        [key: string]: unknown;
+    };
+    status: SuggestionStatus;
+    /**
+     * Createdat
+     */
+    createdAt: string;
 };
 
 /**
@@ -1365,3 +2177,1475 @@ export type PatchApiV1WorksByWorkIdResponses = {
 };
 
 export type PatchApiV1WorksByWorkIdResponse = PatchApiV1WorksByWorkIdResponses[keyof PatchApiV1WorksByWorkIdResponses];
+
+export type PostApiV1WorksByWorkIdBeatSheetData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/beat-sheet';
+};
+
+export type PostApiV1WorksByWorkIdBeatSheetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdBeatSheetError = PostApiV1WorksByWorkIdBeatSheetErrors[keyof PostApiV1WorksByWorkIdBeatSheetErrors];
+
+export type PostApiV1WorksByWorkIdBeatSheetResponses = {
+    /**
+     * Successful Response
+     */
+    200: BeatSheetResponse;
+};
+
+export type PostApiV1WorksByWorkIdBeatSheetResponse = PostApiV1WorksByWorkIdBeatSheetResponses[keyof PostApiV1WorksByWorkIdBeatSheetResponses];
+
+export type GetApiV1WorksByWorkIdSynopsisData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/synopsis';
+};
+
+export type GetApiV1WorksByWorkIdSynopsisErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdSynopsisError = GetApiV1WorksByWorkIdSynopsisErrors[keyof GetApiV1WorksByWorkIdSynopsisErrors];
+
+export type GetApiV1WorksByWorkIdSynopsisResponses = {
+    /**
+     * Successful Response
+     */
+    200: SynopsisResponse;
+};
+
+export type GetApiV1WorksByWorkIdSynopsisResponse = GetApiV1WorksByWorkIdSynopsisResponses[keyof GetApiV1WorksByWorkIdSynopsisResponses];
+
+export type PutApiV1WorksByWorkIdSynopsisData = {
+    body: SynopsisUpdate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/synopsis';
+};
+
+export type PutApiV1WorksByWorkIdSynopsisErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PutApiV1WorksByWorkIdSynopsisError = PutApiV1WorksByWorkIdSynopsisErrors[keyof PutApiV1WorksByWorkIdSynopsisErrors];
+
+export type PutApiV1WorksByWorkIdSynopsisResponses = {
+    /**
+     * Successful Response
+     */
+    200: SynopsisResponse;
+};
+
+export type PutApiV1WorksByWorkIdSynopsisResponse = PutApiV1WorksByWorkIdSynopsisResponses[keyof PutApiV1WorksByWorkIdSynopsisResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesError = GetApiV1WorksByWorkIdEpisodesErrors[keyof GetApiV1WorksByWorkIdEpisodesErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesResponses = {
+    /**
+     * Response List Episodes Api V1 Works  Work Id  Episodes Get
+     *
+     * Successful Response
+     */
+    200: Array<EpisodeResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesResponse = GetApiV1WorksByWorkIdEpisodesResponses[keyof GetApiV1WorksByWorkIdEpisodesResponses];
+
+export type PostApiV1WorksByWorkIdEpisodesData = {
+    body: EpisodeCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes';
+};
+
+export type PostApiV1WorksByWorkIdEpisodesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesError = PostApiV1WorksByWorkIdEpisodesErrors[keyof PostApiV1WorksByWorkIdEpisodesErrors];
+
+export type PostApiV1WorksByWorkIdEpisodesResponses = {
+    /**
+     * Successful Response
+     */
+    201: EpisodeResponse;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesResponse = PostApiV1WorksByWorkIdEpisodesResponses[keyof PostApiV1WorksByWorkIdEpisodesResponses];
+
+export type PatchApiV1WorksByWorkIdEpisodesReorderData = {
+    /**
+     * Payload
+     */
+    body: Array<string>;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/reorder';
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesReorderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesReorderError = PatchApiV1WorksByWorkIdEpisodesReorderErrors[keyof PatchApiV1WorksByWorkIdEpisodesReorderErrors];
+
+export type PatchApiV1WorksByWorkIdEpisodesReorderResponses = {
+    /**
+     * Response Reorder Episodes Api V1 Works  Work Id  Episodes Reorder Patch
+     *
+     * Successful Response
+     */
+    200: Array<EpisodeResponse>;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesReorderResponse = PatchApiV1WorksByWorkIdEpisodesReorderResponses[keyof PatchApiV1WorksByWorkIdEpisodesReorderResponses];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}';
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdError = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdErrors[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdErrors];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponse = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponses[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: EpisodeResponse;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponses];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdData = {
+    body: EpisodeUpdate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}';
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdError = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdErrors[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdErrors];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: EpisodeResponse;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses = {
+    /**
+     * Response List Chapters Api V1 Works  Work Id  Episodes  Episode Id  Chapters Get
+     *
+     * Successful Response
+     */
+    200: Array<ChapterResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses];
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData = {
+    body: ChapterCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters';
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors];
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses = {
+    /**
+     * Successful Response
+     */
+    201: ChapterResponse;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderData = {
+    /**
+     * Payload
+     */
+    body: Array<string>;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/reorder';
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderError = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderErrors[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderErrors];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponses = {
+    /**
+     * Response Reorder Chapters Api V1 Works  Work Id  Episodes  Episode Id  Chapters Reorder Patch
+     *
+     * Successful Response
+     */
+    200: Array<ChapterResponse>;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponses];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}';
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: ChapterResponse;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData = {
+    body: ChapterUpdate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}';
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: ChapterResponse;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses = {
+    /**
+     * Response List Scenes Api V1 Works  Work Id  Episodes  Episode Id  Chapters  Chapter Id  Scenes Get
+     *
+     * Successful Response
+     */
+    200: Array<SceneResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses];
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData = {
+    body: SceneCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes';
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors];
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses = {
+    /**
+     * Successful Response
+     */
+    201: SceneResponse;
+};
+
+export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: SceneResponse;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
+    body: SceneUpdate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: SceneResponse;
+};
+
+export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
+
+export type GetApiV1WorksByWorkIdEntitiesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities';
+};
+
+export type GetApiV1WorksByWorkIdEntitiesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesError = GetApiV1WorksByWorkIdEntitiesErrors[keyof GetApiV1WorksByWorkIdEntitiesErrors];
+
+export type GetApiV1WorksByWorkIdEntitiesResponses = {
+    /**
+     * Response List Entities Api V1 Works  Work Id  Entities Get
+     *
+     * Successful Response
+     */
+    200: Array<EntityResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesResponse = GetApiV1WorksByWorkIdEntitiesResponses[keyof GetApiV1WorksByWorkIdEntitiesResponses];
+
+export type PostApiV1WorksByWorkIdEntitiesData = {
+    body: EntityCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities';
+};
+
+export type PostApiV1WorksByWorkIdEntitiesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEntitiesError = PostApiV1WorksByWorkIdEntitiesErrors[keyof PostApiV1WorksByWorkIdEntitiesErrors];
+
+export type PostApiV1WorksByWorkIdEntitiesResponses = {
+    /**
+     * Successful Response
+     */
+    201: EntityResponse;
+};
+
+export type PostApiV1WorksByWorkIdEntitiesResponse = PostApiV1WorksByWorkIdEntitiesResponses[keyof PostApiV1WorksByWorkIdEntitiesResponses];
+
+export type DeleteApiV1WorksByWorkIdEntitiesByEntityIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}';
+};
+
+export type DeleteApiV1WorksByWorkIdEntitiesByEntityIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteApiV1WorksByWorkIdEntitiesByEntityIdError = DeleteApiV1WorksByWorkIdEntitiesByEntityIdErrors[keyof DeleteApiV1WorksByWorkIdEntitiesByEntityIdErrors];
+
+export type DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponse = DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponses[keyof DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponses];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}';
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdError = GetApiV1WorksByWorkIdEntitiesByEntityIdErrors[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdErrors];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: EntityResponse;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdResponse = GetApiV1WorksByWorkIdEntitiesByEntityIdResponses[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdResponses];
+
+export type PatchApiV1WorksByWorkIdEntitiesByEntityIdData = {
+    body: EntityUpdate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}';
+};
+
+export type PatchApiV1WorksByWorkIdEntitiesByEntityIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdEntitiesByEntityIdError = PatchApiV1WorksByWorkIdEntitiesByEntityIdErrors[keyof PatchApiV1WorksByWorkIdEntitiesByEntityIdErrors];
+
+export type PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: EntityResponse;
+};
+
+export type PatchApiV1WorksByWorkIdEntitiesByEntityIdResponse = PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses[keyof PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: {
+        /**
+         * Up To Scene Id
+         */
+        up_to_scene_id?: string | null;
+    };
+    url: '/api/v1/works/{work_id}/entities/{entity_id}/timeline-states';
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError = GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses = {
+    /**
+     * Response List Timeline States Api V1 Works  Work Id  Entities  Entity Id  Timeline States Get
+     *
+     * Successful Response
+     */
+    200: Array<TimelineStateResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse = GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses];
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData = {
+    body: TimelineStateCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}/timeline-states';
+};
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError = PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors[keyof PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors];
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses = {
+    /**
+     * Successful Response
+     */
+    201: TimelineStateResponse;
+};
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse = PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses[keyof PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdLinksData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links';
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdLinksError = GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses = {
+    /**
+     * Response List Links Api V1 Works  Work Id  Scenes  Scene Id  Links Get
+     *
+     * Successful Response
+     */
+    200: Array<SceneEntityLinkResponse>;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdLinksResponse = GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdLinksData = {
+    body: SceneEntityLinkCreate;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdLinksError = PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses = {
+    /**
+     * Successful Response
+     */
+    201: SceneEntityLinkResponse;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdLinksResponse = PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses];
+
+export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links/{entity_id}';
+};
+
+export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdError = DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors[keyof DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors];
+
+export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponse = DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses[keyof DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/memory';
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryError = GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses = {
+    /**
+     * Response Search Memory Api V1 Works  Work Id  Scenes  Scene Id  Memory Get
+     *
+     * Successful Response
+     */
+    200: Array<MemoryItemResponse>;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponse = GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData = {
+    body: ContinueRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/continue';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueError = PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData = {
+    body: InfillRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/infill';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillError = PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData = {
+    body: DialogueRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/dialogue';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueError = PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData = {
+    body: StyleRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/style';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleError = PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData = {
+    body: CorrectRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/correct';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError = PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesError = PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExtractUpdatesResponse;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponse = PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions';
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsError = GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors];
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses = {
+    /**
+     * Response List Update Suggestions Api V1 Works  Work Id  Scenes  Scene Id  Update Suggestions Get
+     *
+     * Successful Response
+     */
+    200: Array<UpdateSuggestionResponse>;
+};
+
+export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponse = GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+        /**
+         * Suggestion Id
+         */
+        suggestion_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/approve';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveError = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses = {
+    /**
+     * Successful Response
+     */
+    200: UpdateSuggestionResponse;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponse = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+        /**
+         * Suggestion Id
+         */
+        suggestion_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/reject';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectError = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses = {
+    /**
+     * Successful Response
+     */
+    200: UpdateSuggestionResponse;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponse = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses];
+
+export type GetApiV1WorksByWorkIdConflictsData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/conflicts';
+};
+
+export type GetApiV1WorksByWorkIdConflictsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdConflictsError = GetApiV1WorksByWorkIdConflictsErrors[keyof GetApiV1WorksByWorkIdConflictsErrors];
+
+export type GetApiV1WorksByWorkIdConflictsResponses = {
+    /**
+     * Response List Conflicts Api V1 Works  Work Id  Conflicts Get
+     *
+     * Successful Response
+     */
+    200: Array<ConflictResponse>;
+};
+
+export type GetApiV1WorksByWorkIdConflictsResponse = GetApiV1WorksByWorkIdConflictsResponses[keyof GetApiV1WorksByWorkIdConflictsResponses];
+
+export type GetApiV1WorksByWorkIdRelationshipsData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: {
+        /**
+         * Up To Scene Id
+         */
+        up_to_scene_id?: string | null;
+    };
+    url: '/api/v1/works/{work_id}/relationships';
+};
+
+export type GetApiV1WorksByWorkIdRelationshipsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdRelationshipsError = GetApiV1WorksByWorkIdRelationshipsErrors[keyof GetApiV1WorksByWorkIdRelationshipsErrors];
+
+export type GetApiV1WorksByWorkIdRelationshipsResponses = {
+    /**
+     * Successful Response
+     */
+    200: RelationshipGraphResponse;
+};
+
+export type GetApiV1WorksByWorkIdRelationshipsResponse = GetApiV1WorksByWorkIdRelationshipsResponses[keyof GetApiV1WorksByWorkIdRelationshipsResponses];

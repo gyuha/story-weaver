@@ -1,6 +1,7 @@
 import { WorkShell } from '@/components/layout/work-shell';
 import { requireAuth } from '@/features/auth/lib/guard';
 import { useWork } from '@/features/shared/store/selectors';
+import { BeatSheetPanel } from '@/features/works/components/beat-sheet-panel';
 import { createFileRoute, useParams } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/works/$workId/synopsis')({
@@ -47,6 +48,8 @@ function SynopsisPage() {
             <SynopsisStat value={`${work.stats.words}${work.stats.wordsUnit}`} label="분량" />
             <SynopsisStat value={`${work.entities.length}`} label="설정 카드" />
           </div>
+
+          <BeatSheetPanel workId={work.id} />
         </div>
       </div>
     </WorkShell>

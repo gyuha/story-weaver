@@ -1,4 +1,5 @@
 import { WorkShell } from '@/components/layout/work-shell';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Work } from '@/features/shared/types';
 import { useNavigate } from '@tanstack/react-router';
@@ -16,14 +17,18 @@ export function NewEntityScreen({ work }: { work: Work }) {
         subheading="World Bible에 새 설정 카드를 추가합니다."
         submitLabel="저장"
         onCancel={() => navigate({ to: '/works/$workId/bible', params: { workId: work.id } })}
-        onSubmit={(input) => {
-          const id = addEntity(work.id, input);
-          toast.success(`'${input.name}' 엔티티를 추가했습니다`);
-          navigate({
-            to: '/works/$workId/bible',
-            params: { workId: work.id },
-            search: { entity: id },
-          });
+        onSubmit={async (input) => {
+          try {
+            const id = await addEntity(work.id, input);
+            toast.success(`'${input.name}' 엔티티를 추가했습니다`);
+            navigate({
+              to: '/works/$workId/bible',
+              params: { workId: work.id },
+              search: { entity: id },
+            });
+          } catch (err) {
+            toast.error(apiErrorMessage(err, '엔티티를 추가하지 못했습니다. 다시 시도해 주세요.'));
+          }
         }}
       />
     </WorkShell>

@@ -1,6 +1,6 @@
 import { WorkShell } from '@/components/layout/work-shell';
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Conflict, Work } from '@/features/shared/types';
+import type { Conflict, ConflictSceneRef, Work } from '@/features/shared/types';
 import { ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,17 +31,23 @@ export function TimelineScreen({ work }: { work: Work }) {
               <Stat value={work.reviewSummary.conflicts} label="충돌 후보" danger />
             </div>
 
-            {work.conflicts.map((conflict) => (
-              <ConflictCallout
-                key={conflict.id}
-                conflict={conflict}
-                onGoto={() => toast(`${conflict.appearChapter}화 씬으로 이동 (목업)`)}
-                onDismiss={() => {
-                  dismissConflict(work.id, conflict.id);
-                  toast.success('충돌 후보를 무시했습니다');
-                }}
-              />
-            ))}
+            {work.conflicts.map((conflict) => {
+              const gotoLabel = conflict.later.chapterRef
+                ? `${conflict.later.chapterRef}로 이동`
+                : '해당 씬으로 이동';
+              return (
+                <ConflictCallout
+                  key={conflict.id}
+                  conflict={conflict}
+                  gotoLabel={gotoLabel}
+                  onGoto={() => toast(`${gotoLabel} (목업)`)}
+                  onDismiss={() => {
+                    dismissConflict(work.id, conflict.id);
+                    toast.success('충돌 후보를 무시했습니다');
+                  }}
+                />
+              );
+            })}
 
             <div className="mt-6 mb-[11px] text-[13px] font-semibold text-muted-ink">
               최근 타임라인 상태 기록
@@ -120,21 +126,15 @@ function Stat({ value, label, danger }: { value: number; label: string; danger?:
 
 function ConflictCallout({
   conflict,
+  gotoLabel,
   onGoto,
   onDismiss,
 }: {
   conflict: Conflict;
+  gotoLabel: string;
   onGoto: () => void;
   onDismiss: () => void;
 }) {
-  const { from, to, total } = conflict.axis;
-  const pos = (n: number) => Math.min(92, Math.max(8, (n / total) * 100));
-  const fromPct = pos(from);
-  const toPct = pos(to);
-  const ticks = [1, Math.round(total / 3), Math.round((total * 2) / 3), to, total].filter(
-    (v, i, a) => a.indexOf(v) === i
-  );
-
   return (
     <div className="mb-3.5 rounded-[10px] bg-[#fdebec] p-[18px_20px]">
       <div className="flex items-start gap-[13px]">
@@ -146,34 +146,15 @@ function ConflictCallout({
               v2 자동 감지 미리보기
             </span>
           </div>
-          <div className="mb-4 text-[13.5px] leading-[1.65] text-ink-soft">{conflict.note}</div>
+          <div className="mb-4 text-[13.5px] leading-[1.65] text-ink-soft">
+            <b className="font-semibold text-ink">{conflict.entityName}</b>의{' '}
+            <span className="font-mono text-[12.5px]">{conflict.stateKey}</span> 값이 시점을 거슬러
+            모순됩니다.
+          </div>
 
-          <div className="mb-[15px] rounded-lg bg-paper p-[18px_20px_14px]">
-            <div className="relative h-[54px]">
-              <div className="absolute top-6 right-0 left-0 h-0.5 bg-line" />
-              <div
-                className="absolute top-6 h-0.5"
-                style={{
-                  left: `${fromPct}%`,
-                  right: `${100 - toPct}%`,
-                  background:
-                    'repeating-linear-gradient(90deg,#e0a39f 0,#e0a39f 5px,transparent 5px,transparent 10px)',
-                }}
-              />
-              <Dot pct={fromPct} color="#c4554d" label={`${from}화 · 사망`} />
-              <Dot pct={toPct} color="#cb912f" label={`${to}화 · 등장`} />
-              <div
-                className="absolute top-px -translate-x-1/2 whitespace-nowrap text-[10.5px] text-[#c08581]"
-                style={{ left: `${(fromPct + toPct) / 2}%` }}
-              >
-                부활 기록 없음
-              </div>
-            </div>
-            <div className="mt-1 flex justify-between border-t border-[#f1f1ef] pt-2 text-[10px] text-line-strong">
-              {ticks.map((t) => (
-                <span key={t}>{t}화</span>
-              ))}
-            </div>
+          <div className="mb-[15px] flex flex-col gap-2 rounded-lg bg-paper p-[16px_18px]">
+            <ConflictStateRow label="이전" color="#c4554d" state={conflict.earlier} />
+            <ConflictStateRow label="이후" color="#cb912f" state={conflict.later} />
           </div>
 
           <div className="flex gap-2">
@@ -182,14 +163,14 @@ function ConflictCallout({
               onClick={onGoto}
               className="h-8 rounded-[5px] bg-ink px-3.5 text-[12.5px] font-semibold text-white"
             >
-              {to}화 씬으로 이동
+              {gotoLabel}
             </button>
             <button
               type="button"
               onClick={onDismiss}
               className="h-8 rounded-[5px] border border-line-strong bg-paper px-3.5 text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
             >
-              의도된 회귀 — 무시
+              의도된 변화 — 무시
             </button>
           </div>
         </div>
@@ -198,21 +179,21 @@ function ConflictCallout({
   );
 }
 
-function Dot({ pct, color, label }: { pct: number; color: string; label: string }) {
+function ConflictStateRow({
+  label,
+  color,
+  state,
+}: {
+  label: string;
+  color: string;
+  state: ConflictSceneRef;
+}) {
   return (
-    <>
-      <div className="absolute top-[11px] -translate-x-1/2" style={{ left: `${pct}%` }}>
-        <span
-          className="block size-[13px] rounded-full border-[2.5px] border-paper"
-          style={{ background: color, boxShadow: `0 0 0 1.5px ${color}` }}
-        />
-      </div>
-      <div
-        className="absolute top-[31px] -translate-x-1/2 whitespace-nowrap text-center text-[11.5px] font-semibold leading-[1.4]"
-        style={{ left: `${pct}%`, color }}
-      >
-        {label}
-      </div>
-    </>
+    <div className="flex items-center gap-2.5 text-[13px]">
+      <span className="size-2 shrink-0 rounded-full" style={{ background: color }} />
+      <span className="w-10 shrink-0 font-semibold text-muted-ink">{label}</span>
+      <span className="w-[92px] shrink-0 text-ink-soft">{state.chapterRef || '위치 미확인'}</span>
+      <span className="font-semibold text-ink">{state.stateValue}</span>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { WorkShell } from '@/components/layout/work-shell';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Work } from '@/features/shared/types';
 import { Navigate, useNavigate } from '@tanstack/react-router';
@@ -31,10 +32,14 @@ export function EditEntityScreen({ work, entityId }: { work: Work; entityId?: st
         subheading="World Bible 설정 카드를 수정합니다."
         submitLabel="저장"
         onCancel={toDetail}
-        onSubmit={(input) => {
-          updateEntity(work.id, entity.id, input);
-          toast.success(`'${input.name}' 엔티티를 수정했습니다`);
-          toDetail();
+        onSubmit={async (input) => {
+          try {
+            await updateEntity(work.id, entity.id, input);
+            toast.success(`'${input.name}' 엔티티를 수정했습니다`);
+            toDetail();
+          } catch (err) {
+            toast.error(apiErrorMessage(err, '엔티티를 수정하지 못했습니다. 다시 시도해 주세요.'));
+          }
         }}
       />
     </WorkShell>

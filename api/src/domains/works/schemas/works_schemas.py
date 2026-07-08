@@ -73,3 +73,9 @@ class WorkResponse(_CamelModel):
     last_edited_label: str
     stats: WorkStats
     review_summary: ReviewSummary
+
+
+class BeatSheetResponse(_CamelModel):
+    """비트 시트 생성 응답 — 회차별 비트를 한 줄씩 담는다(예: "1화: 발단 — ...")."""
+
+    beats: list[str]

@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from fastapi import Response
 from httpx import ASGITransport, AsyncClient
-from starlette.requests import Request
 
 import main
 
@@ -153,19 +151,6 @@ async def test_lifespan_warms_and_closes_redis(monkeypatch: pytest.MonkeyPatch) 
         assert closed is False
 
     assert closed is True
-
-
-def test_rate_limit_key_prefers_authenticated_user() -> None:
-    request = Request({"type": "http", "client": ("203.0.113.10", 1234), "headers": []})
-    request.state.user = SimpleNamespace(id="user-123")
-
-    assert main._get_user_key(request) == "user:user-123"
-
-
-def test_rate_limit_key_falls_back_to_remote_ip() -> None:
-    request = Request({"type": "http", "client": ("203.0.113.10", 1234), "headers": []})
-
-    assert main._get_user_key(request) == "203.0.113.10"
 
 
 @pytest.mark.asyncio
