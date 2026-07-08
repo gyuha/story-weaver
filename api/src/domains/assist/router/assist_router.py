@@ -35,7 +35,7 @@ from domains.assist.schemas import (
     StyleInput,
 )
 from domains.assist.service.assist_service import AssistService
-from domains.assist.tier_routing import TASK_TIER, TaskType, get_client_for_tier
+from domains.assist.tier_routing import TaskType, get_fast_writing_client
 from domains.auth.models import User
 from domains.auth.security import get_current_user
 from domains.budget.dependency import require_budget_available
@@ -125,26 +125,27 @@ async def _get_service(
     )
 
 
-# 작업별 티어(S2 ``TASK_TIER``)에 맞는 LLM 클라이언트를 고르는 의존성. 라우트마다
-# 별도 함수 객체로 둬야 테스트에서 ``app.dependency_overrides``로 개별 override 가능.
+# thinking 모드를 끈 전용 LLM 클라이언트를 고르는 의존성(tier_routing.get_fast_writing_client
+# 참고). 라우트마다 별도 함수 객체로 둬야 테스트에서 ``app.dependency_overrides``로
+# 개별 override 가능.
 def _continue_llm_client() -> AbstractLLMPort:
-    return get_client_for_tier(TASK_TIER[TaskType.continue_])
+    return get_fast_writing_client()
 
 
 def _infill_llm_client() -> AbstractLLMPort:
-    return get_client_for_tier(TASK_TIER[TaskType.infill])
+    return get_fast_writing_client()
 
 
 def _dialogue_llm_client() -> AbstractLLMPort:
-    return get_client_for_tier(TASK_TIER[TaskType.dialogue])
+    return get_fast_writing_client()
 
 
 def _style_llm_client() -> AbstractLLMPort:
-    return get_client_for_tier(TASK_TIER[TaskType.style])
+    return get_fast_writing_client()
 
 
 def _correct_llm_client() -> AbstractLLMPort:
-    return get_client_for_tier(TASK_TIER[TaskType.correct])
+    return get_fast_writing_client()
 
 
 async def _bind_rate_limit_user(

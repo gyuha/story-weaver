@@ -26,6 +26,7 @@ from collections.abc import Callable
 from enum import StrEnum
 
 from domains.chat.container import get_llm_factory
+from domains.chat.llm_client import LLMClient
 from domains.chat.ports import AbstractLLMPort, LLMClientFactoryProtocol
 
 
@@ -86,3 +87,17 @@ def get_client_for_tier(tier: Tier) -> AbstractLLMPort:
     """
     factory = _TIER_FACTORY_GETTERS[tier]()
     return factory.get_llm_client()
+
+
+def get_fast_writing_client() -> AbstractLLMPort:
+    """5개 집필 보조 작업(이어쓰기·인필링·대사변환·문체변환·교정) 전용 클라이언트.
+
+    z.ai GLM-4.6은 기본적으로 확장 추론(thinking) 모드로 동작해, 응답에 쓰이지
+    않는 추론 토큰을 수백~1000개 이상 태우고 응답을 5배 가까이 느리게 만든다
+    (실측: thinking 켜짐 46~67초 → ``extra_body={"thinking": {"type": "disabled"}}``로
+    끄면 9~12초, 생성된 문장 품질 차이는 없었음). 이 5작업은 짧은 창작 보조라 깊은
+    추론보다 응답 속도가 더 중요해 여기서만 끈다 — 다른 도메인
+    (dynamic_update/works beat-sheet/relationships)이 쓰는 :func:`get_client_for_tier`는
+    영향받지 않는다.
+    """
+    return LLMClient(model_kwargs={"extra_body": {"thinking": {"type": "disabled"}}})

@@ -19,7 +19,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.messages.ai import AIMessage
 
-from domains.assist.tier_routing import TASK_TIER, TaskType, Tier, get_client_for_tier
+from domains.assist.tier_routing import (
+    TASK_TIER,
+    TaskType,
+    Tier,
+    get_client_for_tier,
+    get_fast_writing_client,
+)
 from domains.chat.ports import LLMClientFactoryProtocol, LLMClientProtocol
 
 # ---------------------------------------------------------------------------
@@ -109,3 +115,23 @@ def test_get_client_for_tier_returns_protocol_satisfying_client() -> None:
 def test_get_client_for_tier_rejects_unknown_tier() -> None:
     with pytest.raises(KeyError):
         get_client_for_tier(MagicMock())
+
+
+# ---------------------------------------------------------------------------
+# get_fast_writing_client — assist 5작업 전용, thinking 모드 비활성화
+# ---------------------------------------------------------------------------
+
+
+def test_get_fast_writing_client_returns_protocol_satisfying_client() -> None:
+    """``ChatLiteLLM``을 패치해 네트워크 호출 없이 프로토콜 충족만 확인한다."""
+    with patch("infra.llm.provider_factory.ChatLiteLLM"):
+        client = get_fast_writing_client()
+        assert isinstance(client, LLMClientProtocol)
+
+
+def test_get_fast_writing_client_disables_thinking_mode() -> None:
+    """GLM의 확장 추론(thinking)을 꺼서 응답 지연을 줄이는 것이 이 함수의 핵심 목적이다."""
+    with patch("infra.llm.provider_factory.ChatLiteLLM") as mock_chat_litellm:
+        get_fast_writing_client()
+        _, kwargs = mock_chat_litellm.call_args
+        assert kwargs["model_kwargs"] == {"extra_body": {"thinking": {"type": "disabled"}}}
