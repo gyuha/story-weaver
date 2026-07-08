@@ -11,8 +11,9 @@ from typing import Any
 
 import pytest
 
-from domains.auth.admin_ops import UserNotFoundError, grant_admin, verify_email
+from domains.auth.admin_ops import UserNotFoundError, grant_admin, reset_password, verify_email
 from domains.auth.repository import AuthRepository
+from domains.auth.security import verify_password
 
 # ── command logic (fake_repo) ────────────────────────────────────────────────
 
@@ -54,6 +55,46 @@ async def test_grant_admin_is_idempotent(fake_repo: Any) -> None:
 async def test_grant_admin_unknown_email_raises(fake_repo: Any) -> None:
     with pytest.raises(UserNotFoundError):
         await grant_admin(fake_repo, "nobody@example.com")
+
+
+async def test_reset_password_updates_hash(fake_repo: Any) -> None:
+    user = await fake_repo.create_user(
+        "u@example.com",
+        hashed_password="old-hash",  # pragma: allowlist secret
+    )
+    msg = await reset_password(fake_repo, "u@example.com", "NewPassw0rd!")
+    assert verify_password("NewPassw0rd!", user.hashed_password)
+    assert "재설정" in msg
+
+
+async def test_reset_password_revokes_existing_sessions(fake_repo: Any) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    user = await fake_repo.create_user("u@example.com")
+    await fake_repo.create_refresh_token(
+        user.id, "jti-1", "raw-token", "family-1", datetime.now(UTC) + timedelta(days=1)
+    )
+
+    await reset_password(fake_repo, "u@example.com", "NewPassw0rd!")
+
+    assert fake_repo.refresh_tokens["jti-1"].revoked is True
+
+
+async def test_reset_password_unknown_email_raises(fake_repo: Any) -> None:
+    with pytest.raises(UserNotFoundError):
+        await reset_password(fake_repo, "nobody@example.com", "NewPassw0rd!")
+
+
+async def test_reset_password_rejects_weak_password(fake_repo: Any) -> None:
+    await fake_repo.create_user("u@example.com")
+    with pytest.raises(ValueError, match="uppercase"):
+        await reset_password(fake_repo, "u@example.com", "weakpassword1!")
+
+
+async def test_reset_password_rejects_too_short_password(fake_repo: Any) -> None:
+    await fake_repo.create_user("u@example.com")
+    with pytest.raises(ValueError, match="8 and 128"):
+        await reset_password(fake_repo, "u@example.com", "Sh0rt!")
 
 
 # ── get_or_create_role (real repository, stub session) ───────────────────────

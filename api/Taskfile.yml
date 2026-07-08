@@ -174,6 +174,11 @@ tasks:
     cmds:
       - uv run python scripts/manage.py grant-admin {{.CLI_ARGS}}
 
+  reset-password:
+    desc: "운영자 CLI — 회원 비밀번호 강제 재설정 (사용: task reset-password -- <email> <new_password>)"
+    cmds:
+      - uv run python scripts/manage.py reset-password {{.CLI_ARGS}}
+
   # ── Alembic migrations ───────────────────────────────────────────────────────
   migrate:
     desc: Start local infra if needed, then apply all pending Alembic migrations
