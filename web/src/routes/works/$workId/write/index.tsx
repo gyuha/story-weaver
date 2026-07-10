@@ -12,7 +12,6 @@ export const Route = createFileRoute('/works/$workId/write/')({
   beforeLoad: ({ params }) => {
     requireAuth(`/works/${params.workId}/write`);
     const work = useWorksStore.getState().works.find((w) => w.id === params.workId);
-    if (!work) throw redirect({ to: '/works' });
     const sceneId = defaultSceneId(work);
     if (sceneId) {
       throw redirect({

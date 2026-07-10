@@ -1,15 +1,11 @@
-import type { WorkResponse } from '@/api';
 import { AppShell } from '@/components/layout/app-shell';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUsage, useWorks } from '@/features/shared/store/selectors';
-import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Work } from '@/features/shared/types';
-import { worksQueries } from '@/features/works/api/works.api';
-import { useQuery } from '@tanstack/react-query';
+import { useHydrateWorks } from '@/features/works/lib/hydrate-works';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, CircleAlert, Plus, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
 import { NewWorkCard, WorkCard } from './work-card';
 
 /** stats.words를 만자 기준으로 정규화(천자 → /10) */
@@ -18,21 +14,11 @@ function toManja(work: Work): number {
   return work.stats.wordsUnit === '천자' ? v / 10 : v;
 }
 
-// eco: 챕터·엔티티·타임라인·충돌은 백엔드 하위 도메인 미구현 — 빈 배열로 시작(세션 내 로컬 편집)
-function toWork(response: WorkResponse): Work {
-  return { ...response, chapters: [], entities: [], timeline: [], conflicts: [] } as Work;
-}
-
 /** 작품 대시보드 화면 (셸 포함) — /works */
 export function DashboardScreen() {
-  const { data, isPending, isError } = useQuery(worksQueries.list());
-  const setWorks = useWorksStore((s) => s.setWorks);
+  const { isPending, isError } = useHydrateWorks();
   const works = useWorks();
   const usage = useUsage();
-
-  useEffect(() => {
-    if (data) setWorks(data.map(toWork));
-  }, [data, setWorks]);
 
   if (isPending) {
     return (
