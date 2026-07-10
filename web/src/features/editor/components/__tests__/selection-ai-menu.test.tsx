@@ -117,12 +117,12 @@ describe('SelectionAiMenu 스트리밍 미리보기', () => {
     expect(screen.queryByText('그가')).not.toBeInTheDocument();
   });
 
-  it('스트리밍 중에는 적용 버튼을 비활성화하고, 완료되면 활성화한다', async () => {
+  it('스트리밍 중에는 적용 버튼이 없고, 완료되면 나타나 적용할 수 있다', async () => {
     render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
     await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
 
     act(() => setMockAssistState({ isStreaming: true, text: '그가' }));
-    expect(screen.getByRole('button', { name: '적용' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '적용' })).not.toBeInTheDocument();
 
     act(() => setMockAssistState({ isStreaming: false, text: '그가 낮게 말했다' }));
     expect(screen.getByRole('button', { name: '적용' })).toBeEnabled();
@@ -131,13 +131,13 @@ describe('SelectionAiMenu 스트리밍 미리보기', () => {
     expect(insertContentAtSpy).toHaveBeenCalledWith({ from: 3, to: 8 }, '그가 낮게 말했다');
   });
 
-  it('스트림 에러가 발생하면 에러 메시지를 화면에 표시하고 적용을 막는다', async () => {
+  it('스트림 에러가 발생하면 에러 메시지를 화면에 표시하고 적용 버튼을 감춘다', async () => {
     render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
     await userEvent.click(screen.getByRole('button', { name: '늘리기' }));
 
     act(() => setMockAssistState({ isStreaming: false, error: new Error('LLM provider error') }));
 
     expect(screen.getByText('LLM provider error')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '적용' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '적용' })).not.toBeInTheDocument();
   });
 });

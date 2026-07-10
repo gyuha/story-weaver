@@ -276,7 +276,7 @@ describe('ManuscriptEditor AI 이어쓰기', () => {
     act(() => setMockAssistState({ isStreaming: false, error: new Error('LLM provider error') }));
 
     expect(screen.getByText('LLM provider error')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '적용' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '적용' })).not.toBeInTheDocument();
     // 에러가 나도 나머지 에디터 UI는 정상 렌더된다 (크래시하지 않음)
     expect(screen.getByRole('button', { name: '저장' })).toBeInTheDocument();
   });

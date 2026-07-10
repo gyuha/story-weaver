@@ -32,6 +32,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { SelectionAiMenu } from './selection-ai-menu';
+import { SuggestionPicker } from './suggestion-picker';
 import { VersionHistoryModal } from './version-history-modal';
 
 /** 품질 티어 — ADR-0004. 사용자는 모델명이 아닌 이 티어만 고른다. */
@@ -102,11 +103,6 @@ export function ManuscriptEditor({
     const cursorText = editor.state.doc.textBetween(0, editor.state.selection.from, '\n');
     setShowDraft(true);
     assist.start('continue', { workId: work.id, sceneId: scene.id, payload: { cursorText } });
-  };
-
-  const acceptDraft = () => {
-    editor?.chain().focus().insertContent(assist.text).run();
-    setShowDraft(false);
   };
 
   const dismissDraft = () => setShowDraft(false);
@@ -248,34 +244,17 @@ export function ManuscriptEditor({
           </button>
 
           {showDraft && (
-            <div className="mt-2 rounded-lg border border-line bg-paper p-3 shadow-sm">
-              <div className="mb-1.5 text-[11.5px] font-semibold text-ai">
-                AI 이어쓰기{assist.isStreaming ? ' · 생성 중…' : ''}
-              </div>
-              {assist.error ? (
-                <div className="mb-2.5 text-[13px] text-danger">{assist.error.message}</div>
-              ) : (
-                <div className="mb-2.5 max-h-40 overflow-y-auto text-[13px] leading-[1.6] text-ink">
-                  {assist.text}
-                </div>
-              )}
-              <div className="flex justify-end gap-1.5">
-                <button
-                  type="button"
-                  onClick={dismissDraft}
-                  className="h-8 rounded-[5px] border border-line-strong px-3 text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={acceptDraft}
-                  disabled={assist.isStreaming || !!assist.error}
-                  className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-40"
-                >
-                  적용
-                </button>
-              </div>
+            <div className="mt-2">
+              <SuggestionPicker
+                rawText={assist.text}
+                isStreaming={assist.isStreaming}
+                error={assist.error}
+                onApply={(text) => {
+                  editor?.chain().focus().insertContent(text).run();
+                  setShowDraft(false);
+                }}
+                onCancel={dismissDraft}
+              />
             </div>
           )}
 

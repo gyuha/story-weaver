@@ -1,4 +1,5 @@
 import { useAssistStream } from '@/features/editor/api/assist.api';
+import { SuggestionPicker } from '@/features/editor/components/suggestion-picker';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useState } from 'react';
@@ -23,7 +24,6 @@ const SHORTEN_STYLE = '같은 의미를 유지하며 더 간결하고 축약된 
 const TONE_STYLE = '더 정중하고 격식 있는 문어체로 바꿔줘';
 
 interface Preview {
-  label: string;
   prefix: string;
   from: number;
   to: number;
@@ -52,7 +52,6 @@ export function SelectionAiMenu({
     if (!text) return;
     const coords = editor.view.coordsAtPos(to);
     setPreview({
-      label: action.label,
       prefix: action.key === 'expand' ? `${text} ` : '',
       from,
       to,
@@ -67,14 +66,6 @@ export function SelectionAiMenu({
     const targetStyle =
       action.key === 'shorten' ? SHORTEN_STYLE : action.key === 'tone' ? TONE_STYLE : REWRITE_STYLE;
     assist.start('style', { workId, sceneId, payload: { text, targetStyle } });
-  };
-
-  const result = preview ? preview.prefix + assist.text : '';
-
-  const apply = () => {
-    if (!preview) return;
-    editor.chain().focus().insertContentAt({ from: preview.from, to: preview.to }, result).run();
-    setPreview(null);
   };
 
   return (
@@ -96,38 +87,21 @@ export function SelectionAiMenu({
       </BubbleMenu>
 
       {preview && (
-        <div
-          className="fixed z-50 w-[300px] rounded-lg border border-line bg-paper p-3 shadow-lg"
-          style={{ top: preview.top, left: preview.left }}
-        >
-          <div className="mb-1.5 text-[11.5px] font-semibold text-ai">
-            AI 제안 · {preview.label}
-            {assist.isStreaming ? ' · 생성 중…' : ''}
-          </div>
-          {assist.error ? (
-            <div className="mb-2.5 text-[13px] text-danger">{assist.error.message}</div>
-          ) : (
-            <div className="mb-2.5 max-h-40 overflow-y-auto text-[13px] leading-[1.6] text-ink">
-              {result}
-            </div>
-          )}
-          <div className="flex justify-end gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPreview(null)}
-              className="h-8 rounded-[5px] border border-line-strong px-3 text-[12.5px] font-medium text-ink-soft transition-colors hover:bg-surface"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={apply}
-              disabled={assist.isStreaming || !!assist.error}
-              className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-40"
-            >
-              적용
-            </button>
-          </div>
+        <div className="fixed z-50 w-[300px]" style={{ top: preview.top, left: preview.left }}>
+          <SuggestionPicker
+            rawText={assist.text}
+            isStreaming={assist.isStreaming}
+            error={assist.error}
+            onApply={(text) => {
+              editor
+                .chain()
+                .focus()
+                .insertContentAt({ from: preview.from, to: preview.to }, preview.prefix + text)
+                .run();
+              setPreview(null);
+            }}
+            onCancel={() => setPreview(null)}
+          />
         </div>
       )}
     </>
