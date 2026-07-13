@@ -1,6 +1,7 @@
 import type { UpdateSuggestionResponse } from '@/api';
 import { manuscriptApi } from '@/features/editor/api/manuscript.api';
 import { suggestionApi } from '@/features/memory/api/suggestion.api';
+import { worksApi } from '@/features/works/api/works.api';
 import { worldBibleApi } from '@/features/world-bible/api/world-bible.api';
 import { toApiEntityType } from '@/features/world-bible/lib/attributes-mapping';
 import { fromEntityResponse, toAttributesPayload } from '@/features/world-bible/lib/entity-mapping';
@@ -59,6 +60,8 @@ interface WorksState {
   acceptInlineSuggestion: (workId: string, sceneId: string) => void;
   dismissConflict: (workId: string, conflictId: string) => void;
   renameChapter: (workId: string, chapterId: string, title: string) => Promise<void>;
+  /** 작품 제목을 실 API로 수정 — 시놉시스 화면의 인라인 편집용 */
+  renameWork: (workId: string, title: string) => Promise<void>;
   /** 지정한 부에 빈 화를 추가하고 새 화 id를 반환 (index = 작품 내 max+1) */
   addChapter: (workId: string, partLabel: string) => Promise<string>;
   /** 새 부(제N부) + 그 안의 첫 화를 함께 생성하고 새 부 라벨을 반환 */
@@ -216,6 +219,14 @@ export const useWorksStore = create<WorksState>()(
           .find((w) => w.id === workId)
           ?.chapters.find((c) => c.id === chapterId);
         if (c) c.title = title;
+      });
+    },
+
+    renameWork: async (workId, title) => {
+      await worksApi.update({ path: { work_id: workId }, body: { title } });
+      set((state) => {
+        const work = state.works.find((w) => w.id === workId);
+        if (work) work.title = title;
       });
     },
 

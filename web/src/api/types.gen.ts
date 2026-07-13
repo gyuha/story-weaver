@@ -1085,6 +1085,18 @@ export type SuggestionKind = 'new_entity' | 'attribute_change' | 'timeline_state
 export type SuggestionStatus = 'pending' | 'approved' | 'rejected';
 
 /**
+ * SynopsisContinueRequest
+ *
+ * 기획의도 AI 이어쓰기 입력 — 클라이언트가 보낸 현재 초안 텍스트(task #53).
+ */
+export type SynopsisContinueRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
  * SynopsisResponse
  *
  * 시놉시스 응답.
@@ -2411,6 +2423,34 @@ export type PutApiV1WorksByWorkIdSynopsisResponses = {
 };
 
 export type PutApiV1WorksByWorkIdSynopsisResponse = PutApiV1WorksByWorkIdSynopsisResponses[keyof PutApiV1WorksByWorkIdSynopsisResponses];
+
+export type PostApiV1WorksByWorkIdSynopsisContinueData = {
+    body: SynopsisContinueRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/synopsis/continue';
+};
+
+export type PostApiV1WorksByWorkIdSynopsisContinueErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdSynopsisContinueError = PostApiV1WorksByWorkIdSynopsisContinueErrors[keyof PostApiV1WorksByWorkIdSynopsisContinueErrors];
+
+export type PostApiV1WorksByWorkIdSynopsisContinueResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetApiV1WorksByWorkIdEpisodesData = {
     body?: never;

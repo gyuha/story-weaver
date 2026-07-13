@@ -27,18 +27,18 @@ export function WorkShell({ work, active, activeSceneId, children }: WorkShellPr
           {/* 기능 메뉴 블록 */}
           <div className="mt-1 flex flex-col">
             <NavItem
+              icon={FileText}
+              label="시놉시스"
+              active={active === 'synopsis'}
+              to="/works/$workId/synopsis"
+              params={{ workId: work.id }}
+            />
+            <NavItem
               icon={Sparkles}
               label="World Bible"
               iconClassName="text-ai"
               active={active === 'bible'}
               to="/works/$workId/bible"
-              params={{ workId: work.id }}
-            />
-            <NavItem
-              icon={FileText}
-              label="시놉시스"
-              active={active === 'synopsis'}
-              to="/works/$workId/synopsis"
               params={{ workId: work.id }}
             />
             <NavItem

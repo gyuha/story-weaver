@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 
 interface MemoryPanelProps {
@@ -668,6 +669,25 @@ function ChatTab({ work, sceneId }: { work: Work; sceneId: string }) {
   );
 }
 
+// AI 응답만 마크다운으로 렌더링(사용자 입력은 원문 그대로 표시).
+const MARKDOWN_COMPONENTS = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-1.5 last:mb-0">{children}</p>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="mb-1.5 list-disc pl-4 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="mb-1.5 list-decimal pl-4 last:mb-0">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => <li className="mb-0.5">{children}</li>,
+  a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+    <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">
+      {children}
+    </a>
+  ),
+};
+
 function ChatBubble({ sender, text }: { sender: 'user' | 'ai'; text: string }) {
   return (
     <div
@@ -678,7 +698,11 @@ function ChatBubble({ sender, text }: { sender: 'user' | 'ai'; text: string }) {
           : 'self-start border border-line bg-paper text-ink-soft'
       )}
     >
-      {text}
+      {sender === 'ai' ? (
+        <ReactMarkdown components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
+      ) : (
+        text
+      )}
     </div>
   );
 }

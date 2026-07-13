@@ -1079,7 +1079,7 @@
           "chat"
         ],
         "summary": "작품 채팅 메시지 전송 — 현재 화 원고+메모리 프레시 컨텍스트로 SSE 스트리밍",
-        "description": "대화가 없으면 지연 생성 후, 사용자 메시지 저장 → (수위 통과 시) 프레시 컨텍스트\n조립 → SSE 스트리밍 → 응답 종료 후 assistant 메시지 저장 순으로 진행한다.",
+        "description": "대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시\n컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지\n저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가\n고아 user 메시지를 남기지 않도록 한다.",
         "operationId": "send_work_chat_message_api_v1_works__work_id__chat_messages_post",
         "security": [
           {
@@ -1483,6 +1483,62 @@
                 "schema": {
                   "$ref": "#/components/schemas/SynopsisResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/synopsis/continue": {
+      "post": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "기획의도 AI 이어쓰기 (SSE)",
+        "operationId": "continue_synopsis_api_v1_works__work_id__synopsis_continue_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SynopsisContinueRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -5606,6 +5662,20 @@
         ],
         "title": "SuggestionStatus",
         "description": "제안 검토 상태."
+      },
+      "SynopsisContinueRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SynopsisContinueRequest",
+        "description": "기획의도 AI 이어쓰기 입력 — 클라이언트가 보낸 현재 초안 텍스트(task #53)."
       },
       "SynopsisResponse": {
         "properties": {

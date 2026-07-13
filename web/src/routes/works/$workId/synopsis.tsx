@@ -1,7 +1,7 @@
 import { WorkShell } from '@/components/layout/work-shell';
 import { requireAuth } from '@/features/auth/lib/guard';
 import { useWork } from '@/features/shared/store/selectors';
-import { BeatSheetPanel } from '@/features/works/components/beat-sheet-panel';
+import { SynopsisEditor } from '@/features/works/components/synopsis-editor';
 import { createFileRoute, useParams } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/works/$workId/synopsis')({
@@ -21,9 +21,6 @@ function SynopsisPage() {
           <div className="mb-2 text-[12px] font-semibold tracking-[0.04em] text-genre">
             {work.genre} · {work.subGenre}
           </div>
-          <h1 className="mb-4 font-serif text-[30px] font-bold leading-[1.3] tracking-[-0.01em] text-ink">
-            {work.title}
-          </h1>
           <div className="mb-8 flex flex-wrap gap-2">
             {work.keywords.map((k) => (
               <span
@@ -38,18 +35,13 @@ function SynopsisPage() {
             </span>
           </div>
 
-          <p className="font-serif text-[16.5px] leading-[1.95] text-ink">
-            {work.entities.find((e) => e.type === '인물')?.summary ??
-              '아직 시놉시스가 작성되지 않았습니다. 주인공과 핵심 목표를 적어 작품의 큰 줄기를 잡아 보세요.'}
-          </p>
+          <SynopsisEditor work={work} />
 
-          <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+          <div className="mt-8 grid grid-cols-3 gap-3 text-center">
             <SynopsisStat value={`${work.stats.chapters}`} label="화" />
             <SynopsisStat value={`${work.stats.words}${work.stats.wordsUnit}`} label="분량" />
             <SynopsisStat value={`${work.entities.length}`} label="설정 카드" />
           </div>
-
-          <BeatSheetPanel workId={work.id} />
         </div>
       </div>
     </WorkShell>

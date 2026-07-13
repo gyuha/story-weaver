@@ -101,7 +101,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, api/.secrets.baseline]
-        exclude: .env.example|.secrets.baseline
+        exclude: .env.example|.secrets.baseline|pnpm-lock.yaml
 
   # ── Commit message linting ────────────────────────────────────────────────
   # Enforces Conventional Commits format: feat(scope): description

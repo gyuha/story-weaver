@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -30,6 +30,20 @@ class SynopsisResponse(_CamelModel):
     id: uuid.UUID
     work_id: uuid.UUID
     body: str
+
+
+class SynopsisContinueRequest(_CamelModel):
+    """기획의도 AI 이어쓰기 입력 — 클라이언트가 보낸 현재 초안 텍스트(task #53)."""
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_not_blank(cls, value: str) -> str:
+        """빈/공백 텍스트는 LLM 제공사가 400으로 거부해 수위 거절로 오인된다 — 여기서 차단."""
+        if not value.strip():
+            raise ValueError("text는 비어 있을 수 없습니다")
+        return value
 
 
 class EpisodeCreate(_CamelModel):

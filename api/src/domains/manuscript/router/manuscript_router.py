@@ -7,15 +7,24 @@ works_router.py와 동일 패턴: ``get_current_user``로 인증하고 현재 �
 from __future__ import annotations
 
 import uuid
-from typing import NoReturn
+from typing import Any, NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import EventSourceResponse
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
+from core.rate_limit import LLM_RATE_LIMIT, limiter
+from domains.assist.tier_routing import get_fast_writing_client
 from domains.auth.models import User
 from domains.auth.security import get_current_user
+from domains.budget.dependency import require_budget_available
+from domains.budget.service import estimate_tokens, record_usage
+from domains.chat.ports import AbstractLLMPort
 from domains.manuscript.models import Chapter, Episode, Scene, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
@@ -28,14 +37,24 @@ from domains.manuscript.schemas import (
     SceneCreate,
     SceneResponse,
     SceneUpdate,
+    SynopsisContinueRequest,
     SynopsisResponse,
     SynopsisUpdate,
 )
 from domains.manuscript.service import ManuscriptService
 from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
+from domains.moderation.service import (
+    PRECHECK_DECLINE_MESSAGE,
+    RETRY_DECLINE_MESSAGE,
+    is_explicit_content,
+    stream_with_retry,
+)
+from domains.works.models import Work
 from domains.works.repository import WorksRepository
 from domains.works.service import WorksService
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/works/{work_id}", tags=["manuscript"])
 
@@ -116,6 +135,95 @@ async def upsert_synopsis(
     except AppError as exc:
         _raise_http(exc)
     return _to_response(synopsis)
+
+
+# ---------------------------------------------------------------------------
+# 기획의도 AI 이어쓰기 (task #53) — 씬이 없는 작품 단위 요청이라 메모리 검색 없이
+# 장르·서브장르·키워드·문체 + 클라이언트가 보낸 현재 텍스트만으로 조립한다.
+# assist_router.py의 이어쓰기와 동일한 게이트 구성(precheck→budget→rate→완화 재시도),
+# thinking 모드 꺼진 빠른 티어(get_fast_writing_client) 재사용.
+# ---------------------------------------------------------------------------
+
+
+async def _get_works_service(
+    session: AsyncSession = Depends(get_async_session),
+) -> WorksService:
+    return WorksService(WorksRepository(session))
+
+
+def _synopsis_continue_llm_client() -> AbstractLLMPort:
+    return get_fast_writing_client()
+
+
+async def _bind_rate_limit_user(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> None:
+    """slowapi 키 함수(``core.rate_limit._get_user_key``)가 읽는
+    ``request.state.user``를 인증된 사용자로 채운다(assist_router.py와 동일 패턴).
+    """
+    request.state.user = current_user
+
+
+def _build_synopsis_continue_messages(work: Work, text: str) -> list[BaseMessage]:
+    keywords = ", ".join(work.keywords) if work.keywords else "(없음)"
+    system = (
+        "당신은 웹소설 작가의 기획의도(왜 이 작품을 쓰는지, 어떤 메시지를 전달할지) 작성을 "
+        f"보조하는 AI입니다. 이 작품의 장르는 '{work.genre}', 서브장르는 '{work.sub_genre}', "
+        f"키워드는 [{keywords}], 문체는 '{work.style}'입니다. "
+        "전체이용가(약 15세) 수위를 지키세요. "
+        "아래 지금까지 쓰인 기획의도 뒤에 자연스럽게 이어지는 문장을 생성하세요. "
+        "기존 문장은 다시 쓰지 말고 이어지는 내용만 출력하세요."
+    )
+    return [SystemMessage(content=system), HumanMessage(content=text)]
+
+
+async def _precheck_declined_stream() -> Any:
+    yield {"data": PRECHECK_DECLINE_MESSAGE}
+    yield {"data": "[DONE]"}
+
+
+async def _stream_synopsis_continue(
+    llm: AbstractLLMPort, messages: list[Any], user_id: uuid.UUID
+) -> Any:
+    try:
+        sent: list[str] = []
+        async for chunk in stream_with_retry(llm, messages):
+            sent.append(chunk)
+            yield {"data": chunk}
+        yield {"data": "[DONE]"}
+        combined = "".join(sent)
+        if combined and combined != RETRY_DECLINE_MESSAGE:
+            await record_usage(user_id, estimate_tokens(combined))
+    except Exception as exc:
+        logger.error("synopsis_continue_stream_error", error=str(exc), exc_info=True)
+        yield {"event": "error", "data": str(exc)}
+
+
+@router.post(
+    "/synopsis/continue",
+    summary="기획의도 AI 이어쓰기 (SSE)",
+    dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def continue_synopsis(
+    request: Request,
+    work_id: uuid.UUID,
+    payload: SynopsisContinueRequest,
+    current_user: User = Depends(get_current_user),
+    works_service: WorksService = Depends(_get_works_service),
+    llm: AbstractLLMPort = Depends(_synopsis_continue_llm_client),
+) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="synopsis.continue")
+    try:
+        work = await works_service.get_work(work_id, current_user.id)
+    except AppError as exc:
+        _raise_http(exc)
+
+    if is_explicit_content(payload.text):
+        return EventSourceResponse(_precheck_declined_stream())
+
+    messages = _build_synopsis_continue_messages(work, payload.text)
+    return EventSourceResponse(_stream_synopsis_continue(llm, messages, current_user.id))
 
 
 # ---------------------------------------------------------------------------
