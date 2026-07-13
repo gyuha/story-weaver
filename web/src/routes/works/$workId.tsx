@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useWork } from '@/features/shared/store/selectors';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import { useHydrateWorks } from '@/features/works/lib/hydrate-works';
+import { useWorkEntities } from '@/features/world-bible/lib/hydrate-entities';
 import { Outlet, createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect } from 'react';
 
@@ -16,6 +17,11 @@ export function WorkLayout() {
   const { isPending, isError } = useHydrateWorks();
   const work = useWork(workId);
   const navigate = useNavigate();
+
+  // World Bible 엔티티도 작품 진입 시 함께 하이드레이션한다 — 에디터·메모리 패널 등
+  // World Bible 화면을 거치지 않는 라우트에서도 work.entities를 보장하기 위함.
+  // 렌더는 블로킹하지 않고(작품 존재 확인은 works 하이드레이션만 게이트) 백그라운드로 채운다.
+  useWorkEntities(workId);
 
   // 조회가 끝났는데도 work이 없으면(존재하지 않는 작품) 목록으로 되돌린다.
   // NOTE: 위 work 변수가 아니라 스토어를 직접 읽는다 — useHydrateWorks의 setWorks가

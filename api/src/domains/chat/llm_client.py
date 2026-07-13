@@ -59,16 +59,21 @@ Usage::
 
 from __future__ import annotations
 
+import asyncio
+import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from langchain_core.messages import BaseMessage
-from langchain_core.messages.ai import AIMessage
+from langchain_core.messages.ai import AIMessage, UsageMetadata
+from langchain_core.messages.utils import convert_to_openai_messages
 
 from core.config import LLMSettings, get_settings
+from core.llm_call_context import get_llm_call_context
 from domains.chat.llm_factory import ProviderFactory
 from domains.chat.ports import AbstractLLMPort
+from domains.chat.repository.llm_call_log_repository import save_llm_call_log
 from infra.llm.provider_factory import make_chat_litellm
 
 if TYPE_CHECKING:
@@ -160,6 +165,53 @@ class LLMClient(AbstractLLMPort):
         return self._chat
 
     # ------------------------------------------------------------------
+    # LLM call logging (ADR-0009 / plan.md S3)
+    # ------------------------------------------------------------------
+
+    def _record_call(
+        self,
+        *,
+        start_time: float,
+        messages: list[BaseMessage],
+        response: str | None,
+        error: str | None,
+        usage_metadata: UsageMetadata | None,
+    ) -> None:
+        """Fire-and-forget log of one LLM call (success or failure).
+
+        Reads correlation_id from structlog contextvars (bound by
+        ``CorrelationIdMiddleware``) and user_id/task from
+        :func:`get_llm_call_context` (bound per-request by each router).
+        Delegates the actual INSERT to :func:`save_llm_call_log`, which
+        already swallows its own exceptions — this call must never raise,
+        so the synchronous prep work (message conversion, contextvar reads)
+        is guarded too (ADR-0009: logging must never block the real LLM call).
+        """
+        try:
+            latency_ms = int((time.monotonic() - start_time) * 1000)
+            ctx = get_llm_call_context()
+            correlation_id = structlog.contextvars.get_contextvars().get("correlation_id")
+            openai_messages = convert_to_openai_messages(messages)
+        except Exception:
+            logger.warning("llm_call_log_prep_failed", exc_info=True)
+            return
+        asyncio.create_task(  # noqa: RUF006 - intentional fire-and-forget (ADR-0009)
+            save_llm_call_log(
+                correlation_id=correlation_id,
+                user_id=ctx.user_id,
+                task=ctx.task,
+                model=self._model_string,
+                provider=self._provider,
+                messages=openai_messages,
+                response=response,
+                error=error,
+                latency_ms=latency_ms,
+                prompt_tokens=usage_metadata.get("input_tokens") if usage_metadata else None,
+                completion_tokens=usage_metadata.get("output_tokens") if usage_metadata else None,
+            )
+        )
+
+    # ------------------------------------------------------------------
     # Async interface
     # ------------------------------------------------------------------
 
@@ -195,11 +247,29 @@ class LLMClient(AbstractLLMPort):
             model=self._model_string,
             message_count=len(messages),
         )
-        result = await self._chat.ainvoke(messages, **kwargs)
+        start_time = time.monotonic()
+        try:
+            result = await self._chat.ainvoke(messages, **kwargs)
+        except Exception as exc:
+            self._record_call(
+                start_time=start_time,
+                messages=messages,
+                response=None,
+                error=str(exc),
+                usage_metadata=None,
+            )
+            raise
         logger.debug(
             "llm_ainvoke_complete",
             model=self._model_string,
             content_length=len(str(result.content)),
+        )
+        self._record_call(
+            start_time=start_time,
+            messages=messages,
+            response=str(result.content),
+            error=None,
+            usage_metadata=result.usage_metadata,
         )
         return result
 
@@ -240,16 +310,39 @@ class LLMClient(AbstractLLMPort):
             model=self._model_string,
             message_count=len(messages),
         )
+        start_time = time.monotonic()
         chunk_count = 0
-        async for chunk in self._chat.astream(messages, **kwargs):
-            content = chunk.content
-            if content:
-                chunk_count += 1
-                yield str(content)
+        response_parts: list[str] = []
+        usage_metadata: UsageMetadata | None = None
+        try:
+            async for chunk in self._chat.astream(messages, **kwargs):
+                if chunk.usage_metadata:
+                    usage_metadata = chunk.usage_metadata
+                content = chunk.content
+                if content:
+                    chunk_count += 1
+                    response_parts.append(str(content))
+                    yield str(content)
+        except Exception as exc:
+            self._record_call(
+                start_time=start_time,
+                messages=messages,
+                response=None,
+                error=str(exc),
+                usage_metadata=None,
+            )
+            raise
         logger.debug(
             "llm_astream_complete",
             model=self._model_string,
             chunks=chunk_count,
+        )
+        self._record_call(
+            start_time=start_time,
+            messages=messages,
+            response="".join(response_parts),
+            error=None,
+            usage_metadata=usage_metadata,
         )
 
     # ------------------------------------------------------------------

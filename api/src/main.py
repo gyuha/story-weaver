@@ -226,6 +226,15 @@ def _register_routers(application: FastAPI) -> None:
     except ImportError:
         logger.debug("chat_router_not_found", note="Will be added in later phase")
 
+    # Chat domain (작품 단위 채팅 — 현재 화 원고+메모리 프레시 컨텍스트, ADR-0010)
+    try:
+        from domains.chat.router import work_router as chat_work_router
+
+        application.include_router(chat_work_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/chat")
+    except ImportError:
+        logger.debug("chat_work_router_not_found", note="Will be added in later phase")
+
     # Works domain
     try:
         from domains.works.router import router as works_router

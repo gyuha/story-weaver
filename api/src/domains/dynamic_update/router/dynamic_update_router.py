@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
 from core.rate_limit import LLM_RATE_LIMIT, limiter
 from domains.assist.tier_routing import Tier, get_client_for_tier
 from domains.auth.models import User
@@ -121,6 +122,7 @@ async def extract_updates(
     suggestion_service: SuggestionService = Depends(_get_suggestion_service),
     llm: AbstractLLMPort = Depends(_extraction_llm_client),
 ) -> ExtractUpdatesResponse:
+    bind_llm_call_context(user_id=current_user.id, task="dynamic_update.extract")
     try:
         result = await service.extract_updates(work_id, current_user.id, scene_id, llm)
         await suggestion_service.process_extraction(work_id, current_user.id, scene_id, result)

@@ -1,6 +1,8 @@
 import type { Chapter, Scene, Work } from '@/features/shared/types';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // --- mocks ---
@@ -8,6 +10,43 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockSearch = vi.fn();
 vi.mock('@/features/memory/api/memory.api', () => ({
   memoryApi: { search: (...args: unknown[]) => mockSearch(...args) },
+}));
+
+const mockGetMessages = vi.fn();
+const mockStartNewConversationMutationFn = vi.fn();
+const chatStartSpy = vi.fn();
+interface MockChatStreamState {
+  text: string;
+  isStreaming: boolean;
+  error: Error | null;
+}
+let setMockChatStreamState: (patch: Partial<MockChatStreamState>) => void = () => {};
+
+vi.mock('@/features/memory/api/chat.api', () => ({
+  chatQueries: {
+    conversation: (options: unknown) => ({
+      queryKey: ['chat-conversation-test', options],
+      queryFn: () => Promise.resolve(null),
+    }),
+    messages: (options: unknown) => ({
+      queryKey: ['chat-messages-test', options],
+      queryFn: () => mockGetMessages(options),
+    }),
+  },
+  chatMutations: {
+    startNewConversation: () => ({
+      mutationFn: (options: unknown) => mockStartNewConversationMutationFn(options),
+    }),
+  },
+  useChatStream: () => {
+    const [state, setState] = useState<MockChatStreamState>({
+      text: '',
+      isStreaming: false,
+      error: null,
+    });
+    setMockChatStreamState = (patch) => setState((s) => ({ ...s, ...patch }));
+    return { start: chatStartSpy, ...state };
+  },
 }));
 
 const mockAcceptSuggestion = vi.fn();
@@ -94,6 +133,7 @@ const SCENE: Scene = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setMockChatStreamState = () => {};
 });
 
 describe('MemoryPanel · AI 동적 업데이트 제안', () => {
@@ -244,6 +284,104 @@ describe('MemoryPanel · AI 추천 받기', () => {
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith('추천할 설정이 없습니다');
+    });
+  });
+});
+
+async function renderChatTab() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryPanel work={WORK} chapter={CHAPTER} scene={SCENE} />
+    </QueryClientProvider>
+  );
+  await userEvent.click(screen.getByRole('button', { name: '채팅' }));
+}
+
+describe('MemoryPanel · ChatTab', () => {
+  it('마운트 시 작품의 대화 이력을 조회한다', async () => {
+    mockGetMessages.mockResolvedValue([]);
+
+    await renderChatTab();
+
+    await waitFor(() => {
+      expect(mockGetMessages).toHaveBeenCalledWith({ path: { work_id: 'w1' } });
+    });
+  });
+
+  it('이력이 있으면 말풍선으로 복원한다', async () => {
+    mockGetMessages.mockResolvedValue([
+      { id: 'm1', conversationId: 'c1', role: 'user', content: '주인공 나이가 몇살이야?' },
+      { id: 'm2', conversationId: 'c1', role: 'assistant', content: '17세입니다' },
+    ]);
+
+    await renderChatTab();
+
+    await waitFor(() => {
+      expect(screen.getByText('주인공 나이가 몇살이야?')).toBeInTheDocument();
+    });
+    expect(screen.getByText('17세입니다')).toBeInTheDocument();
+  });
+
+  it('전송 시 실 API를 호출하고 스트리밍 텍스트를 점진적으로 반영한다', async () => {
+    mockGetMessages.mockResolvedValue([]);
+    await renderChatTab();
+
+    const textarea = screen.getByPlaceholderText('메시지를 입력하세요…');
+    await userEvent.type(textarea, '주인공 이름이 뭐야?');
+    await userEvent.click(screen.getByRole('button', { name: '전송' }));
+
+    expect(chatStartSpy).toHaveBeenCalledWith({
+      workId: 'w1',
+      payload: { content: '주인공 이름이 뭐야?', sceneId: 'sc1' },
+    });
+
+    act(() => setMockChatStreamState({ isStreaming: true, text: '이름은' }));
+    expect(screen.getByText('이름은')).toBeInTheDocument();
+
+    act(() => setMockChatStreamState({ isStreaming: false, text: '이름은 담천입니다' }));
+    await waitFor(() => {
+      expect(screen.getByText('이름은 담천입니다')).toBeInTheDocument();
+    });
+  });
+
+  it('스트리밍 중에는 입력·전송이 비활성화된다', async () => {
+    mockGetMessages.mockResolvedValue([]);
+    await renderChatTab();
+
+    act(() => setMockChatStreamState({ isStreaming: true, text: '' }));
+
+    expect(screen.getByPlaceholderText('메시지를 입력하세요…')).toBeDisabled();
+    expect(screen.getByRole('button', { name: '전송' })).toBeDisabled();
+  });
+
+  it("'새 대화' 클릭 시 생성 API를 호출하고 말풍선을 초기화한다", async () => {
+    mockGetMessages.mockResolvedValue([
+      { id: 'm1', conversationId: 'c1', role: 'user', content: '이전 대화' },
+    ]);
+    mockStartNewConversationMutationFn.mockResolvedValue({ id: 'c2' });
+
+    await renderChatTab();
+    await waitFor(() => expect(screen.getByText('이전 대화')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: '새 대화' }));
+
+    expect(mockStartNewConversationMutationFn).toHaveBeenCalledWith({
+      path: { work_id: 'w1' },
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('이전 대화')).not.toBeInTheDocument();
+    });
+  });
+
+  it('스트림 에러가 발생하면 에러 토스트를 보여준다', async () => {
+    mockGetMessages.mockResolvedValue([]);
+    await renderChatTab();
+
+    act(() => setMockChatStreamState({ isStreaming: false, error: new Error('network error') }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
     });
   });
 });

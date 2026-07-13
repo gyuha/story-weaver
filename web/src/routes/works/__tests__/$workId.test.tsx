@@ -18,6 +18,11 @@ vi.mock('@/features/works/lib/hydrate-works', () => ({
   useHydrateWorks: () => mockUseHydrateWorks(),
 }));
 
+// 엔티티 하이드레이션은 이 테스트 범위 밖 — no-op으로 두어 useQuery 의존을 제거한다.
+vi.mock('@/features/world-bible/lib/hydrate-entities', () => ({
+  useWorkEntities: () => ({ isPending: false, isError: false }),
+}));
+
 // NOTE: selectors는 mock하지 않는다 — WorkLayout이 리다이렉트 판단에 실제 스토어를
 // 직접 읽으므로(하이드레이션 경합 회피), 실제 useWorksStore 상태로 시나리오를 구성한다.
 import { useWorksStore } from '@/features/shared/store/works.store';

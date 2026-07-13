@@ -12,7 +12,7 @@ complete turn by a background LLM summarisation call in the service layer.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -37,6 +37,11 @@ class Conversation(Base):
     model_name:
         The LiteLLM model identifier active when the conversation was created,
         e.g. ``"openai/gpt-4o-mini"``.
+    work_id:
+        Optional foreign key to ``works.id`` scoping the conversation to a
+        work (ADR-0010). No unique constraint on ``(user_id, work_id)`` —
+        "start new conversation" may create additional rows for the same
+        work; "current conversation" is defined as the most recent one.
     """
 
     __tablename__ = "conversations"
@@ -48,11 +53,23 @@ class Conversation(Base):
         nullable=False,
         index=True,
     )
+    work_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("works.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     model_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        # Client-side default (not just server_default=func.now()): Postgres'
+        # now() is transaction-time, so two conversations created in the same
+        # transaction would tie, breaking get_latest_by_work's ordering.
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

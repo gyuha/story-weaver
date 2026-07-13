@@ -1,4 +1,5 @@
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { chatMutations, chatQueries, useChatStream } from '@/features/memory/api/chat.api';
 import { memoryApi } from '@/features/memory/api/memory.api';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type {
@@ -11,6 +12,7 @@ import type {
 } from '@/features/shared/types';
 import { EntityDetail } from '@/features/world-bible/components/entity-detail';
 import { cn } from '@/lib/utils';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Check,
   MessageSquare,
@@ -78,7 +80,7 @@ export function MemoryPanel({ work, chapter, scene }: MemoryPanelProps) {
       {tab === 'settings' ? (
         <SettingsTab work={work} chapter={chapter} scene={scene} />
       ) : (
-        <ChatTab />
+        <ChatTab work={work} sceneId={scene.id} />
       )}
     </aside>
   );
@@ -523,41 +525,98 @@ interface ChatMessage {
   text: string;
 }
 
-// eco: 고정 mock 응답. 실제 AI 연동 시 교체.
-const MOCK_REPLY =
-  '(목업 응답) 좋은 질문이에요. 실제 AI 연동 전이라 예시 답변을 보여드립니다 — 설정·전개에 대해 무엇이든 물어보세요.';
+/** 채팅 탭 — 작품 단위 대화(ADR-0010). 씬을 옮겨도 이어지고, 매 메시지마다 현재 화
+ * 원고+메모리로 프레시 컨텍스트가 조립되어 스트리밍 응답한다. */
+function ChatTab({ work, sceneId }: { work: Work; sceneId: string }) {
+  const historyQuery = useQuery(chatQueries.messages({ path: { work_id: work.id } }));
+  // eco: 응답 데이터는 렌더에 쓰지 않는다 — "새 대화" 버튼을 그 사이 누르지 못하도록
+  // isPending만 참고한다(현재 대화 id 자체는 서버가 알아서 최신 것으로 처리).
+  const conversationQuery = useQuery(chatQueries.conversation({ path: { work_id: work.id } }));
+  const startNewConversation = useMutation(chatMutations.startNewConversation());
+  const chatStream = useChatStream();
 
-/** 채팅 탭 — ChatGPT 스타일 mock 질의 UI (실제 연동 없음, ephemeral) */
-function ChatTab() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   // 바닥 근처면 새 메시지에 자동으로 따라 내려가고, 위로 스크롤하면 그 위치를 유지
   const stick = useRef(true);
+  // 진행 중인 스트림 응답을 이미 messages에 편입했는지 추적 (start() 호출 시 false로 리셋)
+  const committedRef = useRef(true);
+
+  useEffect(() => {
+    if (historyQuery.data) {
+      setMessages(
+        historyQuery.data.map((m) => ({
+          role: m.role === 'assistant' ? 'ai' : 'user',
+          text: m.content,
+        }))
+      );
+    }
+  }, [historyQuery.data]);
+
+  useEffect(() => {
+    if (chatStream.error) {
+      toast.error(apiErrorMessage(chatStream.error, '메시지를 보내지 못했습니다'));
+    }
+  }, [chatStream.error]);
+
+  // 스트림이 끝나면 완성된 응답을 말풍선 목록에 편입한다.
+  useEffect(() => {
+    if (!chatStream.isStreaming && !committedRef.current && chatStream.text) {
+      setMessages((m) => [...m, { role: 'ai', text: chatStream.text }]);
+      committedRef.current = true;
+    }
+  }, [chatStream.isStreaming, chatStream.text]);
 
   const onScroll = () => {
     const el = scrollRef.current;
     if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: 메시지 변경 시에만 바닥 고정 판단
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 메시지·스트리밍 텍스트 변경 시에만 바닥 고정 판단
   useEffect(() => {
     const el = scrollRef.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages, chatStream.text]);
 
   const send = () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || chatStream.isStreaming) return;
     stick.current = true; // 내가 보낸 직후엔 바닥으로
-    setMessages((m) => [...m, { role: 'user', text }, { role: 'ai', text: MOCK_REPLY }]);
+    committedRef.current = false;
+    setMessages((m) => [...m, { role: 'user', text }]);
     setInput('');
+    chatStream.start({ workId: work.id, payload: { content: text, sceneId } });
   };
+
+  const newConversation = () => {
+    startNewConversation.mutate(
+      { path: { work_id: work.id } },
+      {
+        // eco: 새 대화는 항상 빈 이력이므로 재조회 대신 로컬 목록만 비운다.
+        onSuccess: () => setMessages([]),
+        onError: (err) => toast.error(apiErrorMessage(err, '새 대화를 시작하지 못했습니다')),
+      }
+    );
+  };
+
+  const disabled = chatStream.isStreaming;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-paper">
+      <div className="flex h-9 shrink-0 items-center justify-end border-b border-ink/[0.06] px-2">
+        <button
+          type="button"
+          onClick={newConversation}
+          disabled={disabled || startNewConversation.isPending || conversationQuery.isPending}
+          className="flex h-6 items-center gap-1 rounded-md px-2 text-[11.5px] font-medium text-faint transition-colors hover:bg-surface hover:text-ink-soft disabled:opacity-50"
+        >
+          <Plus className="size-3" strokeWidth={2} />새 대화
+        </button>
+      </div>
+
       <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-[15px_14px]">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !chatStream.isStreaming ? (
           <div className="mt-6 text-center text-[12.5px] leading-[1.7] text-faint">
             집필 중인 작품에 대해 질문해 보세요.
             <br />
@@ -566,19 +625,14 @@ function ChatTab() {
         ) : (
           <div className="flex flex-col gap-3">
             {messages.map((m, i) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: mock 채팅 — append-only라 인덱스로 충분
+              <ChatBubble
+                // biome-ignore lint/suspicious/noArrayIndexKey: append-only 목록이라 인덱스로 충분
                 key={i}
-                className={cn(
-                  'max-w-[85%] rounded-[10px] px-3 py-2 text-[13px] leading-[1.6]',
-                  m.role === 'user'
-                    ? 'self-end bg-primary/10 text-ink'
-                    : 'self-start border border-line bg-paper text-ink-soft'
-                )}
-              >
-                {m.text}
-              </div>
+                sender={m.role}
+                text={m.text}
+              />
             ))}
+            {chatStream.isStreaming && <ChatBubble sender="ai" text={chatStream.text} />}
           </div>
         )}
       </div>
@@ -594,14 +648,15 @@ function ChatTab() {
                 send();
               }
             }}
+            disabled={disabled}
             rows={1}
             placeholder="메시지를 입력하세요…"
-            className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent text-[13px] leading-[1.5] text-ink outline-none placeholder:text-faintest"
+            className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent text-[13px] leading-[1.5] text-ink outline-none placeholder:text-faintest disabled:opacity-60"
           />
           <button
             type="button"
             onClick={send}
-            disabled={!input.trim()}
+            disabled={disabled || !input.trim()}
             aria-label="전송"
             className="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-30"
           >
@@ -609,6 +664,21 @@ function ChatTab() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ChatBubble({ sender, text }: { sender: 'user' | 'ai'; text: string }) {
+  return (
+    <div
+      className={cn(
+        'max-w-[85%] rounded-[10px] px-3 py-2 text-[13px] leading-[1.6]',
+        sender === 'user'
+          ? 'self-end bg-primary/10 text-ink'
+          : 'self-start border border-line bg-paper text-ink-soft'
+      )}
+    >
+      {text}
     </div>
   );
 }

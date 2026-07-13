@@ -286,6 +286,10 @@ export type ConversationCreate = {
      * System Prompt
      */
     system_prompt?: string | null;
+    /**
+     * Work Id
+     */
+    work_id?: string | null;
 };
 
 /**
@@ -300,6 +304,10 @@ export type ConversationResponse = {
      * User Id
      */
     user_id: string;
+    /**
+     * Work Id
+     */
+    work_id: string | null;
     /**
      * Title
      */
@@ -999,6 +1007,20 @@ export type SendMessageRequest = {
      * When True, response is SSE-streamed. When False, returns full JSON.
      */
     stream?: boolean;
+};
+
+/**
+ * SendWorkChatMessageRequest
+ */
+export type SendWorkChatMessageRequest = {
+    /**
+     * Content
+     */
+    content: string;
+    /**
+     * Sceneid
+     */
+    sceneId: string;
 };
 
 /**
@@ -2040,6 +2062,128 @@ export type PostApiV1ChatConversationsByConversationIdMessagesResponses = {
     /**
      * Response Send Message Api V1 Chat Conversations  Conversation Id  Messages Post
      *
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GetApiV1WorksByWorkIdChatConversationData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chat/conversation';
+};
+
+export type GetApiV1WorksByWorkIdChatConversationErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdChatConversationError = GetApiV1WorksByWorkIdChatConversationErrors[keyof GetApiV1WorksByWorkIdChatConversationErrors];
+
+export type GetApiV1WorksByWorkIdChatConversationResponses = {
+    /**
+     * Response Get Work Conversation Api V1 Works  Work Id  Chat Conversation Get
+     *
+     * Successful Response
+     */
+    200: ConversationResponse | null;
+};
+
+export type GetApiV1WorksByWorkIdChatConversationResponse = GetApiV1WorksByWorkIdChatConversationResponses[keyof GetApiV1WorksByWorkIdChatConversationResponses];
+
+export type GetApiV1WorksByWorkIdChatConversationMessagesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chat/conversation/messages';
+};
+
+export type GetApiV1WorksByWorkIdChatConversationMessagesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdChatConversationMessagesError = GetApiV1WorksByWorkIdChatConversationMessagesErrors[keyof GetApiV1WorksByWorkIdChatConversationMessagesErrors];
+
+export type GetApiV1WorksByWorkIdChatConversationMessagesResponses = {
+    /**
+     * Response Get Work Conversation Messages Api V1 Works  Work Id  Chat Conversation Messages Get
+     *
+     * Successful Response
+     */
+    200: Array<MessageResponse>;
+};
+
+export type GetApiV1WorksByWorkIdChatConversationMessagesResponse = GetApiV1WorksByWorkIdChatConversationMessagesResponses[keyof GetApiV1WorksByWorkIdChatConversationMessagesResponses];
+
+export type PostApiV1WorksByWorkIdChatConversationsData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chat/conversations';
+};
+
+export type PostApiV1WorksByWorkIdChatConversationsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdChatConversationsError = PostApiV1WorksByWorkIdChatConversationsErrors[keyof PostApiV1WorksByWorkIdChatConversationsErrors];
+
+export type PostApiV1WorksByWorkIdChatConversationsResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConversationResponse;
+};
+
+export type PostApiV1WorksByWorkIdChatConversationsResponse = PostApiV1WorksByWorkIdChatConversationsResponses[keyof PostApiV1WorksByWorkIdChatConversationsResponses];
+
+export type PostApiV1WorksByWorkIdChatMessagesData = {
+    body: SendWorkChatMessageRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chat/messages';
+};
+
+export type PostApiV1WorksByWorkIdChatMessagesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdChatMessagesError = PostApiV1WorksByWorkIdChatMessagesErrors[keyof PostApiV1WorksByWorkIdChatMessagesErrors];
+
+export type PostApiV1WorksByWorkIdChatMessagesResponses = {
+    /**
      * Successful Response
      */
     200: unknown;

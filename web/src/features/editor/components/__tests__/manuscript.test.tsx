@@ -165,6 +165,9 @@ const SCENE: Scene = {
   vectorMemory: [],
 };
 
+const mockScrollIntoView = vi.fn();
+Element.prototype.scrollIntoView = mockScrollIntoView;
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetText.mockReturnValue('원래 문단');
@@ -247,6 +250,31 @@ describe('ManuscriptEditor AI 이어쓰기', () => {
     });
   });
 
+  it('커서 앞 텍스트가 비면(커서가 씬 맨 앞) 씬 전체 본문으로 폴백해 호출한다', async () => {
+    mockTextBetween.mockReturnValue('');
+    mockGetText.mockReturnValue('씬 전체 본문');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
+
+    expect(startSpy).toHaveBeenCalledWith('continue', {
+      workId: 'w1',
+      sceneId: 'sc1',
+      payload: { cursorText: '씬 전체 본문' },
+    });
+  });
+
+  it('씬 전체가 비어 있으면 호출하지 않고 안내 토스트를 보여준다', async () => {
+    mockTextBetween.mockReturnValue('');
+    mockGetText.mockReturnValue('');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
+
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
   it('스트림 청크가 도착하는 대로 제안이 점진적으로 반영된다', async () => {
     render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
     await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
@@ -279,5 +307,23 @@ describe('ManuscriptEditor AI 이어쓰기', () => {
     expect(screen.queryByRole('button', { name: '적용' })).not.toBeInTheDocument();
     // 에러가 나도 나머지 에디터 UI는 정상 렌더된다 (크래시하지 않음)
     expect(screen.getByRole('button', { name: '저장' })).toBeInTheDocument();
+  });
+
+  it('이어쓰기 패널은 본문 에디터 컨테이너보다 DOM 순서상 뒤에 렌더된다', async () => {
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
+
+    const editorContainer = screen.getByTestId('editor-container');
+    const cancelButton = screen.getByRole('button', { name: '취소' });
+
+    const position = editorContainer.compareDocumentPosition(cancelButton);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('패널이 나타나면 화면에 보이도록 스크롤한다', async () => {
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
+
+    expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
   });
 });

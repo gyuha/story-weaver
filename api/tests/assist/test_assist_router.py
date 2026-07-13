@@ -24,6 +24,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from core.database import AsyncSessionFactory, engine
+from core.llm_call_context import get_llm_call_context
 from domains.assist.router import router as assist_router
 from domains.assist.router.assist_router import (
     _continue_llm_client,
@@ -193,6 +194,54 @@ async def test_continue_streams_fake_chunks_and_assembles_full_memory_prompt(
     assert "다음 문장 3~5개" in system_text
     assert "[메모리 컨텍스트]" in system_text
     assert human_text == "그는 문을 열었다."
+
+
+async def test_continue_binds_llm_call_context_before_streaming(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    """S2 — LLMClient(S3)가 llm_call_logs에 채울 user_id·task가 스트리밍 시점에
+    이미 바인딩돼 있어야 한다(core.llm_call_context)."""
+    owner, _ = two_users
+    scene = await _create_scene(app, owner, owner_work.id, body="문 앞에 서 있었다.")
+    captured: dict[str, Any] = {}
+
+    class _CapturingLLMClient:
+        async def stream(self, messages: list[Any], **kwargs: Any) -> AsyncIterator[str]:
+            context = get_llm_call_context()
+            captured["user_id"] = context.user_id
+            captured["task"] = context.task
+            yield "응답"
+
+    app.dependency_overrides[_continue_llm_client] = _CapturingLLMClient
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            json={"cursorText": "그는 문을 열었다."},
+        )
+
+    assert resp.status_code == 200
+    assert captured["user_id"] == owner.id
+    assert captured["task"] == "assist.continue"
+
+
+async def test_continue_rejects_blank_cursor_text(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    """빈/공백 cursor_text는 422 — LLM 제공사 400(수위 거절로 오인)까지 가지 않게 차단."""
+    owner, _ = two_users
+    scene = await _create_scene(app, owner, owner_work.id, body="문 앞에 서 있었다.")
+    fake = _FakeLLMClient(["안 불려야 함"])
+    app.dependency_overrides[_continue_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        for blank in ("", "   "):
+            resp = await client.post(
+                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+                json={"cursorText": blank},
+            )
+            assert resp.status_code == 422
+    assert fake.received_messages == []
 
 
 # ---------------------------------------------------------------------------

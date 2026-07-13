@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { parseSseTextStream } from '../assist.api';
+import { useAuthStore } from '@/features/auth/store/auth.store';
+import { refreshAccessToken } from '@/lib/api-interceptors';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseSseTextStream, streamAssist } from '../assist.api';
+
+// eco: assist.api.ts는 refreshAccessToken(단일-비행 coordinator)에 위임할 뿐이므로
+// 여기서는 그 결과(성공/실패)만 모킹해 401 처리 분기를 검증한다.
+vi.mock('@/lib/api-interceptors', () => ({
+  refreshAccessToken: vi.fn(),
+}));
 
 // eco: 실 네트워크 스트림은 여기서 테스트하지 않는다 — fetch(ReadableStream)을 흉내 낸
 // 문자열 청크 스트림만으로 SSE 파싱 로직(청크 경계, [DONE] 종료, 에러 이벤트)을 검증한다.
@@ -52,5 +60,87 @@ describe('parseSseTextStream', () => {
     await expect(
       collect(parseSseTextStream(fromChunks(['event: error\ndata: LLM provider error\n\n'])))
     ).rejects.toThrow('LLM provider error');
+  });
+});
+
+// eco: fetch가 반환하는 최소한의 Response 모양만 흉내 낸다(res.ok/status/body만 사용).
+function sseResponse(text: string): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
+  return { ok: true, status: 200, body } as Response;
+}
+
+function errorResponse(status: number): Response {
+  return { ok: false, status, body: null } as Response;
+}
+
+describe('streamAssist의 401 처리 (단일-비행 refresh 후 1회 재시도)', () => {
+  const params = {
+    workId: 'work-1',
+    sceneId: 'scene-1',
+    taskType: 'continue' as const,
+    payload: { cursorText: '이어쓸 문장' },
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    useAuthStore.setState({
+      accessToken: 'old-token',
+      refreshToken: 'ref-token',
+      user: null,
+      isAuthenticated: true,
+    });
+    vi.mocked(refreshAccessToken).mockReset();
+    // eco: jsdom의 실제 navigation을 막고 리다이렉트 여부만 관찰한다(이 저장소에 기존 관례 없음).
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: '' },
+    });
+  });
+
+  it('① 첫 fetch 401 → refresh 성공 → 새 Authorization으로 재시도해 정상 스트리밍한다', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(errorResponse(401))
+      .mockResolvedValueOnce(sseResponse('data: hello\n\ndata: [DONE]\n\n'));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(refreshAccessToken).mockResolvedValue('new-token');
+
+    const chunks = await collect(streamAssist(params));
+
+    expect(chunks).toEqual(['hello']);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer new-token');
+    expect(window.location.href).toBe('');
+  });
+
+  it('② refresh 실패 → 세션 클리어 + /auth/login 이동, 재시도 없음', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(errorResponse(401));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(refreshAccessToken).mockRejectedValue(new Error('refresh failed'));
+
+    await expect(collect(streamAssist(params))).rejects.toThrow();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(window.location.href).toBe('/auth/login');
+  });
+
+  it('③ 재시도 후에도 401 → 세션 클리어 + /auth/login 이동, 추가 재시도 없음(fetch 총 2회)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(errorResponse(401))
+      .mockResolvedValueOnce(errorResponse(401));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.mocked(refreshAccessToken).mockResolvedValue('new-token');
+
+    await expect(collect(streamAssist(params))).rejects.toThrow();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(useAuthStore.getState().accessToken).toBeNull();
+    expect(window.location.href).toBe('/auth/login');
   });
 });

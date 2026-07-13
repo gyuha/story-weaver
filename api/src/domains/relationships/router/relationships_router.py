@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
 from core.rate_limit import LLM_RATE_LIMIT, limiter
 from domains.assist.tier_routing import Tier, get_client_for_tier
 from domains.auth.models import User
@@ -85,6 +86,7 @@ async def get_relationships(
     service: RelationshipsService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_relationships_llm_client),
 ) -> RelationshipGraphResponse:
+    bind_llm_call_context(user_id=current_user.id, task="relationships")
     try:
         edges, summary = await service.get_relationships(
             work_id, current_user.id, up_to_scene_id, llm

@@ -102,7 +102,7 @@ class TestLLMClientConstructor:
                 settings=_make_llm_settings(
                     "anthropic",
                     "claude-3-5-sonnet-20241022",
-                    anthropic_api_key="sk-ant-test",
+                    anthropic_api_key="test-anthropic-key",  # pragma: allowlist secret
                     openai_api_key="",
                 )
             )
@@ -114,7 +114,7 @@ class TestLLMClientConstructor:
                 settings=_make_llm_settings(
                     "gemini",
                     "gemini-1.5-flash",
-                    gemini_api_key="AIza-test",
+                    gemini_api_key="test-gemini-key",  # pragma: allowlist secret
                     openai_api_key="",
                 )
             )
@@ -139,7 +139,7 @@ class TestLLMClientConstructor:
                     "azure",
                     "gpt-4o",
                     openai_api_key="",
-                    azure_api_key="az-key",
+                    azure_api_key="test-azure-key",  # pragma: allowlist secret
                     azure_endpoint="https://my.openai.azure.com/",
                     azure_deployment="prod-gpt4o",
                 )
@@ -157,7 +157,7 @@ class TestLLMClientConstructor:
                 settings=_make_llm_settings(
                     "anthropic",
                     "claude-3-5-haiku-20241022",
-                    anthropic_api_key="sk-ant",
+                    anthropic_api_key="test-anthropic-key",  # pragma: allowlist secret
                     openai_api_key="",
                 )
             )
@@ -482,7 +482,7 @@ class TestGetLlmClient:
             mock_llm_settings = _make_llm_settings(
                 "anthropic",
                 "claude-3-5-haiku-20241022",
-                anthropic_api_key="sk-ant",
+                anthropic_api_key="test-anthropic-key",  # pragma: allowlist secret
                 openai_api_key="",
             )
             mock_settings.llm = mock_llm_settings
@@ -539,13 +539,22 @@ class TestProviderPortability:
     ) -> None:
         extra: dict[str, str] = {}
         if provider == "anthropic":
-            extra = {"openai_api_key": "", "anthropic_api_key": "sk-ant"}
+            extra = {
+                "openai_api_key": "",
+                "anthropic_api_key": "test-anthropic-key",  # pragma: allowlist secret
+            }
         elif provider == "gemini":
-            extra = {"openai_api_key": "", "gemini_api_key": "AIza"}
+            extra = {
+                "openai_api_key": "",
+                "gemini_api_key": "test-gemini-key",  # pragma: allowlist secret
+            }
         elif provider == "ollama":
             extra = {"openai_api_key": ""}
         elif provider == "azure":
-            extra = {"openai_api_key": "", "azure_api_key": "az-key"}
+            extra = {
+                "openai_api_key": "",
+                "azure_api_key": "test-azure-key",  # pragma: allowlist secret
+            }
 
         with patch("infra.llm.provider_factory.ChatLiteLLM"):
             client = LLMClient(settings=_make_llm_settings(provider, model, **extra))
@@ -565,9 +574,9 @@ class TestProviderPortability:
             if provider != "openai":
                 extra["openai_api_key"] = ""
             if provider == "anthropic":
-                extra["anthropic_api_key"] = "sk-ant"
+                extra["anthropic_api_key"] = "test-anthropic-key"  # pragma: allowlist secret
             elif provider == "gemini":
-                extra["gemini_api_key"] = "AIza"
+                extra["gemini_api_key"] = "test-gemini-key"  # pragma: allowlist secret
 
             with patch("infra.llm.provider_factory.ChatLiteLLM"):
                 client = LLMClient(settings=_make_llm_settings(provider, model, **extra))
@@ -575,3 +584,263 @@ class TestProviderPortability:
             assert client.model_string.startswith(f"{provider}/"), (
                 f"Expected model string to start with '{provider}/', got {client.model_string!r}"
             )
+
+
+# ---------------------------------------------------------------------------
+# LLM call logging (S3 — ADR-0009 / plan.md)
+# ---------------------------------------------------------------------------
+
+
+def _capture_create_task() -> tuple[list[Any], Any]:
+    """Patch target for ``asyncio.create_task`` that captures the coroutine instead
+    of scheduling it, so the test can await it deterministically (fire-and-forget)."""
+    captured: list[Any] = []
+
+    def _fake_create_task(coro: Any) -> MagicMock:
+        captured.append(coro)
+        return MagicMock()
+
+    return captured, _fake_create_task
+
+
+class TestAInvokeLogging:
+    """ainvoke must log success/failure via save_llm_call_log (fire-and-forget)."""
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_logs_success(self) -> None:
+        expected = AIMessage(
+            content="hello there",
+            usage_metadata={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+        )
+        mock_chat = AsyncMock()
+        mock_chat.ainvoke = AsyncMock(return_value=expected)
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+        ):
+            await client.ainvoke([HumanMessage(content="hi")])
+            assert len(captured) == 1
+            await captured[0]
+
+        mock_save.assert_awaited_once()
+        kwargs = mock_save.await_args.kwargs
+        assert kwargs["messages"] == [{"role": "user", "content": "hi"}]
+        assert kwargs["response"] == "hello there"
+        assert kwargs["error"] is None
+        assert kwargs["model"] == client.model_string
+        assert kwargs["provider"] == client.provider
+        assert kwargs["prompt_tokens"] == 10
+        assert kwargs["completion_tokens"] == 5
+        assert kwargs["latency_ms"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_logs_failure_and_reraises(self) -> None:
+        mock_chat = AsyncMock()
+        mock_chat.ainvoke = AsyncMock(side_effect=RuntimeError("boom"))
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            await client.ainvoke([HumanMessage(content="hi")])
+
+        assert len(captured) == 1
+        await captured[0]
+        mock_save.assert_awaited_once()
+        kwargs = mock_save.await_args.kwargs
+        assert kwargs["error"] == "boom"
+        assert kwargs["response"] is None
+
+
+class TestAStreamLogging:
+    """astream must log success/failure via save_llm_call_log (fire-and-forget)."""
+
+    @pytest.mark.asyncio
+    async def test_astream_logs_success(self) -> None:
+        chunks = [
+            AIMessageChunk(content="Hello"),
+            AIMessageChunk(
+                content=", world",
+                usage_metadata={"input_tokens": 7, "output_tokens": 3, "total_tokens": 10},
+            ),
+        ]
+
+        async def _fake_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            for chunk in chunks:
+                yield chunk
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _fake_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+        ):
+            collected = [c async for c in client.astream([HumanMessage(content="hi")])]
+            assert len(captured) == 1
+            await captured[0]
+
+        assert collected == ["Hello", ", world"]
+        mock_save.assert_awaited_once()
+        kwargs = mock_save.await_args.kwargs
+        assert kwargs["response"] == "Hello, world"
+        assert kwargs["error"] is None
+        assert kwargs["prompt_tokens"] == 7
+        assert kwargs["completion_tokens"] == 3
+
+    @pytest.mark.asyncio
+    async def test_astream_logs_failure_and_reraises(self) -> None:
+        async def _boom_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            yield AIMessageChunk(content="partial")
+            raise RuntimeError("provider exploded")
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _boom_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+            pytest.raises(RuntimeError, match="provider exploded"),
+        ):
+            [_ async for _ in client.astream([HumanMessage(content="hi")])]
+
+        assert len(captured) == 1
+        await captured[0]
+        mock_save.assert_awaited_once()
+        kwargs = mock_save.await_args.kwargs
+        assert kwargs["error"] == "provider exploded"
+        assert kwargs["response"] is None
+
+
+class TestModerationRetryLogging:
+    """S3(c) — moderation's mitigation retry must produce 2 logged rows, one per
+    underlying LLMClient.astream call (plan.md: "완화 재시도는 호출마다 1행")."""
+
+    @pytest.mark.asyncio
+    async def test_stream_with_retry_logs_two_rows_on_empty_first_attempt(self) -> None:
+        from domains.moderation.service import stream_with_retry
+
+        async def _empty_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            for _item in ():
+                yield AIMessageChunk(content=str(_item))
+
+        async def _softened_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            yield AIMessageChunk(content="완화된 결과")
+
+        attempts = iter([_empty_astream, _softened_astream])
+
+        def _dispatch_astream(messages: Any, **kwargs: Any) -> Any:
+            return next(attempts)(messages, **kwargs)
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _dispatch_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+        ):
+            chunks = [c async for c in stream_with_retry(client, [HumanMessage(content="hi")])]
+            assert len(captured) == 2
+            for coro in captured:
+                await coro
+
+        assert chunks[-1] == "완화된 결과"
+        assert mock_save.await_count == 2
+
+
+class TestRecordCallNeverBlocksRealCall:
+    """A failure in the logging *prep* code (message conversion / contextvar
+    reads) must never prevent the real LLM call from succeeding, nor mask the
+    real provider error with a logging error (critical fix — ADR-0009)."""
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_succeeds_even_if_message_conversion_raises(self) -> None:
+        expected = AIMessage(content="ok")
+        mock_chat = AsyncMock()
+        mock_chat.ainvoke = AsyncMock(return_value=expected)
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        with (
+            patch(
+                "domains.chat.llm_client.convert_to_openai_messages",
+                side_effect=ValueError("unsupported content block"),
+            ),
+            patch("domains.chat.llm_client.asyncio.create_task") as mock_create_task,
+        ):
+            result = await client.ainvoke([HumanMessage(content="hi")])
+
+        assert result is expected
+        mock_create_task.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_reraises_original_error_not_logging_error(self) -> None:
+        mock_chat = AsyncMock()
+        mock_chat.ainvoke = AsyncMock(side_effect=RuntimeError("real-provider-error"))
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        with (
+            patch(
+                "domains.chat.llm_client.convert_to_openai_messages",
+                side_effect=ValueError("unsupported content block"),
+            ),
+            patch("domains.chat.llm_client.asyncio.create_task") as mock_create_task,
+            pytest.raises(RuntimeError, match="real-provider-error"),
+        ):
+            await client.ainvoke([HumanMessage(content="hi")])
+
+        mock_create_task.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_astream_succeeds_even_if_message_conversion_raises(self) -> None:
+        async def _fake_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            yield AIMessageChunk(content="ok")
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _fake_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        with (
+            patch(
+                "domains.chat.llm_client.convert_to_openai_messages",
+                side_effect=ValueError("unsupported content block"),
+            ),
+            patch("domains.chat.llm_client.asyncio.create_task") as mock_create_task,
+        ):
+            collected = [c async for c in client.astream([HumanMessage(content="hi")])]
+
+        assert collected == ["ok"]
+        mock_create_task.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_astream_reraises_original_error_not_logging_error(self) -> None:
+        async def _boom_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            raise RuntimeError("real-provider-error")
+            yield  # pragma: no cover - makes this an async generator
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _boom_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        with (
+            patch(
+                "domains.chat.llm_client.convert_to_openai_messages",
+                side_effect=ValueError("unsupported content block"),
+            ),
+            patch("domains.chat.llm_client.asyncio.create_task") as mock_create_task,
+            pytest.raises(RuntimeError, match="real-provider-error"),
+        ):
+            [_ async for _ in client.astream([HumanMessage(content="hi")])]
+
+        mock_create_task.assert_not_called()

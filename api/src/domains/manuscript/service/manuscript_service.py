@@ -265,6 +265,17 @@ class ManuscriptService:
             raise NotFoundError("Scene")
         return scene
 
+    async def list_scenes_by_chapter_id(
+        self, work_id: uuid.UUID, user_id: uuid.UUID, chapter_id: uuid.UUID
+    ) -> list[Scene]:
+        """계층 경로(episode_id) 없이 ``chapter_id``만으로 챕터의 전체 씬 조회.
+
+        ``get_scene_by_id``와 동일 패턴(다른 도메인의 ID-only 크로스 도메인 참조용) —
+        chat 도메인이 "현재 화(챕터) 전체 씬"을 얻을 때 쓴다(work-chat-context S2).
+        """
+        await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
+        return await self._repo.list_scenes(chapter_id)
+
     async def list_scene_ids_up_to(
         self, work_id: uuid.UUID, user_id: uuid.UUID, up_to_scene_id: uuid.UUID
     ) -> list[uuid.UUID]:

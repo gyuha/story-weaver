@@ -33,16 +33,32 @@ class ChatRepository:
         title: str | None = None,
         system_prompt: str | None = None,
         model_name: str | None = None,
+        work_id: uuid.UUID | None = None,
     ) -> Conversation:
         conv = Conversation(
             user_id=user_id,
             title=title,
             system_prompt=system_prompt,
             model_name=model_name,
+            work_id=work_id,
         )
         self._session.add(conv)
         await self._session.flush()
         return conv
+
+    async def get_latest_by_work(
+        self,
+        work_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> Conversation | None:
+        """Fetch the most recent conversation for a work ("current conversation", ADR-0010)."""
+        result = await self._session.execute(
+            select(Conversation)
+            .where(Conversation.work_id == work_id, Conversation.user_id == user_id)
+            .order_by(Conversation.created_at.desc(), Conversation.id.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
     async def get_conversation(
         self,

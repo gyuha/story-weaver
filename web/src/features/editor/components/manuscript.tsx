@@ -29,7 +29,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { SelectionAiMenu } from './selection-ai-menu';
 import { SuggestionPicker } from './suggestion-picker';
@@ -55,6 +55,7 @@ export function ManuscriptEditor({
   const [showHistory, setShowHistory] = useState(false);
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
+  const draftRef = useRef<HTMLDivElement>(null);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreSceneVersion = useWorksStore((s) => s.restoreSceneVersion);
@@ -100,12 +101,26 @@ export function ManuscriptEditor({
 
   const runContinue = () => {
     if (!editor) return;
-    const cursorText = editor.state.doc.textBetween(0, editor.state.selection.from, '\n');
+    const beforeCursor = editor.state.doc.textBetween(0, editor.state.selection.from, '\n');
+    // 커서가 씬 맨 앞이면 선행 텍스트가 비어 LLM이 400으로 거부한다(수위 거절로 오인되던 원인)
+    // — 씬 전체 본문으로 폴백하고, 그것마저 비면 호출하지 않는다.
+    const cursorText = beforeCursor.trim()
+      ? beforeCursor
+      : editor.getText({ blockSeparator: '\n' });
+    if (!cursorText.trim()) {
+      toast.error('이어쓸 본문이 없습니다. 한두 문장을 먼저 써 주세요.');
+      return;
+    }
     setShowDraft(true);
     assist.start('continue', { workId: work.id, sceneId: scene.id, payload: { cursorText } });
   };
 
   const dismissDraft = () => setShowDraft(false);
+
+  // 패널이 나타날 때 화면에 보이도록 스크롤 — 긴 본문에서 반응 없음으로 오인되는 것 방지.
+  useEffect(() => {
+    if (showDraft) draftRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [showDraft]);
 
   const saveScene = async () => {
     if (!editor) return;
@@ -243,21 +258,6 @@ export function ManuscriptEditor({
             AI 이어쓰기
           </button>
 
-          {showDraft && (
-            <div className="mt-2">
-              <SuggestionPicker
-                rawText={assist.text}
-                isStreaming={assist.isStreaming}
-                error={assist.error}
-                onApply={(text) => {
-                  editor?.chain().focus().insertContent(text).run();
-                  setShowDraft(false);
-                }}
-                onCancel={dismissDraft}
-              />
-            </div>
-          )}
-
           {/* 서식 툴바 */}
           <div className="mt-6 flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface-soft px-2 py-1.5">
             <ToolBtn
@@ -326,10 +326,25 @@ export function ManuscriptEditor({
           </div>
 
           {/* 본문 에디터 */}
-          <div className="mt-6">
+          <div className="mt-6" data-testid="editor-container">
             <EditorContent editor={editor} />
             <SelectionAiMenu editor={editor} workId={work.id} sceneId={scene.id} />
           </div>
+
+          {showDraft && (
+            <div ref={draftRef} className="mt-4">
+              <SuggestionPicker
+                rawText={assist.text}
+                isStreaming={assist.isStreaming}
+                error={assist.error}
+                onApply={(text) => {
+                  editor?.chain().focus().insertContent(text).run();
+                  setShowDraft(false);
+                }}
+                onCancel={dismissDraft}
+              />
+            </div>
+          )}
         </div>
       </div>
 

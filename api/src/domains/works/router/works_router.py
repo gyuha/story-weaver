@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
 from core.rate_limit import LLM_RATE_LIMIT, limiter
 from domains.assist.tier_routing import Tier, get_client_for_tier
 from domains.auth.models import User
@@ -185,6 +186,7 @@ async def generate_beat_sheet(
     service: WorksService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_beat_sheet_llm_client),
 ) -> BeatSheetResponse:
+    bind_llm_call_context(user_id=current_user.id, task="works.beat_sheet")
     try:
         work = await service.get_work(work_id, current_user.id)
     except AppError as exc:

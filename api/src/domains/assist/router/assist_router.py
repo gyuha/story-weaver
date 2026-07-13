@@ -18,13 +18,14 @@ from typing import Any, NoReturn
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from core.database import get_async_session
 from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
 from core.rate_limit import LLM_RATE_LIMIT, limiter
 from domains.assist import correct_cache
 from domains.assist.schemas import (
@@ -77,6 +78,14 @@ class _CamelModel(BaseModel):
 
 class ContinueRequest(_CamelModel):
     cursor_text: str
+
+    @field_validator("cursor_text")
+    @classmethod
+    def _cursor_text_not_blank(cls, value: str) -> str:
+        """빈/공백 프롬프트는 LLM 제공사가 400으로 거부해 수위 거절로 오인된다 — 여기서 차단."""
+        if not value.strip():
+            raise ValueError("cursor_text는 비어 있을 수 없습니다")
+        return value
 
 
 class InfillRequest(_CamelModel):
@@ -252,6 +261,7 @@ async def assist_continue(
     service: AssistService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_continue_llm_client),
 ) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.continue")
     if is_explicit_content(payload.cursor_text):
         return EventSourceResponse(_precheck_declined_stream())
     try:
@@ -282,6 +292,7 @@ async def assist_infill(
     service: AssistService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_infill_llm_client),
 ) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.infill")
     if is_explicit_content(f"{payload.before_text} {payload.after_text}"):
         return EventSourceResponse(_precheck_declined_stream())
     try:
@@ -312,6 +323,7 @@ async def assist_dialogue(
     service: AssistService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_dialogue_llm_client),
 ) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.dialogue")
     if is_explicit_content(payload.intent):
         return EventSourceResponse(_precheck_declined_stream())
     try:
@@ -345,6 +357,7 @@ async def assist_style(
     service: AssistService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_style_llm_client),
 ) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.style")
     if is_explicit_content(payload.text):
         return EventSourceResponse(_precheck_declined_stream())
     try:
@@ -375,6 +388,7 @@ async def assist_correct(
     service: AssistService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_correct_llm_client),
 ) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.correct")
     if is_explicit_content(payload.text):
         return EventSourceResponse(_precheck_declined_stream())
     try:

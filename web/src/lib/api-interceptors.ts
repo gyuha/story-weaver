@@ -47,6 +47,15 @@ const coordinator = createRefreshCoordinator(() => {
   );
 });
 
+/**
+ * axios 인터셉터를 우회하는 raw fetch 경로(예: assist.api.ts의 SSE 스트림)에서
+ * 재사용하는 단일-비행 refresh 헬퍼. 앱 레벨 coordinator 인스턴스에 위임하므로
+ * axios 401 처리와 동시에 일어나도 refresh 호출은 한 번만 발생한다.
+ */
+export async function refreshAccessToken(): Promise<string> {
+  return coordinator.refresh();
+}
+
 // ── Request 인터셉터: Authorization 헤더 주입 ────────────────────────────────
 client.instance.interceptors.request.use((config) => {
   const token = getAccessToken();

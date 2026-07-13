@@ -37,6 +37,7 @@ class ConversationCreate(BaseModel):
 
     title: str | None = Field(default=None, max_length=256)
     system_prompt: str | None = None
+    work_id: uuid.UUID | None = None
 
 
 class ConversationResponse(BaseModel):
@@ -44,6 +45,7 @@ class ConversationResponse(BaseModel):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    work_id: uuid.UUID | None
     title: str | None
     system_prompt: str | None
     model_name: str | None

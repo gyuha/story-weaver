@@ -50,20 +50,29 @@ Inject a stub factory to avoid real LLM calls::
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, NoReturn
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from langchain_core.messages import AIMessage as LCAIMessage
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic.alias_generators import to_camel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from core.config import get_settings
 from core.database import get_async_session
+from core.exceptions import AppError
+from core.llm_call_context import bind_llm_call_context
+from core.rate_limit import LLM_RATE_LIMIT, limiter
+from domains.assist.tier_routing import Tier, get_client_for_tier
+from domains.auth.models import User
 from domains.auth.security import get_current_user, require_permission
+from domains.budget.dependency import require_budget_available
+from domains.budget.service import estimate_tokens, record_usage
 from domains.chat.container import get_chat_service
+from domains.chat.ports import AbstractLLMPort
 from domains.chat.repository import ChatRepository
 from domains.chat.schemas import (
     ConversationCreate,
@@ -72,10 +81,34 @@ from domains.chat.schemas import (
     SendMessageRequest,
 )
 from domains.chat.service import ChatService
+from domains.chat.service.chat_context_service import ChatContextService
+from domains.manuscript.repository import ManuscriptRepository
+from domains.manuscript.service import ManuscriptService
+from domains.memory.repository import MemoryRepository
+from domains.memory.service import MemoryService
+from domains.memory.service.memory_search_service import MemorySearchService
+from domains.moderation.service import (
+    PRECHECK_DECLINE_MESSAGE,
+    RETRY_DECLINE_MESSAGE,
+    is_explicit_content,
+    stream_with_retry,
+)
+from domains.timeline.repository import TimelineRepository
+from domains.timeline.service import TimelineService
+from domains.works.repository import WorksRepository
+from domains.works.service import WorksService
+from domains.worldbible.repository import WorldBibleRepository
+from domains.worldbible.service import WorldBibleService
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+#: 작품 단위 채팅(work-chat-context, ADR-0010) — 씬이 아닌 작품(work) 단위로 대화가
+#: 이어지고, 매 메시지마다 현재 화 원고+메모리로 프레시 컨텍스트를 조립한다.
+#: timeline_router.py의 ``router``/``links_router`` 분리와 동일 패턴(경로 파라미터가
+#: 달라 별도 ``APIRouter`` 인스턴스로 둔다).
+work_router = APIRouter(prefix="/works/{work_id}/chat", tags=["chat"])
 
 
 # ---------------------------------------------------------------------------
@@ -451,6 +484,7 @@ async def send_message(
 
     Requires the ``chat:write`` permission.
     """
+    bind_llm_call_context(user_id=current_user.id, task="chat")
     repo = ChatRepository(session)
     conv = await repo.get_conversation(conversation_id, user_id=current_user.id)
     if conv is None:
@@ -578,3 +612,254 @@ async def _auto_title(
             logger.info("conversation_title_set", conv_id=str(conv_id), title=title)
     except Exception as exc:
         logger.warning("auto_title_failed", conv_id=str(conv_id), error=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# 작품 단위 채팅 엔드포인트 (work-chat-context S2, ADR-0010)
+# ---------------------------------------------------------------------------
+#
+# assist_router.py와 동일 패턴: get_current_user로 인증하고, 교차 테넌트 접근은
+# 404(ADR-0005). "현재(최신) 대화"는 work_id로 스코프된 대화 중 가장 최근 것
+# (ChatRepository.get_latest_by_work). 컨텍스트(현재 화 원고+메모리)는 매 메시지마다
+# ChatContextService로 새로 조립해 임시 SystemMessage로만 쓰고, DB에는 영속화하지
+# 않는다(Conversation.system_prompt도 쓰지 않는다) — ADR-0010 핵심 제약.
+
+
+class _CamelModel(BaseModel):
+    """camelCase 입력 (assist_router.py와 동일 패턴)."""
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class SendWorkChatMessageRequest(_CamelModel):
+    content: str = Field(min_length=1, max_length=32_000)
+    scene_id: uuid.UUID
+
+    @field_validator("content")
+    @classmethod
+    def _content_not_blank(cls, value: str) -> str:
+        """빈/공백 프롬프트는 LLM 제공사가 400으로 거부해 수위 거절로 오인된다 —
+        여기서 차단(assist_router.ContinueRequest._cursor_text_not_blank와 동일 패턴)."""
+        if not value.strip():
+            raise ValueError("content는 비어 있을 수 없습니다")
+        return value
+
+
+async def _get_works_service(
+    session: AsyncSession = Depends(get_async_session),
+) -> WorksService:
+    return WorksService(WorksRepository(session))
+
+
+async def _get_chat_context_service(
+    session: AsyncSession = Depends(get_async_session),
+) -> ChatContextService:
+    works_service = WorksService(WorksRepository(session))
+    memory_service = MemoryService(MemoryRepository(session))
+    worldbible_service = WorldBibleService(
+        WorldBibleRepository(session), works_service, memory_service
+    )
+    manuscript_service = ManuscriptService(
+        ManuscriptRepository(session), works_service, memory_service
+    )
+    timeline_service = TimelineService(
+        TimelineRepository(session), worldbible_service, manuscript_service
+    )
+    memory_search_service = MemorySearchService(
+        MemoryRepository(session), worldbible_service, manuscript_service, timeline_service
+    )
+    return ChatContextService(manuscript_service, memory_search_service, works_service)
+
+
+def _work_chat_llm_client() -> AbstractLLMPort:
+    """분석적 질의응답이라 thinking 모드를 켠 채 high_quality 티어를 쓴다(ADR-0010) —
+    5개 집필 보조 작업 전용인 ``get_fast_writing_client``는 여기 쓰지 않는다."""
+    return get_client_for_tier(Tier.high_quality)
+
+
+async def _bind_work_chat_rate_limit_user(
+    request: Request, current_user: User = Depends(get_current_user)
+) -> None:
+    """slowapi 키 함수가 읽는 ``request.state.user``를 채운다(assist_router.py와 동일)."""
+    request.state.user = current_user
+
+
+def _raise_http(exc: AppError) -> NoReturn:
+    raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+async def _work_chat_precheck_declined_stream(
+    repo: ChatRepository, conversation_id: uuid.UUID, session: AsyncSession
+) -> Any:
+    """S1 선제 가드 — LLM을 호출하지 않고 안내만 스트리밍하되, 대화 이력에는 남긴다."""
+    yield {"data": PRECHECK_DECLINE_MESSAGE}
+    yield {"data": "[DONE]"}
+    try:
+        await repo.add_message(
+            conversation_id, "assistant", PRECHECK_DECLINE_MESSAGE, finish_reason="stop"
+        )
+        await session.commit()
+    except Exception as db_exc:
+        logger.error("work_chat_message_persist_failed", error=str(db_exc), exc_info=True)
+
+
+async def _stream_work_chat_response(
+    llm: AbstractLLMPort,
+    messages: list[BaseMessage],
+    user_id: uuid.UUID,
+    repo: ChatRepository,
+    conversation_id: uuid.UUID,
+    session: AsyncSession,
+) -> Any:
+    """``send_message``의 SSE+영속화 패턴(스트림 종료 후 ``finally``에서 저장)을 그대로
+    따르되, moderation 완화 재시도(``stream_with_retry``, ADR-0003)를 거친다."""
+    collected_chunks: list[str] = []
+    try:
+        async for chunk in stream_with_retry(llm, messages):
+            collected_chunks.append(chunk)
+            yield {"data": chunk}
+        yield {"data": "[DONE]"}
+    except Exception as exc:
+        logger.error("work_chat_stream_error", error=str(exc), exc_info=True)
+        yield {"event": "error", "data": str(exc)}
+    finally:
+        if collected_chunks:
+            assistant_content = "".join(collected_chunks)
+            try:
+                await repo.add_message(
+                    conversation_id, "assistant", assistant_content, finish_reason="stop"
+                )
+                await session.commit()
+                if assistant_content != RETRY_DECLINE_MESSAGE:
+                    await record_usage(user_id, estimate_tokens(assistant_content))
+            except Exception as db_exc:
+                logger.error("work_chat_message_persist_failed", error=str(db_exc), exc_info=True)
+
+
+@work_router.get(
+    "/conversation",
+    response_model=ConversationResponse | None,
+    summary="작품의 현재(최신) 대화 조회 — 없으면 null",
+)
+async def get_work_conversation(
+    work_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    works_service: WorksService = Depends(_get_works_service),
+    session: AsyncSession = Depends(get_async_session),
+) -> ConversationResponse | None:
+    try:
+        await works_service.get_work(work_id, current_user.id)  # 소유권 확인 (미소유 시 404)
+    except AppError as exc:
+        _raise_http(exc)
+    repo = ChatRepository(session)
+    conv = await repo.get_latest_by_work(work_id, current_user.id)
+    return ConversationResponse.model_validate(conv) if conv is not None else None
+
+
+@work_router.get(
+    "/conversation/messages",
+    response_model=list[MessageResponse],
+    summary="작품의 현재 대화 메시지 이력 — 대화가 없으면 빈 배열",
+)
+async def get_work_conversation_messages(
+    work_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    works_service: WorksService = Depends(_get_works_service),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[MessageResponse]:
+    try:
+        await works_service.get_work(work_id, current_user.id)  # 소유권 확인 (미소유 시 404)
+    except AppError as exc:
+        _raise_http(exc)
+    repo = ChatRepository(session)
+    conv = await repo.get_latest_by_work(work_id, current_user.id)
+    if conv is None:
+        return []
+    msgs = await repo.get_conversation_messages(conv.id)
+    return [MessageResponse.model_validate(m) for m in msgs]
+
+
+@work_router.post(
+    "/conversations",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="새 대화 시작 — 기존 대화 유무와 무관하게 항상 새 Conversation 생성",
+)
+async def start_new_work_conversation(
+    work_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    works_service: WorksService = Depends(_get_works_service),
+    session: AsyncSession = Depends(get_async_session),
+) -> ConversationResponse:
+    try:
+        await works_service.get_work(work_id, current_user.id)  # 소유권 확인 (미소유 시 404)
+    except AppError as exc:
+        _raise_http(exc)
+    repo = ChatRepository(session)
+    conv = await repo.create_conversation(user_id=current_user.id, work_id=work_id)
+    await session.commit()
+    return ConversationResponse.model_validate(conv)
+
+
+@work_router.post(
+    "/messages",
+    summary="작품 채팅 메시지 전송 — 현재 화 원고+메모리 프레시 컨텍스트로 SSE 스트리밍",
+    dependencies=[
+        Depends(require_budget_available),
+        Depends(_bind_work_chat_rate_limit_user),
+    ],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def send_work_chat_message(
+    request: Request,
+    work_id: uuid.UUID,
+    payload: SendWorkChatMessageRequest,
+    current_user: User = Depends(get_current_user),
+    works_service: WorksService = Depends(_get_works_service),
+    context_service: ChatContextService = Depends(_get_chat_context_service),
+    llm: AbstractLLMPort = Depends(_work_chat_llm_client),
+    session: AsyncSession = Depends(get_async_session),
+) -> EventSourceResponse:
+    """대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시
+    컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지
+    저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가
+    고아 user 메시지를 남기지 않도록 한다."""
+    bind_llm_call_context(user_id=current_user.id, task="chat")
+    try:
+        await works_service.get_work(work_id, current_user.id)  # 소유권 확인 (미소유 시 404)
+    except AppError as exc:
+        _raise_http(exc)
+
+    repo = ChatRepository(session)
+    conv = await repo.get_latest_by_work(work_id, current_user.id)
+    if conv is None:
+        conv = await repo.create_conversation(user_id=current_user.id, work_id=work_id)
+
+    if is_explicit_content(payload.content):
+        await repo.add_message(conv.id, "user", payload.content)
+        await session.commit()
+        return EventSourceResponse(_work_chat_precheck_declined_stream(repo, conv.id, session))
+
+    # scene_id 검증을 사용자 메시지 커밋보다 먼저 수행 — 잘못된 scene_id로 인한
+    # 404가 답변 없는 고아 user 메시지를 남기지 않도록 한다.
+    try:
+        system_text = await context_service.build_context(
+            work_id, current_user.id, payload.scene_id
+        )
+    except AppError as exc:
+        _raise_http(exc)
+
+    await repo.add_message(conv.id, "user", payload.content)
+    await session.commit()
+
+    history = await repo.get_conversation_messages(conv.id)
+    lc_messages: list[BaseMessage] = [SystemMessage(content=system_text)]
+    for hist_msg in history:
+        if hist_msg.role == "user":
+            lc_messages.append(HumanMessage(content=hist_msg.content))
+        elif hist_msg.role == "assistant":
+            lc_messages.append(LCAIMessage(content=hist_msg.content))
+
+    return EventSourceResponse(
+        _stream_work_chat_response(llm, lc_messages, current_user.id, repo, conv.id, session)
+    )
