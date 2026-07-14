@@ -9,7 +9,7 @@ export const Route = createFileRoute('/works/$workId/synopsis')({
   component: SynopsisPage,
 });
 
-function SynopsisPage() {
+export function SynopsisPage() {
   const { workId } = useParams({ from: '/works/$workId/synopsis' });
   const work = useWork(workId);
   if (!work) return null;

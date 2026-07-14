@@ -3078,6 +3078,34 @@ export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesB
 
 export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
 
+export type GetApiV1WorksByWorkIdExportData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/export';
+};
+
+export type GetApiV1WorksByWorkIdExportErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdExportError = GetApiV1WorksByWorkIdExportErrors[keyof GetApiV1WorksByWorkIdExportErrors];
+
+export type GetApiV1WorksByWorkIdExportResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type GetApiV1WorksByWorkIdEntitiesData = {
     body?: never;
     path: {

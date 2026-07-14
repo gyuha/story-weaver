@@ -1,4 +1,5 @@
 import type { Work } from '@/features/shared/types';
+import { ManuscriptDownloadButton } from '@/features/works/components/manuscript-download-button';
 import { Clock, FileText, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { NavItem, SectionLabel, SidebarShell, WorkspaceHeader } from './sidebar-parts';
@@ -56,6 +57,11 @@ export function WorkShell({ work, active, activeSceneId, children }: WorkShellPr
           {/* 콘텐츠(원고) 섹션 — 작품명을 헤더로, 트리에 집중 */}
           <SectionLabel>{work.title}</SectionLabel>
           <WorkTree work={work} activeSceneId={activeSceneId} />
+
+          {/* 하단 고정 — 소설 다운로드 (WorkTree가 flex-1이라 이 shrink-0 블록은 항상 바닥에 붙는다) */}
+          <div className="shrink-0 border-t border-line p-1.5">
+            <ManuscriptDownloadButton work={work} />
+          </div>
         </SidebarShell>
 
         <div className="flex min-w-0 flex-1 flex-col bg-paper">{children}</div>

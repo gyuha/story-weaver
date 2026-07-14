@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import uuid
 
-from core.exceptions import NotFoundError
+from core.exceptions import AppError, NotFoundError
 from domains.manuscript.models import Chapter, Episode, Scene, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
@@ -24,6 +24,7 @@ from domains.manuscript.schemas import (
     SceneCreate,
     SceneUpdate,
 )
+from domains.manuscript.service.export_service import build_manuscript_zip
 from domains.memory.models import EmbeddingSourceType
 from domains.memory.service import MemoryService
 from domains.works.service import WorksService
@@ -282,3 +283,28 @@ class ManuscriptService:
         """``up_to_scene_id``의 ``global_seq`` 이하인 씬 id 목록(타임라인 시점 필터의 근거)."""
         up_to_scene = await self.get_scene_by_id(work_id, user_id, up_to_scene_id)
         return await self._repo.list_scene_ids_up_to_seq(work_id, up_to_scene.global_seq)
+
+    # -- Export --------------------------------------------------------------
+
+    async def export_manuscript_zip(self, work_id: uuid.UUID, user_id: uuid.UUID) -> bytes:
+        """작품 전체 원고를 부=폴더/회차=txt 구조의 zip 바이트로 조립.
+
+        소유권 확인은 ``list_episodes``/``list_chapters``/``list_scenes``에 내장(미소유
+        시 404). 부·회차가 하나도 없으면 내보낼 원고가 없다는 뜻이라 400.
+        """
+        episodes = await self.list_episodes(work_id, user_id)
+        episodes_with_content: list[tuple[Episode, list[tuple[Chapter, list[Scene]]]]] = []
+        total_chapters = 0
+        for episode in episodes:
+            chapters = await self.list_chapters(work_id, user_id, episode.id)
+            total_chapters += len(chapters)
+            chapters_with_scenes = [
+                (chapter, await self.list_scenes(work_id, user_id, episode.id, chapter.id))
+                for chapter in chapters
+            ]
+            episodes_with_content.append((episode, chapters_with_scenes))
+
+        if not episodes or total_chapters == 0:
+            raise AppError("내보낼 원고가 없습니다")
+
+        return build_manuscript_zip(episodes_with_content)

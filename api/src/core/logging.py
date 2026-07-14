@@ -52,8 +52,9 @@ def configure_logging(level: str = "INFO", fmt: str = "json") -> None:
         # Include exception tracebacks as formatted strings
         shared_processors.append(structlog.dev.set_exc_info)
     else:
-        # JSON output — format exceptions as a dict for log aggregators
-        renderer = structlog.processors.JSONRenderer()
+        # JSON output — format exceptions as a dict for log aggregators.
+        # ensure_ascii=False so non-ASCII (한글 등)이 \uXXXX로 이스케이프되지 않고 그대로 찍힌다.
+        renderer = structlog.processors.JSONRenderer(ensure_ascii=False)
         shared_processors.append(structlog.processors.format_exc_info)
 
     structlog.configure(
@@ -85,6 +86,17 @@ def configure_logging(level: str = "INFO", fmt: str = "json") -> None:
     root_logger.addHandler(handler)
     root_logger.setLevel(log_level)
 
-    # Silence noisy third-party loggers
-    for noisy in ("uvicorn.access", "sqlalchemy.engine", "httpx", "httpcore"):
+    # Silence noisy third-party loggers.
+    # openai/litellm은 DEBUG에서 매 LLM 호출마다 요청 옵션(프롬프트·헤더·idempotency key 등)을
+    # 거대한 한 줄로 덤프한다 — 우리가 llm_client.py에서 프롬프트/응답을 직접 읽기 좋게 찍으므로
+    # 이 원시 덤프는 WARNING으로 억제한다.
+    for noisy in (
+        "uvicorn.access",
+        "sqlalchemy.engine",
+        "httpx",
+        "httpcore",
+        "openai",
+        "LiteLLM",
+        "litellm",
+    ):
         logging.getLogger(noisy).setLevel(logging.WARNING)

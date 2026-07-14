@@ -10,7 +10,7 @@ import uuid
 from typing import Any, NoReturn
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -552,3 +552,25 @@ async def delete_scene(
         await service.delete_scene(work_id, current_user.id, episode_id, chapter_id, scene_id)
     except AppError as exc:
         _raise_http(exc)
+
+
+# ---------------------------------------------------------------------------
+# Export (작품 전체 원고 zip 내보내기)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/export", summary="작품 전체 원고 zip 내보내기")
+async def export_manuscript(
+    work_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ManuscriptService = Depends(_get_service),
+) -> Response:
+    try:
+        zip_bytes = await service.export_manuscript_zip(work_id, current_user.id)
+    except AppError as exc:
+        _raise_http(exc)
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="novel.zip"'},
+    )

@@ -82,6 +82,15 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
+def _format_prompt(messages: list[BaseMessage]) -> str:
+    """프롬프트를 사람이 읽기 좋은 여러 줄 문자열로 만든다(DEBUG 로그용).
+
+    각 메시지를 ``[role] content`` 한 블록으로 찍는다 — SDK의 원시 요청 덤프(헤더·
+    idempotency key 등 노이즈 포함)를 대체하는, 프롬프트만 보여주는 형태다.
+    """
+    return "\n".join(f"[{m.type}] {m.content}" for m in messages)
+
+
 # ---------------------------------------------------------------------------
 # LLMClient
 # ---------------------------------------------------------------------------
@@ -246,6 +255,7 @@ class LLMClient(AbstractLLMPort):
             "llm_ainvoke_start",
             model=self._model_string,
             message_count=len(messages),
+            prompt=_format_prompt(messages),
         )
         start_time = time.monotonic()
         try:
@@ -263,6 +273,7 @@ class LLMClient(AbstractLLMPort):
             "llm_ainvoke_complete",
             model=self._model_string,
             content_length=len(str(result.content)),
+            response=str(result.content),
         )
         self._record_call(
             start_time=start_time,
@@ -309,6 +320,7 @@ class LLMClient(AbstractLLMPort):
             "llm_astream_start",
             model=self._model_string,
             message_count=len(messages),
+            prompt=_format_prompt(messages),
         )
         start_time = time.monotonic()
         chunk_count = 0
@@ -336,6 +348,7 @@ class LLMClient(AbstractLLMPort):
             "llm_astream_complete",
             model=self._model_string,
             chunks=chunk_count,
+            response="".join(response_parts),
         )
         self._record_call(
             start_time=start_time,
