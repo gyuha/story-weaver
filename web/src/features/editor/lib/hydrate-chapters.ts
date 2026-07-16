@@ -5,6 +5,7 @@ import type { SceneResponse } from '@/api';
 import { manuscriptApi } from '@/features/editor/api/manuscript.api';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Paragraph, Scene } from '@/features/shared/types';
+import { worldBibleApi } from '@/features/world-bible/api/world-bible.api';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
@@ -15,15 +16,20 @@ export function toParagraphs(body: string): Paragraph[] {
     .map((text) => ({ text }));
 }
 
-function toScene(scene: SceneResponse): Scene {
+// 씬-엔티티 링크(설정 참고)는 씬 조회에 포함되지 않아 씬별로 따로 불러온다 —
+// 이걸 빼면 reload 시 저장된 설정 참고가 빈 배열로 덮여 사라진다.
+async function toScene(workId: string, scene: SceneResponse): Promise<Scene> {
   const paragraphs = toParagraphs(scene.body);
+  const links = await worldBibleApi.sceneLinks({
+    path: { work_id: workId, scene_id: scene.id },
+  });
   return {
     id: scene.id,
     title: scene.title ?? '새 씬',
     // eco: 'done' 상태는 백엔드에 대응 필드가 없음 — 본문 유무로만 draft/empty를 구분
     status: paragraphs.length ? 'draft' : 'empty',
     paragraphs,
-    linkedEntityIds: [],
+    linkedEntityIds: links.map((link) => link.entityId),
     vectorMemory: [],
   };
 }
@@ -36,8 +42,12 @@ export async function fetchWorkChapters(workId: string): Promise<Chapter[]> {
       const chapters = await manuscriptApi.chapters({
         path: { work_id: workId, episode_id: episode.id },
       });
+      // 표시용 화 번호는 부 내 1-based 순번으로 매긴다 — order_index(정렬 키)는
+      // 생성 시엔 1-based, 재정렬 시엔 0-based로 부여돼 값이 섞이므로 그대로 쓰면
+      // "0화"가 나온다. 스토어의 생성·재정렬 로직과 동일한 1-based 순번 규칙으로 통일.
+      const ordered = [...chapters].sort((a, b) => a.orderIndex - b.orderIndex);
       return Promise.all(
-        chapters.map(async (chapter): Promise<Chapter> => {
+        ordered.map(async (chapter, idx): Promise<Chapter> => {
           const scenes = await manuscriptApi.scenes({
             path: { work_id: workId, episode_id: episode.id, chapter_id: chapter.id },
           });
@@ -45,9 +55,9 @@ export async function fetchWorkChapters(workId: string): Promise<Chapter[]> {
             id: chapter.id,
             episodeId: episode.id,
             partLabel: episode.title,
-            index: chapter.orderIndex,
+            index: idx + 1,
             title: chapter.title,
-            scenes: scenes.map(toScene),
+            scenes: await Promise.all(scenes.map((scene) => toScene(workId, scene))),
           };
         })
       );

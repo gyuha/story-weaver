@@ -18,11 +18,17 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 const mockEpisodes = vi.fn();
 const mockChapters = vi.fn();
 const mockScenes = vi.fn();
+const mockSceneLinks = vi.fn();
 vi.mock('@/features/editor/api/manuscript.api', () => ({
   manuscriptApi: {
     episodes: (...args: unknown[]) => mockEpisodes(...args),
     chapters: (...args: unknown[]) => mockChapters(...args),
     scenes: (...args: unknown[]) => mockScenes(...args),
+  },
+}));
+vi.mock('@/features/world-bible/api/world-bible.api', () => ({
+  worldBibleApi: {
+    sceneLinks: (...args: unknown[]) => mockSceneLinks(...args),
   },
 }));
 
@@ -48,6 +54,7 @@ beforeEach(() => {
   mockEpisodes.mockResolvedValue([{ id: 'e1', title: '제1부' }]);
   mockChapters.mockResolvedValue([{ id: 'c1', orderIndex: 1, title: '1화' }]);
   mockScenes.mockResolvedValue([{ id: 's1', title: '새 씬', body: '본문' }]);
+  mockSceneLinks.mockResolvedValue([]);
 });
 
 // chapters 조회가 막 끝난 커밋에서 setWorkChapters 반영이 리렌더에 실리기 전,

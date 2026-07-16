@@ -7,11 +7,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockEpisodes = vi.fn();
 const mockChapters = vi.fn();
 const mockScenes = vi.fn();
+const mockSceneLinks = vi.fn();
 vi.mock('@/features/editor/api/manuscript.api', () => ({
   manuscriptApi: {
     episodes: (...args: unknown[]) => mockEpisodes(...args),
     chapters: (...args: unknown[]) => mockChapters(...args),
     scenes: (...args: unknown[]) => mockScenes(...args),
+  },
+}));
+vi.mock('@/features/world-bible/api/world-bible.api', () => ({
+  worldBibleApi: {
+    sceneLinks: (...args: unknown[]) => mockSceneLinks(...args),
   },
 }));
 
@@ -26,6 +32,7 @@ const WORK_ID = 'w1';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSceneLinks.mockResolvedValue([]);
   useWorksStore.setState({
     works: [
       {
@@ -95,6 +102,57 @@ describe('fetchWorkChapters', () => {
     expect(mockChapters).toHaveBeenCalledWith({ path: { work_id: WORK_ID, episode_id: 'ep1' } });
     expect(mockScenes).toHaveBeenCalledWith({
       path: { work_id: WORK_ID, episode_id: 'ep1', chapter_id: 'ch1' },
+    });
+  });
+
+  it('order_index가 0-based이거나 섞여 있어도 부 내 1-based 순번으로 표시한다(0화 방지)', async () => {
+    mockEpisodes.mockResolvedValue([{ id: 'ep1', workId: WORK_ID, title: '제1부', orderIndex: 0 }]);
+    // 재정렬을 거쳐 0-based로 섞인 order_index(2,0,1) — 그대로 쓰면 "0화"가 나온다.
+    mockChapters.mockResolvedValue([
+      { id: 'chC', workId: WORK_ID, episodeId: 'ep1', title: 'C', orderIndex: 2 },
+      { id: 'chA', workId: WORK_ID, episodeId: 'ep1', title: 'A', orderIndex: 0 },
+      { id: 'chB', workId: WORK_ID, episodeId: 'ep1', title: 'B', orderIndex: 1 },
+    ]);
+    mockScenes.mockResolvedValue([]);
+
+    const chapters = await fetchWorkChapters(WORK_ID);
+
+    // order_index 오름차순(A=0,B=1,C=2)으로 정렬된 뒤 1,2,3으로 표시 — 0화 없음.
+    expect(chapters.map((c) => [c.id, c.index])).toEqual([
+      ['chA', 1],
+      ['chB', 2],
+      ['chC', 3],
+    ]);
+  });
+
+  it('저장된 씬-엔티티 링크(설정 참고)를 linkedEntityIds로 하이드레이션한다', async () => {
+    mockEpisodes.mockResolvedValue([{ id: 'ep1', workId: WORK_ID, title: '제1부', orderIndex: 0 }]);
+    mockChapters.mockResolvedValue([
+      { id: 'ch1', workId: WORK_ID, episodeId: 'ep1', title: '1화', orderIndex: 1 },
+    ]);
+    mockScenes.mockResolvedValue([
+      {
+        id: 'sc1',
+        workId: WORK_ID,
+        chapterId: 'ch1',
+        orderIndex: 1,
+        globalSeq: 1,
+        title: null,
+        body: '본문',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    mockSceneLinks.mockResolvedValue([
+      { id: 'l1', workId: WORK_ID, sceneId: 'sc1', entityId: 'e1', source: 'author' },
+      { id: 'l2', workId: WORK_ID, sceneId: 'sc1', entityId: 'e2', source: 'author' },
+    ]);
+
+    const [chapter] = await fetchWorkChapters(WORK_ID);
+
+    expect(chapter.scenes[0].linkedEntityIds).toEqual(['e1', 'e2']);
+    expect(mockSceneLinks).toHaveBeenCalledWith({
+      path: { work_id: WORK_ID, scene_id: 'sc1' },
     });
   });
 
