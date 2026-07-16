@@ -6,8 +6,8 @@
 라우터가 S2(``tier_routing``)를 직접 써서 처리한다 — 이 서비스는 프롬프트 조립까지만
 담당한다.
 
-교정(``correct``)은 ai-pipeline.md 3.1 표상 메모리 주입이 "최소"이고, S3 지시대로
-전체 메모리 검색(P1~P3, 벡터 임베딩 포함)을 아예 생략한다 — 소유권/씬 존재 확인만 한다.
+교정(``correct``)·제목(``title``)은 메모리 주입이 "최소"(고유명사만)이라 전체 메모리
+검색(P1~P3, 벡터 임베딩 포함)을 아예 생략한다 — 소유권/씬 존재 확인만 한다.
 """
 
 from __future__ import annotations
@@ -54,8 +54,8 @@ class AssistService:
         await self._manuscript_service.get_scene_by_id(work_id, user_id, scene_id)  # 씬 존재 확인
 
         memory_items: list[MemoryItemResponse]
-        if task_type is TaskType.correct:
-            # eco: 교정은 최소 주입(고유명사만) — 전체 검색(P1~P3) 자체를 생략한다.
+        if task_type in (TaskType.correct, TaskType.title_):
+            # eco: 교정·제목은 최소 주입(고유명사만) — 전체 검색(P1~P3) 자체를 생략한다.
             memory_items = []
         else:
             memory_items = await self._memory_search_service.search(work_id, user_id, scene_id)

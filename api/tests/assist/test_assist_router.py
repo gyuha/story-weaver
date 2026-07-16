@@ -32,6 +32,7 @@ from domains.assist.router.assist_router import (
     _dialogue_llm_client,
     _infill_llm_client,
     _style_llm_client,
+    _title_llm_client,
 )
 from domains.auth.models import User
 from domains.auth.security import get_current_user
@@ -519,6 +520,80 @@ async def test_continue_other_tenant_returns_404(
         resp = await client.post(
             f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
             json={"cursorText": "..."},
+        )
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 화 제목 생성 — 현재 씬 본문 근거, 최소 메모리(검색 생략), SSE 스트리밍
+# ---------------------------------------------------------------------------
+
+
+async def test_title_streams_from_body_and_skips_full_memory_search(
+    app: FastAPI,
+    owner_work: Work,
+    two_users: tuple[User, User],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner, _ = two_users
+    scene = await _create_scene(app, owner, owner_work.id)
+
+    def _must_not_be_called(self: MemorySearchService, *args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("title 작업은 전체 메모리 검색을 호출하면 안 된다")
+
+    monkeypatch.setattr(MemorySearchService, "search", _must_not_be_called)
+
+    fake = _FakeLLMClient(["빗속의 검"])
+    app.dependency_overrides[_title_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+            json={"text": "비 오는 골목, 그는 우산도 없이 서 있었다."},
+        )
+
+    assert resp.status_code == 200
+    assert _sse_data_lines(resp.text) == ["빗속의 검", "[DONE]"]
+
+    system_text = str(fake.received_messages[0].content)
+    human_text = str(fake.received_messages[1].content)
+    assert "제목" in system_text
+    assert "개행" in system_text
+    assert "고유명사 없음" in system_text  # 최소 메모리 주입
+    assert human_text == "비 오는 골목, 그는 우산도 없이 서 있었다."
+
+
+async def test_title_rejects_blank_text(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    """빈/공백 본문은 422 — LLM 제공사 400(수위 거절로 오인)까지 가지 않게 차단."""
+    owner, _ = two_users
+    scene = await _create_scene(app, owner, owner_work.id)
+    fake = _FakeLLMClient(["안 불려야 함"])
+    app.dependency_overrides[_title_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        for blank in ("", "   "):
+            resp = await client.post(
+                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+                json={"text": blank},
+            )
+            assert resp.status_code == 422
+    assert fake.received_messages == []
+
+
+async def test_title_other_tenant_returns_404(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    owner, intruder = two_users
+    scene = await _create_scene(app, owner, owner_work.id)
+    fake = _FakeLLMClient(["x"])
+    app.dependency_overrides[_title_llm_client] = lambda: fake
+
+    async with _client_as(app, intruder) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+            json={"text": "본문 텍스트."},
         )
     assert resp.status_code == 404
 

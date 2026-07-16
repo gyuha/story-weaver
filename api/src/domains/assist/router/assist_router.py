@@ -34,6 +34,7 @@ from domains.assist.schemas import (
     DialogueInput,
     InfillInput,
     StyleInput,
+    TitleInput,
 )
 from domains.assist.service.assist_service import AssistService
 from domains.assist.tier_routing import TaskType, get_fast_writing_client
@@ -107,6 +108,18 @@ class CorrectRequest(_CamelModel):
     text: str
 
 
+class TitleRequest(_CamelModel):
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_not_blank(cls, value: str) -> str:
+        """빈/공백 본문은 LLM 제공사가 400으로 거부해 수위 거절로 오인된다 — 여기서 차단."""
+        if not value.strip():
+            raise ValueError("text는 비어 있을 수 없습니다")
+        return value
+
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -154,6 +167,10 @@ def _style_llm_client() -> AbstractLLMPort:
 
 
 def _correct_llm_client() -> AbstractLLMPort:
+    return get_fast_writing_client()
+
+
+def _title_llm_client() -> AbstractLLMPort:
     return get_fast_writing_client()
 
 
@@ -406,3 +423,30 @@ async def assist_correct(
     return EventSourceResponse(
         _stream_and_cache_correct(llm, messages, current_user.id, work_id, payload.text)
     )
+
+
+@router.post(
+    "/title",
+    summary="화 제목 생성 (SSE)",
+    dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def assist_title(
+    request: Request,
+    work_id: uuid.UUID,
+    scene_id: uuid.UUID,
+    payload: TitleRequest,
+    current_user: User = Depends(get_current_user),
+    service: AssistService = Depends(_get_service),
+    llm: AbstractLLMPort = Depends(_title_llm_client),
+) -> EventSourceResponse:
+    bind_llm_call_context(user_id=current_user.id, task="assist.title")
+    if is_explicit_content(payload.text):
+        return EventSourceResponse(_precheck_declined_stream())
+    try:
+        messages = await service.build_messages(
+            work_id, current_user.id, scene_id, TaskType.title_, TitleInput(text=payload.text)
+        )
+    except AppError as exc:
+        _raise_http(exc)
+    return EventSourceResponse(_stream_response(llm, messages, current_user.id))

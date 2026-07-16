@@ -41,13 +41,14 @@ from domains.chat.ports import LLMClientFactoryProtocol, LLMClientProtocol
         (TaskType.correct, Tier.low_cost),
         (TaskType.dialogue, Tier.high_quality),
         (TaskType.style, Tier.high_quality),
+        (TaskType.title_, Tier.low_cost),
     ],
 )
 def test_task_type_maps_to_documented_tier(task_type: TaskType, expected_tier: Tier) -> None:
     assert TASK_TIER[task_type] is expected_tier
 
 
-def test_all_five_task_types_are_mapped() -> None:
+def test_all_task_types_are_mapped() -> None:
     assert set(TASK_TIER) == set(TaskType)
 
 

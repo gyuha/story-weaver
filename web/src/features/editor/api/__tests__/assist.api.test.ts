@@ -144,3 +144,37 @@ describe('streamAssist의 401 처리 (단일-비행 refresh 후 1회 재시도)'
     expect(window.location.href).toBe('/auth/login');
   });
 });
+
+describe('streamAssist title 태스크', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useAuthStore.setState({
+      accessToken: 'tok',
+      refreshToken: 'ref',
+      user: null,
+      isAuthenticated: true,
+    });
+  });
+
+  it('taskType이 title이면 .../scenes/{sceneId}/assist/title로 text 바디를 POST 한다', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(sseResponse('data: 빗속의 검\n\ndata: [DONE]\n\n'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const chunks = await collect(
+      streamAssist({
+        workId: 'work-1',
+        sceneId: 'scene-1',
+        taskType: 'title',
+        payload: { text: '비 오는 골목, 그는 우산도 없이 서 있었다.' },
+      })
+    );
+
+    expect(chunks).toEqual(['빗속의 검']);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/works/work-1/scenes/scene-1/assist/title');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ text: '비 오는 골목, 그는 우산도 없이 서 있었다.' });
+  });
+});

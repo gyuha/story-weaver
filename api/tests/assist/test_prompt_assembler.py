@@ -19,6 +19,7 @@ from domains.assist.schemas import (
     DialogueInput,
     InfillInput,
     StyleInput,
+    TitleInput,
 )
 from domains.assist.service.prompt_assembler import assemble_prompt
 from domains.assist.tier_routing import TaskType
@@ -157,6 +158,29 @@ def test_correct_prompt_uses_minimal_memory_names_only() -> None:
     assert _RATING_PHRASE in text
     assert "지원은 검울 뽑았다." in text
     # 최소: 고유명사(name)만 — summary/상태/벡터는 전부 빠져야 한다
+    assert "한지원" in text
+    assert "몰락한 검가의 후예" not in text
+    assert "life_status" not in text
+    assert "지원은 과거 스승과의 대화" not in text
+
+
+def test_title_prompt_uses_body_and_minimal_memory_names_only() -> None:
+    messages = assemble_prompt(
+        TaskType.title_,
+        work_genre="무협",
+        work_style="간결체",
+        memory_items=_MEMORY_ITEMS,
+        task_input=TitleInput(text="비 오는 골목에서 그는 검을 들었다."),
+    )
+    text = _combined_text(messages)
+
+    assert _RATING_PHRASE in text
+    # 본문이 사용자 메시지에 그대로 담긴다(제목 생성의 근거)
+    assert "비 오는 골목에서 그는 검을 들었다." in text
+    # 제목 지시: 짧은 제목 하나만, 개행/따옴표 없이
+    assert "제목" in text
+    assert "개행" in text
+    # 최소: 고유명사(name)만 — summary/상태/벡터는 전부 빠져야 한다(correct와 동일)
     assert "한지원" in text
     assert "몰락한 검가의 후예" not in text
     assert "life_status" not in text

@@ -327,3 +327,50 @@ describe('ManuscriptEditor AI 이어쓰기', () => {
     expect(mockScrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
   });
 });
+
+describe('ManuscriptEditor AI 제목 생성', () => {
+  it('본문이 비어 있으면 호출하지 않고 안내 토스트를 보여준다', async () => {
+    mockGetText.mockReturnValue('');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
+
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('클릭 시 현재 씬 라이브 본문을 text로 title 태스크를 호출한다', async () => {
+    mockGetText.mockReturnValue('비 오는 골목, 그는 우산도 없이 서 있었다.');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
+
+    expect(startSpy).toHaveBeenCalledWith('title', {
+      workId: 'w1',
+      sceneId: 'sc1',
+      payload: { text: '비 오는 골목, 그는 우산도 없이 서 있었다.' },
+    });
+  });
+
+  it('생성 완료 시 첫 줄만·양끝 따옴표를 제거해 제목 입력란에 채운다', async () => {
+    mockGetText.mockReturnValue('비 오는 골목, 그는 우산도 없이 서 있었다.');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
+
+    act(() => setMockAssistState({ isStreaming: true }));
+    act(() => setMockAssistState({ isStreaming: false, text: '"빗속의 검"\n(부제는 무시)' }));
+
+    const input = screen.getByRole('textbox', { name: '챕터 제목' });
+    expect((input as HTMLInputElement).value).toBe('빗속의 검');
+  });
+
+  it('생성 중에는 버튼이 비활성화된다', async () => {
+    mockGetText.mockReturnValue('비 오는 골목, 그는 우산도 없이 서 있었다.');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} scene={SCENE} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
+
+    expect(screen.getByRole('button', { name: 'AI 제목 생성' })).toBeDisabled();
+  });
+});

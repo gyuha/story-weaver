@@ -31,13 +31,15 @@ from domains.chat.ports import AbstractLLMPort, LLMClientFactoryProtocol
 
 
 class TaskType(StrEnum):
-    """The 5 writing-assist operations (ai-pipeline.md §3.1)."""
+    """The writing-assist operations (ai-pipeline.md §3.1; ``title`` added per ADR-0012)."""
 
     continue_ = "continue"
     infill = "infill"
     dialogue = "dialogue"
     style = "style"
     correct = "correct"
+    # ``title``은 ``str.title`` 메서드와 충돌 → ``continue_``처럼 밑줄 접미사(값은 "title").
+    title_ = "title"
 
 
 class Tier(StrEnum):
@@ -54,6 +56,7 @@ TASK_TIER: dict[TaskType, Tier] = {
     TaskType.correct: Tier.low_cost,
     TaskType.dialogue: Tier.high_quality,
     TaskType.style: Tier.high_quality,
+    TaskType.title_: Tier.low_cost,
 }
 
 #: tier → factory-getter dispatch. Both tiers use the chat domain's default
@@ -90,7 +93,7 @@ def get_client_for_tier(tier: Tier) -> AbstractLLMPort:
 
 
 def get_fast_writing_client() -> AbstractLLMPort:
-    """5개 집필 보조 작업(이어쓰기·인필링·대사변환·문체변환·교정) 전용 클라이언트.
+    """집필 보조 작업(이어쓰기·인필링·대사변환·문체변환·교정·제목) 전용 클라이언트.
 
     z.ai GLM-4.6은 기본적으로 확장 추론(thinking) 모드로 동작해, 응답에 쓰이지
     않는 추론 토큰을 수백~1000개 이상 태우고 응답을 5배 가까이 느리게 만든다

@@ -4,11 +4,12 @@ import type {
   DialogueRequest,
   InfillRequest,
   StyleRequest,
+  TitleRequest,
 } from '@/api';
 import { getAccessToken, useAuthStore } from '@/features/auth/store/auth.store';
 import { refreshAccessToken } from '@/lib/api-interceptors';
-// editor(집필 보조: 이어쓰기·인필링·대사변환·문체변환·교정) 도메인 API facade.
-// 5개 엔드포인트 모두 SSE(text/event-stream) 응답이라 생성 SDK(@/api) 함수를 그대로
+// editor(집필 보조: 이어쓰기·인필링·대사변환·문체변환·교정·제목) 도메인 API facade.
+// 모든 엔드포인트가 SSE(text/event-stream) 응답이라 생성 SDK(@/api) 함수를 그대로
 // 쓰지 않는다 — axios 클라이언트는 스트리밍 바디를 다루지 않으므로 fetch를 직접 호출하고,
 // 요청 바디 타입만 생성 타입(ContinueRequest 등)을 재사용한다.
 // 와이어 포맷은 백엔드 assist_router.py가 chat_router.py의 SSE 패턴을 그대로 미러링한 것 —
@@ -16,7 +17,7 @@ import { refreshAccessToken } from '@/lib/api-interceptors';
 // `data: [DONE]\r\n\r\n`, 실패 시 `event: error\r\ndata: <message>\r\n\r\n`.
 import { useCallback, useRef, useState } from 'react';
 
-export type AssistTaskType = 'continue' | 'infill' | 'dialogue' | 'style' | 'correct';
+export type AssistTaskType = 'continue' | 'infill' | 'dialogue' | 'style' | 'correct' | 'title';
 
 type AssistPayloadMap = {
   continue: ContinueRequest;
@@ -24,6 +25,7 @@ type AssistPayloadMap = {
   dialogue: DialogueRequest;
   style: StyleRequest;
   correct: CorrectRequest;
+  title: TitleRequest;
 };
 
 export type AssistPayload<T extends AssistTaskType> = AssistPayloadMap[T];

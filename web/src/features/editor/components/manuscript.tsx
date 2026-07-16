@@ -19,6 +19,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  Loader2,
   Maximize2,
   Pencil,
   Redo2,
@@ -55,7 +56,9 @@ export function ManuscriptEditor({
   const [showHistory, setShowHistory] = useState(false);
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
   const draftRef = useRef<HTMLDivElement>(null);
+  const prevStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreSceneVersion = useWorksStore((s) => s.restoreSceneVersion);
@@ -111,11 +114,42 @@ export function ManuscriptEditor({
       toast.error('이어쓸 본문이 없습니다. 한두 문장을 먼저 써 주세요.');
       return;
     }
+    setGeneratingTitle(false); // 이어쓰기 시작은 진행 중이던 제목 생성 스트림을 대체한다
     setShowDraft(true);
     assist.start('continue', { workId: work.id, sceneId: scene.id, payload: { cursorText } });
   };
 
   const dismissDraft = () => setShowDraft(false);
+
+  // 현재 씬 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
+  const generateTitle = () => {
+    if (!editor) return;
+    const text = editor.getText({ blockSeparator: '\n' });
+    if (!text.trim()) {
+      toast.error('제목을 지을 본문이 없습니다. 몇 문장을 먼저 써 주세요.');
+      return;
+    }
+    setShowDraft(false); // 제목 생성은 이어쓰기 제안 패널과 같은 스트림을 쓰므로 패널을 닫는다
+    setGeneratingTitle(true);
+    assist.start('title', { workId: work.id, sceneId: scene.id, payload: { text } });
+  };
+
+  // useAssistStream엔 완료 콜백이 없어, 스트리밍 true→false 전이로 제목 생성 완료를 감지한다.
+  useEffect(() => {
+    const finished = prevStreamingRef.current && !assist.isStreaming;
+    prevStreamingRef.current = assist.isStreaming;
+    if (!finished || !generatingTitle) return;
+    setGeneratingTitle(false);
+    if (assist.error) {
+      toast.error('제목 생성에 실패했습니다. 다시 시도해 주세요.');
+      return;
+    }
+    // 후처리: 첫 줄만 취하고 양끝 따옴표·공백 제거.
+    const cleaned = assist.text
+      .split('\n')[0]
+      .replace(/^["'“”‘’「」『』\s]+|["'“”‘’「」『』\s]+$/g, '');
+    if (cleaned) setTitleDraft(cleaned);
+  }, [assist.isStreaming, assist.text, assist.error, generatingTitle]);
 
   // 패널이 나타날 때 화면에 보이도록 스크롤 — 긴 본문에서 반응 없음으로 오인되는 것 방지.
   useEffect(() => {
@@ -193,6 +227,20 @@ export function ManuscriptEditor({
               />
             </h1>
             <div className="mt-1.5 flex items-center gap-1.5 text-faint">
+              <button
+                type="button"
+                onClick={generateTitle}
+                disabled={generatingTitle}
+                aria-label="AI 제목 생성"
+                title="AI 제목 생성"
+                className="grid size-7 place-items-center rounded-[5px] hover:bg-surface disabled:cursor-default disabled:opacity-50"
+              >
+                {generatingTitle ? (
+                  <Loader2 className="size-[15px] animate-spin text-ai" strokeWidth={2} />
+                ) : (
+                  <Sparkles className="size-[15px] text-ai" strokeWidth={2} />
+                )}
+              </button>
               <Pencil className="size-[15px]" strokeWidth={2} />
               <button
                 type="button"

@@ -19,6 +19,7 @@ from domains.assist.schemas import (
     DialogueInput,
     InfillInput,
     StyleInput,
+    TitleInput,
 )
 from domains.assist.tier_routing import TaskType
 from domains.memory.schemas import MemoryItemResponse, MemoryItemType
@@ -51,6 +52,10 @@ _TASK_INSTRUCTION: dict[TaskType, str] = {
     TaskType.correct: (
         "맞춤법, 어색한 표현, 중복 어휘를 최소 침습으로 교정하세요. "
         "의미·문체·고유명사는 바꾸지 마세요."
+    ),
+    TaskType.title_: (
+        "아래 본문을 근거로 이 화(chapter)에 어울리는 짧은 제목 하나만 지으세요. "
+        "따옴표·접두어·설명·개행 없이 제목 텍스트만 출력하세요."
     ),
 }
 
@@ -159,6 +164,11 @@ def assemble_prompt(
             raise TypeError(f"style task requires StyleInput, got {type(task_input).__name__}")
         system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_light(memory_items)}")
         user_text = f"[대상 텍스트]\n{task_input.text}\n\n[목표 문체]\n{task_input.target_style}"
+    elif task_type is TaskType.title_:
+        if not isinstance(task_input, TitleInput):
+            raise TypeError(f"title task requires TitleInput, got {type(task_input).__name__}")
+        system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_minimal(memory_items)}")
+        user_text = task_input.text
     else:
         if not isinstance(task_input, CorrectInput):
             raise TypeError(f"correct task requires CorrectInput, got {type(task_input).__name__}")

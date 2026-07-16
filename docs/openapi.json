@@ -3745,6 +3745,72 @@
         }
       }
     },
+    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/title": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "화 제목 생성 (SSE)",
+        "operationId": "assist_title_api_v1_works__work_id__scenes__scene_id__assist_title_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "scene_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scene Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates": {
       "post": {
         "tags": [
@@ -5898,6 +5964,19 @@
         ],
         "title": "TimelineStateSource",
         "description": "타임라인 상태 출처 (data-model.md 4.1). 이 슬라이스는 ``author``만 기록한다."
+      },
+      "TitleRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TitleRequest"
       },
       "TokenResponse": {
         "properties": {

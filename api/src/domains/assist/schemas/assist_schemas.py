@@ -57,5 +57,14 @@ class CorrectInput:
     text: str
 
 
-#: assemble_prompt의 task_input 파라미터가 받는 5개 작업별 입력 타입의 합집합.
-AssistTaskInput = ContinueInput | InfillInput | DialogueInput | StyleInput | CorrectInput
+@dataclass(frozen=True)
+class TitleInput:
+    """화 제목 생성: 현재 씬 본문."""
+
+    text: str
+
+
+#: assemble_prompt의 task_input 파라미터가 받는 작업별 입력 타입의 합집합.
+AssistTaskInput = (
+    ContinueInput | InfillInput | DialogueInput | StyleInput | CorrectInput | TitleInput
+)

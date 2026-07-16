@@ -1221,6 +1221,16 @@ export type TimelineStateResponse = {
 export type TimelineStateSource = 'author' | 'ai_suggested';
 
 /**
+ * TitleRequest
+ */
+export type TitleRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
  * TokenResponse
  *
  * JWT pair returned by login and refresh endpoints.
@@ -3643,6 +3653,38 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors = {
 export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError = PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors];
 
 export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleData = {
+    body: TitleRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Scene Id
+         */
+        scene_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/title';
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleError = PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors];
+
+export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleResponses = {
     /**
      * Successful Response
      */
