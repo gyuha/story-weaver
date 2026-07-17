@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Work } from '../../types';
+import type { Chapter, Work } from '../../types';
 import { useWorksStore } from '../works.store';
 
 const mockCreateEpisode = vi.fn();
@@ -10,7 +10,6 @@ const mockCreateChapter = vi.fn();
 const mockUpdateChapter = vi.fn();
 const mockDeleteChapter = vi.fn();
 const mockReorderChapters = vi.fn();
-const mockCreateScene = vi.fn();
 
 vi.mock('@/features/editor/api/manuscript.api', () => ({
   manuscriptApi: {
@@ -22,7 +21,6 @@ vi.mock('@/features/editor/api/manuscript.api', () => ({
     updateChapter: (...args: unknown[]) => mockUpdateChapter(...args),
     deleteChapter: (...args: unknown[]) => mockDeleteChapter(...args),
     reorderChapters: (...args: unknown[]) => mockReorderChapters(...args),
-    createScene: (...args: unknown[]) => mockCreateScene(...args),
   },
 }));
 
@@ -47,6 +45,20 @@ function makeWork(overrides: Partial<Work> & { id: string }): Work {
   };
 }
 
+function makeChapter(overrides: Partial<Chapter> & { id: string }): Chapter {
+  return {
+    episodeId: 'ep1',
+    partLabel: '제1부',
+    index: 1,
+    title: '1화',
+    status: 'empty',
+    paragraphs: [],
+    linkedEntityIds: [],
+    vectorMemory: [],
+    ...overrides,
+  };
+}
+
 const WORK_ID = 'w1';
 
 beforeEach(() => {
@@ -55,9 +67,7 @@ beforeEach(() => {
     works: [
       makeWork({
         id: WORK_ID,
-        chapters: [
-          { id: 'ch1', episodeId: 'ep1', partLabel: '제1부', index: 1, title: '1화', scenes: [] },
-        ],
+        chapters: [makeChapter({ id: 'ch1' })],
       }),
     ],
   });
@@ -93,24 +103,13 @@ describe('renameChapter', () => {
 });
 
 describe('addChapter', () => {
-  it('실 API로 화+첫 씬을 생성하고 성공 시 스토어에 추가한다', async () => {
+  it('실 API로 화를 생성하고 성공 시 스토어에 추가한다', async () => {
     mockCreateChapter.mockResolvedValue({
       id: 'ch2',
       workId: WORK_ID,
       episodeId: 'ep1',
       title: '새 화',
       orderIndex: 2,
-    });
-    mockCreateScene.mockResolvedValue({
-      id: 'sc2',
-      workId: WORK_ID,
-      chapterId: 'ch2',
-      orderIndex: 0,
-      globalSeq: 2,
-      title: '새 씬',
-      body: '',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
     });
 
     const id = await useWorksStore.getState().addChapter(WORK_ID, '제1부');
@@ -120,10 +119,6 @@ describe('addChapter', () => {
       path: { work_id: WORK_ID, episode_id: 'ep1' },
       body: { title: '새 화', orderIndex: 2 },
     });
-    expect(mockCreateScene).toHaveBeenCalledWith({
-      path: { work_id: WORK_ID, episode_id: 'ep1', chapter_id: 'ch2' },
-      body: { orderIndex: 0, title: '새 씬', body: '' },
-    });
     const chapters = useWorksStore.getState().works[0].chapters;
     expect(chapters).toHaveLength(2);
     expect(chapters[1]).toEqual({
@@ -132,22 +127,16 @@ describe('addChapter', () => {
       partLabel: '제1부',
       index: 2,
       title: '새 화',
-      scenes: [
-        {
-          id: 'sc2',
-          title: '새 씬',
-          status: 'empty',
-          paragraphs: [],
-          linkedEntityIds: [],
-          vectorMemory: [],
-        },
-      ],
+      status: 'empty',
+      paragraphs: [],
+      linkedEntityIds: [],
+      vectorMemory: [],
     });
   });
 });
 
 describe('addPart', () => {
-  it('실 API로 새 부+첫 화+첫 씬을 생성하고 성공 시 스토어에 추가한다', async () => {
+  it('실 API로 새 부+첫 화를 생성하고 성공 시 스토어에 추가한다', async () => {
     mockCreateEpisode.mockResolvedValue({
       id: 'ep2',
       workId: WORK_ID,
@@ -160,17 +149,6 @@ describe('addPart', () => {
       episodeId: 'ep2',
       title: '새 화',
       orderIndex: 1,
-    });
-    mockCreateScene.mockResolvedValue({
-      id: 'sc3',
-      workId: WORK_ID,
-      chapterId: 'ch3',
-      orderIndex: 0,
-      globalSeq: 3,
-      title: '새 씬',
-      body: '',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
     });
 
     const label = await useWorksStore.getState().addPart(WORK_ID);
@@ -247,9 +225,27 @@ describe('reorderChapters', () => {
         makeWork({
           id: WORK_ID,
           chapters: [
-            { id: 'ch1', episodeId: 'ep1', partLabel: '제1부', index: 1, title: '1화', scenes: [] },
-            { id: 'ch2', episodeId: 'ep1', partLabel: '제1부', index: 2, title: '2화', scenes: [] },
-            { id: 'ch3', episodeId: 'ep2', partLabel: '제2부', index: 1, title: '3화', scenes: [] },
+            makeChapter({
+              id: 'ch1',
+              episodeId: 'ep1',
+              partLabel: '제1부',
+              index: 1,
+              title: '1화',
+            }),
+            makeChapter({
+              id: 'ch2',
+              episodeId: 'ep1',
+              partLabel: '제1부',
+              index: 2,
+              title: '2화',
+            }),
+            makeChapter({
+              id: 'ch3',
+              episodeId: 'ep2',
+              partLabel: '제2부',
+              index: 1,
+              title: '3화',
+            }),
           ],
         }),
       ],
@@ -290,8 +286,20 @@ describe('reorderParts', () => {
         makeWork({
           id: WORK_ID,
           chapters: [
-            { id: 'ch1', episodeId: 'ep1', partLabel: '제1부', index: 1, title: '1화', scenes: [] },
-            { id: 'ch2', episodeId: 'ep2', partLabel: '제2부', index: 1, title: '2화', scenes: [] },
+            makeChapter({
+              id: 'ch1',
+              episodeId: 'ep1',
+              partLabel: '제1부',
+              index: 1,
+              title: '1화',
+            }),
+            makeChapter({
+              id: 'ch2',
+              episodeId: 'ep2',
+              partLabel: '제2부',
+              index: 1,
+              title: '2화',
+            }),
           ],
         }),
       ],

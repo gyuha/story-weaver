@@ -1,13 +1,13 @@
-"""씬 본문 → 신규 설정 후보 추출 서비스 (plan.md M3-S1).
+"""화 본문 → 신규 설정 후보 추출 서비스 (plan.md M3-S1).
 
-씬의 현재 본문 + 링크된 엔티티 카드(timeline의 ``SceneEntityLink`` → worldbible의
+화의 현재 본문 + 링크된 엔티티 카드(timeline의 ``SceneEntityLink`` → worldbible의
 ``Entity``)를 LOW_COST 티어 LLM에 넘겨, 아직 엔티티 카드에 반영되지 않은 새 사실을
 JSON으로 추출한다. LLM 출력은 신뢰할 수 없으므로(:func:`parse_extraction_result`)
 JSON 파싱/스키마 검증 실패 시 예외를 삼키고 빈 결과(3개 카테고리 모두 빈 리스트)를
 반환한다 — 요청을 500으로 실패시키지 않는다.
 
 소유권 확인은 manuscript/worldbible/timeline 도메인이 이미 확립한 헬퍼
-(``get_scene_by_id``/``get_entity``/``list_links``)를 그대로 재사용한다(ADR-0005).
+(``get_chapter_by_id``/``get_entity``/``list_links``)를 그대로 재사용한다(ADR-0005).
 """
 
 from __future__ import annotations
@@ -94,24 +94,23 @@ class DynamicUpdateService:
         self,
         work_id: uuid.UUID,
         user_id: uuid.UUID,
-        scene_id: uuid.UUID,
+        chapter_id: uuid.UUID,
         llm: AbstractLLMPort,
     ) -> ExtractUpdatesResponse:
-        scene = await self._manuscript_service.get_scene_by_id(work_id, user_id, scene_id)
-        # S1 선제 가드(plan.md M4-S1) — 씬 본문이 명백히 19금 수위면 LLM 호출 자체를 생략.
-        if is_explicit_content(scene.body):
+        chapter = await self._manuscript_service.get_chapter_by_id(work_id, user_id, chapter_id)
+        # S1 선제 가드(plan.md M4-S1) — 화 본문이 명백히 19금 수위면 LLM 호출 자체를 생략.
+        if is_explicit_content(chapter.body):
             raise AppError(PRECHECK_DECLINE_MESSAGE, status.HTTP_400_BAD_REQUEST)
 
-        links = await self._timeline_service.list_links(work_id, user_id, scene_id)
+        links = await self._timeline_service.list_links(work_id, user_id, chapter_id)
         entities = [
             await self._worldbible_service.get_entity(work_id, user_id, link.entity_id)
             for link in links
         ]
+        known_entities = _format_entities(entities)
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
-            HumanMessage(
-                content=f"[씬 본문]\n{scene.body}\n\n[알려진 엔티티]\n{_format_entities(entities)}"
-            ),
+            HumanMessage(content=f"[씬 본문]\n{chapter.body}\n\n[알려진 엔티티]\n{known_entities}"),
         ]
         # S2 완화 재시도(plan.md M4-S2) — 거절/빈 응답이면 완화 프롬프트로 1회
         # 재시도하고, 그래도 실패하면 raw 에러 없이 완곡 안내로 대체한다.

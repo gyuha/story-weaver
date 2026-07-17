@@ -81,7 +81,7 @@ function errorResponse(status: number): Response {
 describe('streamAssist의 401 처리 (단일-비행 refresh 후 1회 재시도)', () => {
   const params = {
     workId: 'work-1',
-    sceneId: 'scene-1',
+    chapterId: 'chapter-1',
     taskType: 'continue' as const,
     payload: { cursorText: '이어쓸 문장' },
   };
@@ -156,7 +156,7 @@ describe('streamAssist title 태스크', () => {
     });
   });
 
-  it('taskType이 title이면 .../scenes/{sceneId}/assist/title로 text 바디를 POST 한다', async () => {
+  it('taskType이 title이면 .../chapters/{chapterId}/assist/title로 text 바디를 POST 한다', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(sseResponse('data: 빗속의 검\n\ndata: [DONE]\n\n'));
@@ -165,7 +165,7 @@ describe('streamAssist title 태스크', () => {
     const chunks = await collect(
       streamAssist({
         workId: 'work-1',
-        sceneId: 'scene-1',
+        chapterId: 'chapter-1',
         taskType: 'title',
         payload: { text: '비 오는 골목, 그는 우산도 없이 서 있었다.' },
       })
@@ -173,7 +173,7 @@ describe('streamAssist title 태스크', () => {
 
     expect(chunks).toEqual(['빗속의 검']);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('/api/v1/works/work-1/scenes/scene-1/assist/title');
+    expect(url).toBe('/api/v1/works/work-1/chapters/chapter-1/assist/title');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({ text: '비 오는 골목, 그는 우산도 없이 서 있었다.' });
   });

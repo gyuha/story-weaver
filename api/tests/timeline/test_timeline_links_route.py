@@ -71,22 +71,16 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
     return AsyncClient(transport=transport, base_url="http://test")
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -111,18 +105,18 @@ async def _create_entity(
 
 async def test_create_link(app: FastAPI, owner_work: Work, two_users: tuple[User, User]) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
     assert resp.status_code == 201
     body = resp.json()
     assert body["workId"] == str(owner_work.id)
-    assert body["sceneId"] == scene["id"]
+    assert body["chapterId"] == chapter["id"]
     assert body["entityId"] == entity["id"]
     assert body["source"] == "author"
 
@@ -131,16 +125,16 @@ async def test_create_link_duplicate_is_idempotent(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         first = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
         second = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
     assert first.status_code == 201
@@ -148,7 +142,7 @@ async def test_create_link_duplicate_is_idempotent(
     assert second.json()["id"] == first.json()["id"]
 
     async with _client_as(app, owner) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
     assert len(resp.json()) == 1
 
 
@@ -161,20 +155,20 @@ async def test_list_links_returns_created(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity_a = await _create_entity(app, owner, owner_work.id, name="김무사")
     entity_b = await _create_entity(app, owner, owner_work.id, name="무영곡")
 
     async with _client_as(app, owner) as client:
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity_a["id"]},
         )
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity_b["id"]},
         )
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
 
     assert resp.status_code == 200
     entity_ids = {link["entityId"] for link in resp.json()}
@@ -188,21 +182,21 @@ async def test_list_links_returns_created(
 
 async def test_delete_link(app: FastAPI, owner_work: Work, two_users: tuple[User, User]) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
         resp = await client.delete(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links/{entity['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links/{entity['id']}"
         )
     assert resp.status_code == 204
 
     async with _client_as(app, owner) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
     assert resp.json() == []
 
 
@@ -210,12 +204,12 @@ async def test_delete_link_not_found_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         resp = await client.delete(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links/{entity['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links/{entity['id']}"
         )
     assert resp.status_code == 404
 
@@ -229,18 +223,18 @@ async def test_create_link_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, intruder) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
     assert resp.status_code == 404
 
     async with _client_as(app, owner) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
     assert resp.json() == []
 
 
@@ -248,10 +242,10 @@ async def test_list_links_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
 
     async with _client_as(app, intruder) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
     assert resp.status_code == 404
 
 
@@ -259,21 +253,21 @@ async def test_delete_link_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links",
             json={"entityId": entity["id"]},
         )
 
     async with _client_as(app, intruder) as client:
         resp = await client.delete(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links/{entity['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links/{entity['id']}"
         )
     assert resp.status_code == 404
 
     async with _client_as(app, owner) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/links")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/links")
     assert len(resp.json()) == 1

@@ -10,13 +10,16 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
+import litellm
 import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from domains.moderation.service import (
+    LLM_UNAVAILABLE_MESSAGE,
     PRECHECK_DECLINE_MESSAGE,
     RETRY_DECLINE_MESSAGE,
     SOFTENED_NOTICE,
+    LLMUnavailableError,
     invoke_with_retry,
     is_explicit_content,
     stream_with_retry,
@@ -203,3 +206,53 @@ def test_decline_messages_are_distinct_polite_korean_text() -> None:
     assert PRECHECK_DECLINE_MESSAGE
     assert RETRY_DECLINE_MESSAGE
     assert PRECHECK_DECLINE_MESSAGE != RETRY_DECLINE_MESSAGE
+
+
+# ---------------------------------------------------------------------------
+# S2 — 운영 에러(인증·레이트리밋 등)는 콘텐츠 거절로 위장하지 않고 표면화한다
+# (콘텐츠 정책 위반만 완곡 거절 경로로 남긴다)
+# ---------------------------------------------------------------------------
+
+
+async def test_stream_with_retry_raises_on_operational_error_without_retry() -> None:
+    """인증 실패 등 운영 예외는 완곡 거절(RETRY_DECLINE_MESSAGE)로 삼키지 않고
+    LLMUnavailableError로 올린다 — 완화 재시도도 하지 않는다(재시도가 고칠 수 없음)."""
+    auth_err = litellm.AuthenticationError(
+        message="token expired or incorrect", llm_provider="openai_compatible", model="glm-4.6"
+    )
+    llm = _FlakyStreamLLM([auth_err, ["재시도 결과(도달하면 안 됨)"]])
+
+    with pytest.raises(LLMUnavailableError) as excinfo:
+        [c async for c in stream_with_retry(llm, _MESSAGES)]
+
+    assert llm.call_count == 1  # 운영 에러는 재시도하지 않는다
+    # raw provider 메시지는 노출하지 않고, 일반화된 안내만 담는다.
+    assert "token expired or incorrect" not in str(excinfo.value)
+    assert str(excinfo.value) == LLM_UNAVAILABLE_MESSAGE
+
+
+async def test_stream_with_retry_still_declines_on_content_policy_violation() -> None:
+    """콘텐츠 정책 위반은 운영 에러가 아니므로 기존대로 완화 재시도 → 완곡 거절 경로."""
+    policy_err = litellm.ContentPolicyViolationError(
+        message="content_policy_violation", llm_provider="openai", model="gpt-4o-mini"
+    )
+    llm = _FlakyStreamLLM([policy_err, policy_err])
+
+    chunks = [c async for c in stream_with_retry(llm, _MESSAGES)]
+
+    assert llm.call_count == 2
+    assert chunks == [RETRY_DECLINE_MESSAGE]
+
+
+async def test_invoke_with_retry_raises_on_operational_error_without_retry() -> None:
+    rate_err = litellm.RateLimitError(
+        message="rate limit raw detail", llm_provider="openai", model="gpt-4o-mini"
+    )
+    llm = _FlakyInvokeLLM([rate_err, "재시도(도달 금지)"])
+
+    with pytest.raises(LLMUnavailableError) as excinfo:
+        await invoke_with_retry(llm, _MESSAGES)
+
+    assert llm.call_count == 1
+    assert "rate limit raw detail" not in str(excinfo.value)
+    assert str(excinfo.value) == LLM_UNAVAILABLE_MESSAGE

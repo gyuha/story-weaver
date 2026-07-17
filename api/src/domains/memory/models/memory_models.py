@@ -1,7 +1,7 @@
 """임베딩 ORM 모델 (data-model.md 6장).
 
-엔티티 카드·씬 본문을 임베딩한 벡터를 저장하는 폴리모픽 테이블 — ``source_type``
-(entity/scene) + ``source_id``로 worldbible의 ``Entity`` 또는 manuscript의 ``Scene``을
+엔티티 카드·챕터 본문을 임베딩한 벡터를 저장하는 폴리모픽 테이블 — ``source_type``
+(entity/chapter) + ``source_id``로 worldbible의 ``Entity`` 또는 manuscript의 ``Chapter``를
 가리킨다. 두 도메인 중 어느 쪽 테이블도 FK로 잡지 않는다(폴리모픽 참조라 단일 FK가
 불가능하고, 애초에 도메인 간 직접 모델 import 금지 컨벤션과도 맞음) — 격리·정리는
 ``work_id`` FK(CASCADE)만으로 충분하다. 임베딩 차원(384)은 로컬
@@ -31,7 +31,7 @@ class EmbeddingSourceType(enum.StrEnum):
     """임베딩 출처 판별 타입 (data-model.md 6장)."""
 
     entity = "entity"
-    scene = "scene"
+    chapter = "chapter"
 
 
 class Embedding(Base):

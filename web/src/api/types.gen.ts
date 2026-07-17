@@ -83,7 +83,7 @@ export type ChangePasswordResponse = {
 /**
  * ChapterCreate
  *
- * 챕터 생성 입력.
+ * 챕터 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다.
  */
 export type ChapterCreate = {
     /**
@@ -94,12 +94,16 @@ export type ChapterCreate = {
      * Orderindex
      */
     orderIndex: number;
+    /**
+     * Body
+     */
+    body?: string;
 };
 
 /**
  * ChapterResponse
  *
- * 챕터 응답.
+ * 챕터 응답 — 본문(``body``)을 직접 보유한다(scenes 계층 폐지, remove-scene ADR).
  */
 export type ChapterResponse = {
     /**
@@ -122,12 +126,20 @@ export type ChapterResponse = {
      * Orderindex
      */
     orderIndex: number;
+    /**
+     * Globalseq
+     */
+    globalSeq: number;
+    /**
+     * Body
+     */
+    body: string;
 };
 
 /**
  * ChapterUpdate
  *
- * 챕터 수정 입력 — 모든 필드 선택(PATCH).
+ * 챕터 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가.
  */
 export type ChapterUpdate = {
     /**
@@ -138,6 +150,10 @@ export type ChapterUpdate = {
      * Orderindex
      */
     orderIndex?: number | null;
+    /**
+     * Body
+     */
+    body?: string | null;
 };
 
 /**
@@ -245,9 +261,9 @@ export type ConflictStateRef = {
      */
     id: string;
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
     /**
      * Globalseq
      */
@@ -359,7 +375,7 @@ export type DialogueRequest = {
  *
  * 임베딩 출처 판별 타입 (data-model.md 6장).
  */
-export type EmbeddingSourceType = 'entity' | 'scene';
+export type EmbeddingSourceType = 'entity' | 'chapter';
 
 /**
  * EntityCreate
@@ -828,7 +844,7 @@ export type RelationshipEdge = {
 /**
  * RelationshipGraphResponse
  *
- * 관계 그래프 응답 — ``up_to_scene_id`` 미지정 시 ``summary``는 null.
+ * 관계 그래프 응답 — ``up_to_chapter_id`` 미지정 시 ``summary``는 null.
  */
 export type RelationshipGraphResponse = {
     /**
@@ -860,26 +876,6 @@ export type ReviewSummary = {
 };
 
 /**
- * SceneCreate
- *
- * 씬 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다.
- */
-export type SceneCreate = {
-    /**
-     * Orderindex
-     */
-    orderIndex: number;
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Body
-     */
-    body?: string;
-};
-
-/**
  * SceneEntityLinkCreate
  *
  * 씬-엔티티 링크 생성 입력. ``source``는 서비스에서 ``author``로 고정된다.
@@ -906,9 +902,9 @@ export type SceneEntityLinkResponse = {
      */
     workId: string;
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
     /**
      * Entityid
      */
@@ -926,70 +922,6 @@ export type SceneEntityLinkResponse = {
  * 씬-엔티티 링크 출처 (data-model.md 5.1). 이 슬라이스는 ``author``만 기록한다.
  */
 export type SceneEntityLinkSource = 'author' | 'ai_extracted';
-
-/**
- * SceneResponse
- *
- * 씬 응답.
- */
-export type SceneResponse = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Workid
-     */
-    workId: string;
-    /**
-     * Chapterid
-     */
-    chapterId: string;
-    /**
-     * Orderindex
-     */
-    orderIndex: number;
-    /**
-     * Globalseq
-     */
-    globalSeq: number;
-    /**
-     * Title
-     */
-    title: string | null;
-    /**
-     * Body
-     */
-    body: string;
-    /**
-     * Createdat
-     */
-    createdAt: string;
-    /**
-     * Updatedat
-     */
-    updatedAt: string;
-};
-
-/**
- * SceneUpdate
- *
- * 씬 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가.
- */
-export type SceneUpdate = {
-    /**
-     * Orderindex
-     */
-    orderIndex?: number | null;
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Body
-     */
-    body?: string | null;
-};
 
 /**
  * SendMessageRequest
@@ -1018,9 +950,9 @@ export type SendWorkChatMessageRequest = {
      */
     content: string;
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
 };
 
 /**
@@ -1155,9 +1087,9 @@ export type TimelineChange = {
  */
 export type TimelineStateCreate = {
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
     /**
      * Statekey
      */
@@ -1191,9 +1123,9 @@ export type TimelineStateResponse = {
      */
     entityId: string;
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
     /**
      * Statekey
      */
@@ -1291,9 +1223,9 @@ export type UpdateSuggestionResponse = {
      */
     workId: string;
     /**
-     * Sceneid
+     * Chapterid
      */
-    sceneId: string;
+    chapterId: string;
     kind: SuggestionKind;
     /**
      * Payload
@@ -2884,210 +2816,6 @@ export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdRespons
 
 export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses];
 
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData = {
-    body?: never;
-    path: {
-        /**
-         * Work Id
-         */
-        work_id: string;
-        /**
-         * Episode Id
-         */
-        episode_id: string;
-        /**
-         * Chapter Id
-         */
-        chapter_id: string;
-    };
-    query?: never;
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes';
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors];
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses = {
-    /**
-     * Response List Scenes Api V1 Works  Work Id  Episodes  Episode Id  Chapters  Chapter Id  Scenes Get
-     *
-     * Successful Response
-     */
-    200: Array<SceneResponse>;
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses];
-
-export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData = {
-    body: SceneCreate;
-    path: {
-        /**
-         * Work Id
-         */
-        work_id: string;
-        /**
-         * Episode Id
-         */
-        episode_id: string;
-        /**
-         * Chapter Id
-         */
-        chapter_id: string;
-    };
-    query?: never;
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes';
-};
-
-export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors];
-
-export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses = {
-    /**
-     * Successful Response
-     */
-    201: SceneResponse;
-};
-
-export type PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse = PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses[keyof PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses];
-
-export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
-    body?: never;
-    path: {
-        /**
-         * Work Id
-         */
-        work_id: string;
-        /**
-         * Episode Id
-         */
-        episode_id: string;
-        /**
-         * Chapter Id
-         */
-        chapter_id: string;
-        /**
-         * Scene Id
-         */
-        scene_id: string;
-    };
-    query?: never;
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
-};
-
-export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
-
-export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
-    body?: never;
-    path: {
-        /**
-         * Work Id
-         */
-        work_id: string;
-        /**
-         * Episode Id
-         */
-        episode_id: string;
-        /**
-         * Chapter Id
-         */
-        chapter_id: string;
-        /**
-         * Scene Id
-         */
-        scene_id: string;
-    };
-    query?: never;
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
-    /**
-     * Successful Response
-     */
-    200: SceneResponse;
-};
-
-export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
-
-export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData = {
-    body: SceneUpdate;
-    path: {
-        /**
-         * Work Id
-         */
-        work_id: string;
-        /**
-         * Episode Id
-         */
-        episode_id: string;
-        /**
-         * Chapter Id
-         */
-        chapter_id: string;
-        /**
-         * Scene Id
-         */
-        scene_id: string;
-    };
-    query?: never;
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}';
-};
-
-export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors];
-
-export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses = {
-    /**
-     * Successful Response
-     */
-    200: SceneResponse;
-};
-
-export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses];
-
 export type GetApiV1WorksByWorkIdExportData = {
     body?: never;
     path: {
@@ -3294,9 +3022,9 @@ export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData = {
     };
     query?: {
         /**
-         * Up To Scene Id
+         * Up To Chapter Id
          */
-        up_to_scene_id?: string | null;
+        up_to_chapter_id?: string | null;
     };
     url: '/api/v1/works/{work_id}/entities/{entity_id}/timeline-states';
 };
@@ -3355,7 +3083,7 @@ export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses = {
 
 export type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse = PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses[keyof PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdLinksData = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdLinksData = {
     body?: never;
     path: {
         /**
@@ -3363,35 +3091,35 @@ export type GetApiV1WorksByWorkIdScenesBySceneIdLinksData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links';
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdLinksError = GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdLinksError = GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors[keyof GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses = {
     /**
-     * Response List Links Api V1 Works  Work Id  Scenes  Scene Id  Links Get
+     * Response List Links Api V1 Works  Work Id  Chapters  Chapter Id  Links Get
      *
      * Successful Response
      */
     200: Array<SceneEntityLinkResponse>;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdLinksResponse = GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponse = GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses[keyof GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdLinksData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdLinksData = {
     body: SceneEntityLinkCreate;
     path: {
         /**
@@ -3399,33 +3127,33 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdLinksData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdLinksError = PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdLinksError = PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses = {
     /**
      * Successful Response
      */
     201: SceneEntityLinkResponse;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdLinksResponse = PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponse = PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses[keyof PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses];
 
-export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData = {
+export type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData = {
     body?: never;
     path: {
         /**
@@ -3433,37 +3161,37 @@ export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
         /**
          * Entity Id
          */
         entity_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links/{entity_id}';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links/{entity_id}';
 };
 
-export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors = {
+export type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdError = DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors[keyof DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors];
+export type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdError = DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors[keyof DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors];
 
-export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses = {
+export type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponse = DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses[keyof DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses];
+export type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponse = DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses[keyof DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryData = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData = {
     body?: never;
     path: {
         /**
@@ -3471,35 +3199,35 @@ export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/memory';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/memory';
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryError = GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdMemoryError = GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors[keyof GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses = {
     /**
-     * Response Search Memory Api V1 Works  Work Id  Scenes  Scene Id  Memory Get
+     * Response Search Memory Api V1 Works  Work Id  Chapters  Chapter Id  Memory Get
      *
      * Successful Response
      */
     200: Array<MemoryItemResponse>;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponse = GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponse = GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses[keyof GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData = {
     body: ContinueRequest;
     path: {
         /**
@@ -3507,31 +3235,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/continue';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/continue';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueError = PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData = {
     body: InfillRequest;
     path: {
         /**
@@ -3539,31 +3267,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/infill';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/infill';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillError = PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData = {
     body: DialogueRequest;
     path: {
         /**
@@ -3571,31 +3299,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/dialogue';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/dialogue';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueError = PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData = {
     body: StyleRequest;
     path: {
         /**
@@ -3603,31 +3331,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/style';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/style';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleError = PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData = {
     body: CorrectRequest;
     path: {
         /**
@@ -3635,31 +3363,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/correct';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/correct';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError = PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleData = {
     body: TitleRequest;
     path: {
         /**
@@ -3667,31 +3395,31 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/title';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/title';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleError = PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData = {
     body?: never;
     path: {
         /**
@@ -3699,33 +3427,33 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesError = PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesError = PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses = {
     /**
      * Successful Response
      */
     200: ExtractUpdatesResponse;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponse = PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponse = PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses[keyof PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData = {
     body?: never;
     path: {
         /**
@@ -3733,35 +3461,35 @@ export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData = {
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions';
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsError = GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors[keyof GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsError = GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors[keyof GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors];
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses = {
+export type GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses = {
     /**
-     * Response List Update Suggestions Api V1 Works  Work Id  Scenes  Scene Id  Update Suggestions Get
+     * Response List Update Suggestions Api V1 Works  Work Id  Chapters  Chapter Id  Update Suggestions Get
      *
      * Successful Response
      */
     200: Array<UpdateSuggestionResponse>;
 };
 
-export type GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponse = GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses[keyof GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses];
+export type GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponse = GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses[keyof GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData = {
     body?: never;
     path: {
         /**
@@ -3769,37 +3497,37 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionId
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
         /**
          * Suggestion Id
          */
         suggestion_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/approve';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/approve';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveError = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveError = PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses = {
     /**
      * Successful Response
      */
     200: UpdateSuggestionResponse;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponse = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponse = PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses[keyof PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData = {
     body?: never;
     path: {
         /**
@@ -3807,35 +3535,35 @@ export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionId
          */
         work_id: string;
         /**
-         * Scene Id
+         * Chapter Id
          */
-        scene_id: string;
+        chapter_id: string;
         /**
          * Suggestion Id
          */
         suggestion_id: string;
     };
     query?: never;
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/reject';
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/reject';
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectError = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectError = PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors];
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses = {
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses = {
     /**
      * Successful Response
      */
     200: UpdateSuggestionResponse;
 };
 
-export type PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponse = PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses[keyof PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses];
+export type PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponse = PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses[keyof PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses];
 
 export type GetApiV1WorksByWorkIdConflictsData = {
     body?: never;
@@ -3879,9 +3607,9 @@ export type GetApiV1WorksByWorkIdRelationshipsData = {
     };
     query?: {
         /**
-         * Up To Scene Id
+         * Up To Chapter Id
          */
-        up_to_scene_id?: string | null;
+        up_to_chapter_id?: string | null;
     };
     url: '/api/v1/works/{work_id}/relationships';
 };

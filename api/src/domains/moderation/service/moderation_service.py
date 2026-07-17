@@ -5,12 +5,16 @@ S1(선제 가드) — 사용자 입력에 명백한 19금 키워드가 있으면
 방식은 ai-pipeline.md 6.1이 "미결정, 키워드/분류 모델" 중 가장 단순하다고 명시한
 키워드 목록 매칭이다.
 
-S2(거절 정규화 + 완화 재시도) — LLM 호출 결과가 빈 응답이거나 예외(콘텐츠 정책
-거절 등 — litellm/제공사별 신호가 제각각이라 예외 유형을 특정하지 않고 통째로
-잡아 정규화한다)면, 시스템 프롬프트에 완화 지시를 덧붙여 1회만 재시도한다
+S2(거절 정규화 + 완화 재시도) — LLM 호출 결과가 빈 응답이거나 (콘텐츠 정책 거절 등)
+알 수 없는 예외면, 시스템 프롬프트에 완화 지시를 덧붙여 1회만 재시도한다
 (:func:`stream_with_retry`/:func:`invoke_with_retry`). 재시도도 실패하면
 :data:`RETRY_DECLINE_MESSAGE`로 대체한다 — 어느 경우든 provider의 raw 예외
 메시지는 호출자에게 노출하지 않는다.
+
+단, 인증·연결·레이트리밋·서버 오류처럼 콘텐츠와 무관함이 분명한 litellm 예외
+(:data:`_OPERATIONAL_LLM_ERRORS`)는 완곡 거절로 위장하지 않는다 — 재시도로 고칠 수
+없으므로 :class:`LLMUnavailableError`로 표면화해 운영 오류임을 알린다(이 역시 raw
+메시지는 노출하지 않고 :data:`LLM_UNAVAILABLE_MESSAGE`만 전달한다).
 """
 
 from __future__ import annotations
@@ -19,8 +23,20 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import structlog
+from fastapi import status
 from langchain_core.messages import BaseMessage, SystemMessage
+from litellm.exceptions import (
+    APIConnectionError,
+    AuthenticationError,
+    BadGatewayError,
+    InternalServerError,
+    PermissionDeniedError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+)
 
+from core.exceptions import AppError
 from domains.chat.ports import AbstractLLMPort
 
 logger = structlog.get_logger(__name__)
@@ -47,6 +63,38 @@ RETRY_DECLINE_MESSAGE = (
 SOFTENED_NOTICE = "표현 수위를 조정해 생성했습니다."
 
 _SOFTEN_INSTRUCTION = "직접적인 묘사보다 암시적인 서술로 표현해줘."
+
+LLM_UNAVAILABLE_MESSAGE = (
+    "AI 생성 서비스에 일시적으로 연결하지 못했습니다. 잠시 후 다시 시도해 주세요."
+)
+
+#: 콘텐츠 정책 거절이 아니라 인프라/인증 실패임이 분명한 litellm 예외들. 완곡 거절
+#: (:data:`RETRY_DECLINE_MESSAGE`)로 위장하지 않고 :class:`LLMUnavailableError`로
+#: 표면화한다(재시도로 고칠 수 없으므로). 그 외 알 수 없는 예외는 기존대로 삼켜
+#: 완화 재시도/완곡 안내로 처리한다(제공사별 콘텐츠 거절 신호가 제각각이라).
+_OPERATIONAL_LLM_ERRORS: tuple[type[Exception], ...] = (
+    AuthenticationError,
+    PermissionDeniedError,
+    RateLimitError,
+    ServiceUnavailableError,
+    InternalServerError,
+    BadGatewayError,
+    APIConnectionError,
+    Timeout,
+)
+
+
+class LLMUnavailableError(AppError):
+    """LLM 호출이 운영상 실패(인증·연결·레이트리밋·서버 오류 등)했음을 알리는 예외.
+
+    콘텐츠 정책 거절(:data:`RETRY_DECLINE_MESSAGE`)과 구별하기 위한 것으로, provider의
+    raw 메시지는 담지 않는다 — 사용자에게 노출되는 것은 :data:`LLM_UNAVAILABLE_MESSAGE`
+    뿐이다. 스트리밍 엔드포인트는 이를 ``event: error``로, 비스트리밍 엔드포인트는
+    :class:`~core.exceptions.AppError` 처리 경로(502)로 표면화한다.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(LLM_UNAVAILABLE_MESSAGE, status.HTTP_502_BAD_GATEWAY)
 
 
 def is_explicit_content(text: str) -> bool:
@@ -86,6 +134,9 @@ async def _live_stream(llm: AbstractLLMPort, messages: list[BaseMessage]) -> Asy
         async for chunk in llm.stream(messages):
             if chunk:
                 yield chunk
+    except _OPERATIONAL_LLM_ERRORS as exc:
+        logger.warning("moderation_llm_unavailable", error=str(exc))
+        raise LLMUnavailableError from exc
     except Exception as exc:
         logger.warning("moderation_stream_refused", error=str(exc))
 
@@ -94,6 +145,9 @@ async def _safe_invoke(llm: AbstractLLMPort, messages: list[BaseMessage]) -> str
     """단발 호출 결과 텍스트. 예외/빈 응답은 빈 문자열로 눌러 담는다."""
     try:
         response = await llm.invoke(messages)
+    except _OPERATIONAL_LLM_ERRORS as exc:
+        logger.warning("moderation_llm_unavailable", error=str(exc))
+        raise LLMUnavailableError from exc
     except Exception as exc:
         logger.warning("moderation_invoke_refused", error=str(exc))
         return ""

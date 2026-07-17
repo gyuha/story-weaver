@@ -60,7 +60,7 @@ class UpdateSuggestionResponse(_CamelModel):
 
     id: uuid.UUID
     work_id: uuid.UUID
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
     kind: SuggestionKind
     payload: dict[str, Any]
     status: SuggestionStatus

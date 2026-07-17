@@ -3,7 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { requireAuth } from '@/features/auth/lib/guard';
 import { useWorkChapters } from '@/features/editor/lib/hydrate-chapters';
-import { defaultSceneId, useWork } from '@/features/shared/store/selectors';
+import { defaultChapterId, useWork } from '@/features/shared/store/selectors';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import { createFileRoute, redirect, useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect } from 'react';
@@ -12,11 +12,11 @@ export const Route = createFileRoute('/works/$workId/write/')({
   beforeLoad: ({ params }) => {
     requireAuth(`/works/${params.workId}/write`);
     const work = useWorksStore.getState().works.find((w) => w.id === params.workId);
-    const sceneId = defaultSceneId(work);
-    if (sceneId) {
+    const chapterId = defaultChapterId(work);
+    if (chapterId) {
       throw redirect({
-        to: '/works/$workId/write/$sceneId',
-        params: { workId: params.workId, sceneId },
+        to: '/works/$workId/write/$chapterId',
+        params: { workId: params.workId, chapterId },
       });
     }
   },
@@ -29,13 +29,13 @@ function EmptyEditor() {
   const { isPending, isError } = useWorkChapters(workId);
   const navigate = useNavigate();
 
-  // 서버 계층 하이드레이션으로 씬이 뒤늦게 채워지면 beforeLoad가 놓친 기본 씬으로 이동
+  // 서버 계층 하이드레이션으로 화가 뒤늦게 채워지면 beforeLoad가 놓친 기본 화로 이동
   useEffect(() => {
-    const sceneId = defaultSceneId(work);
-    if (sceneId) {
+    const chapterId = defaultChapterId(work);
+    if (chapterId) {
       navigate({
-        to: '/works/$workId/write/$sceneId',
-        params: { workId, sceneId },
+        to: '/works/$workId/write/$chapterId',
+        params: { workId, chapterId },
         replace: true,
       });
     }
@@ -73,7 +73,7 @@ function EmptyEditor() {
         <div className="max-w-sm">
           <div className="mb-3 font-serif text-[22px] font-bold text-ink">{work.title}</div>
           <p className="text-sm leading-relaxed text-muted-ink">
-            아직 씬이 없습니다. 작업트리에서 새 씬을 만들어 첫 문장을 시작하세요. World Bible에
+            아직 화가 없습니다. 작업트리에서 새 화를 만들어 첫 문장을 시작하세요. World Bible에
             인물·장소를 먼저 등록하면 메모리가 함께 작동합니다.
           </p>
         </div>

@@ -1,6 +1,6 @@
 """동적 업데이트 추출 API 테스트 (TDD, plan.md M3-S1).
 
-``POST /works/{work_id}/scenes/{scene_id}/extract-updates`` — assist_router 테스트의
+``POST /works/{work_id}/chapters/{chapter_id}/extract-updates`` — assist_router 테스트의
 실 DB e2e 패턴을 그대로 따르되, LLM 호출만 FAKE 클라이언트로 override한다
 (``app.dependency_overrides``로 ``_extraction_llm_client`` 교체).
 
@@ -96,22 +96,18 @@ class _FakeLLMClient:
         return _FakeResponse(self._content)
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID, body: str) -> dict[str, Any]:
+async def _create_chapter(
+    app: FastAPI, owner: User, work_id: uuid.UUID, body: str
+) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -130,11 +126,11 @@ async def _create_character(
 
 
 async def _link_entity(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str, entity_id: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str, entity_id: str
 ) -> None:
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{work_id}/scenes/{scene_id}/links", json={"entityId": entity_id}
+            f"/api/v1/works/{work_id}/chapters/{chapter_id}/links", json={"entityId": entity_id}
         )
     assert resp.status_code == 201
 
@@ -149,8 +145,8 @@ async def test_extract_updates_parses_fake_llm_json_into_three_categories(
 ) -> None:
     owner, _ = two_users
     character = await _create_character(app, owner, owner_work.id, "한지원")
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
-    await _link_entity(app, owner, owner_work.id, scene["id"], character["id"])
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
+    await _link_entity(app, owner, owner_work.id, chapter["id"], character["id"])
 
     canned = (
         '{"candidateEntities": [{"name": "복면인", "summary": "정체불명의 자객"}], '
@@ -163,7 +159,7 @@ async def test_extract_updates_parses_fake_llm_json_into_three_categories(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200
@@ -186,7 +182,7 @@ async def test_extract_updates_parses_json_wrapped_in_markdown_code_fence(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="본문")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="본문")
     fenced = (
         '```json\n{"candidateEntities": [{"name": "복면인", "summary": "자객"}], '
         '"attributeChanges": [], "timelineChanges": []}\n```'
@@ -195,7 +191,7 @@ async def test_extract_updates_parses_json_wrapped_in_markdown_code_fence(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200
@@ -211,12 +207,12 @@ async def test_extract_updates_malformed_json_returns_empty_result(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="아무 사건도 없다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="아무 사건도 없다.")
     app.dependency_overrides[_extraction_llm_client] = lambda: _FakeLLMClient("이건 JSON이 아님{{{")
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200
@@ -240,7 +236,7 @@ async def test_extract_updates_proceeds_when_usage_under_budget_limit(
 ) -> None:
     monkeypatch.setenv("BUDGET_TOKEN_LIMIT", "1000")
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="본문")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="본문")
     fake = _FakeLLMClient(
         '{"candidateEntities": [], "attributeChanges": [], "timelineChanges": []}'
     )
@@ -248,7 +244,7 @@ async def test_extract_updates_proceeds_when_usage_under_budget_limit(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200
@@ -263,14 +259,14 @@ async def test_extract_updates_blocked_when_usage_exceeds_budget_limit(
 ) -> None:
     monkeypatch.setenv("BUDGET_TOKEN_LIMIT", "50")
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="본문")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="본문")
     await record_usage(owner.id, 100)
     fake = _FakeLLMClient("{}")
     app.dependency_overrides[_extraction_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 429
@@ -287,12 +283,12 @@ async def test_extract_updates_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="본문")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="본문")
     app.dependency_overrides[_extraction_llm_client] = lambda: _FakeLLMClient("{}")
 
     async with _client_as(app, intruder) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
     assert resp.status_code == 404
 
@@ -312,12 +308,12 @@ async def test_extract_updates_real_llm_detects_new_fact(
     """
     owner, _ = two_users
     character = await _create_character(app, owner, owner_work.id, "한지원")
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
-    await _link_entity(app, owner, owner_work.id, scene["id"], character["id"])
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
+    await _link_entity(app, owner, owner_work.id, chapter["id"], character["id"])
 
     async with _client_as(app, owner, timeout=30.0) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200

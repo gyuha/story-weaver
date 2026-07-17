@@ -49,19 +49,16 @@ class ChatContextService:
         self._works_service = works_service
 
     async def build_context(
-        self, work_id: uuid.UUID, user_id: uuid.UUID, scene_id: uuid.UUID
+        self, work_id: uuid.UUID, user_id: uuid.UUID, chapter_id: uuid.UUID
     ) -> str:
         """현재 화 원고 전문 + 메모리 검색 결과로 프레시 시스템 프롬프트 텍스트를 조립한다.
 
         범위는 "현재 화(챕터) 전체"로 제한한다(ADR-0010) — 작품 전체 원고는 넣지 않는다.
         """
         work = await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
-        scene = await self._manuscript_service.get_scene_by_id(work_id, user_id, scene_id)
-        chapter_scenes = await self._manuscript_service.list_scenes_by_chapter_id(
-            work_id, user_id, scene.chapter_id
-        )
-        manuscript_text = "\n\n".join(s.body for s in chapter_scenes) or "(현재 화 본문 없음)"
-        memory_items = await self._memory_search_service.search(work_id, user_id, scene_id)
+        chapter = await self._manuscript_service.get_chapter_by_id(work_id, user_id, chapter_id)
+        manuscript_text = chapter.body or "(현재 화 본문 없음)"
+        memory_items = await self._memory_search_service.search(work_id, user_id, chapter_id)
 
         return (
             "당신은 웹소설 작가의 집필을 보조하는 AI 어시스턴트입니다. "

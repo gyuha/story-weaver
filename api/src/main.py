@@ -244,7 +244,7 @@ def _register_routers(application: FastAPI) -> None:
     except ImportError:
         logger.debug("works_router_not_found", note="Will be added in later phase")
 
-    # Manuscript domain (synopsis·episodes·chapters·scenes)
+    # Manuscript domain (synopsis·episodes·chapters)
     try:
         from domains.manuscript.router import router as manuscript_router
 
@@ -274,12 +274,15 @@ def _register_routers(application: FastAPI) -> None:
     except ImportError:
         logger.debug("timeline_router_not_found", note="Will be added in later phase")
 
-    # Timeline domain (씬-엔티티 링크)
+    # Timeline domain (화-엔티티 링크)
     try:
         from domains.timeline.router import links_router as timeline_links_router
 
         application.include_router(timeline_links_router, prefix="/api/v1")
-        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/links")
+        logger.debug(
+            "router_registered",
+            prefix="/api/v1/works/{work_id}/chapters/{chapter_id}/links",
+        )
     except ImportError:
         logger.debug("timeline_links_router_not_found", note="Will be added in later phase")
 
@@ -288,7 +291,10 @@ def _register_routers(application: FastAPI) -> None:
         from domains.memory.router import router as memory_router
 
         application.include_router(memory_router, prefix="/api/v1")
-        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/memory")
+        logger.debug(
+            "router_registered",
+            prefix="/api/v1/works/{work_id}/chapters/{chapter_id}/memory",
+        )
     except ImportError:
         logger.debug("memory_router_not_found", note="Will be added in later phase")
 
@@ -297,18 +303,21 @@ def _register_routers(application: FastAPI) -> None:
         from domains.assist.router import router as assist_router
 
         application.include_router(assist_router, prefix="/api/v1")
-        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/scenes/{scene_id}/assist")
+        logger.debug(
+            "router_registered",
+            prefix="/api/v1/works/{work_id}/chapters/{chapter_id}/assist",
+        )
     except ImportError:
         logger.debug("assist_router_not_found", note="Will be added in later phase")
 
-    # Dynamic update domain (씬 저장 시 신규 설정 후보 추출)
+    # Dynamic update domain (화 저장 시 신규 설정 후보 추출)
     try:
         from domains.dynamic_update.router import router as dynamic_update_router
 
         application.include_router(dynamic_update_router, prefix="/api/v1")
         logger.debug(
             "router_registered",
-            prefix="/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates",
+            prefix="/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates",
         )
     except ImportError:
         logger.debug("dynamic_update_router_not_found", note="Will be added in later phase")

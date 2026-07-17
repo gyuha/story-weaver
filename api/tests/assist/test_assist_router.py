@@ -1,6 +1,6 @@
 """집필 보조 5개 엔드포인트 HTTP 라우터 테스트 (TDD, plan.md M3-S3).
 
-``POST /works/{work_id}/scenes/{scene_id}/assist/{continue|infill|dialogue|style|
+``POST /works/{work_id}/chapters/{chapter_id}/assist/{continue|infill|dialogue|style|
 correct}`` — memory_router.py의 실 DB e2e 패턴을 따르되, LLM 호출만 FAKE 클라이언트로
 override한다(``app.dependency_overrides``에 라우터의 티어별 LLM 의존성을 override —
 chat 도메인 테스트의 "get_llm_factory override" 관례와 동일한 override 메커니즘).
@@ -120,7 +120,7 @@ def _sse_data_lines(text: str) -> list[str]:
     return [line[len("data: ") :] for line in text.splitlines() if line.startswith("data: ")]
 
 
-async def _create_scene(
+async def _create_chapter(
     app: FastAPI, owner: User, work_id: uuid.UUID, body: str = "본문"
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
@@ -129,15 +129,9 @@ async def _create_scene(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -174,13 +168,13 @@ async def test_continue_streams_fake_chunks_and_assembles_full_memory_prompt(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="문 앞에 서 있었다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="문 앞에 서 있었다.")
     fake = _FakeLLMClient(["다음 문장 하나.", " 다음 문장 둘."])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "그는 문을 열었다."},
         )
 
@@ -203,7 +197,7 @@ async def test_continue_binds_llm_call_context_before_streaming(
     """S2 — LLMClient(S3)가 llm_call_logs에 채울 user_id·task가 스트리밍 시점에
     이미 바인딩돼 있어야 한다(core.llm_call_context)."""
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="문 앞에 서 있었다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="문 앞에 서 있었다.")
     captured: dict[str, Any] = {}
 
     class _CapturingLLMClient:
@@ -217,7 +211,7 @@ async def test_continue_binds_llm_call_context_before_streaming(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "그는 문을 열었다."},
         )
 
@@ -231,14 +225,14 @@ async def test_continue_rejects_blank_cursor_text(
 ) -> None:
     """빈/공백 cursor_text는 422 — LLM 제공사 400(수위 거절로 오인)까지 가지 않게 차단."""
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="문 앞에 서 있었다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="문 앞에 서 있었다.")
     fake = _FakeLLMClient(["안 불려야 함"])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         for blank in ("", "   "):
             resp = await client.post(
-                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+                f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
                 json={"cursorText": blank},
             )
             assert resp.status_code == 422
@@ -254,13 +248,13 @@ async def test_infill_prompt_contains_before_and_after_text(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["이어지는 문장."])
     app.dependency_overrides[_infill_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/infill",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/infill",
             json={"beforeText": "앞 문장.", "afterText": "뒤 문장."},
         )
 
@@ -283,7 +277,7 @@ async def test_dialogue_prompt_emphasizes_target_character_speech_style(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     character = await _create_character(
         app,
         owner,
@@ -297,7 +291,7 @@ async def test_dialogue_prompt_emphasizes_target_character_speech_style(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/dialogue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/dialogue",
             json={
                 "intent": "지원이 상대의 도움을 단칼에 거절한다.",
                 "targetEntityId": character["id"],
@@ -322,13 +316,13 @@ async def test_style_prompt_uses_light_memory_and_no_character_block(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["재작성된 문장."])
     app.dependency_overrides[_style_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/style",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/style",
             json={"text": "그는 화가 났다.", "targetStyle": "하드보일드"},
         )
 
@@ -353,7 +347,7 @@ async def test_correct_skips_full_memory_search(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
 
     def _must_not_be_called(self: MemorySearchService, *args: Any, **kwargs: Any) -> Any:
         raise AssertionError("correct 작업은 전체 메모리 검색을 호출하면 안 된다")
@@ -365,7 +359,7 @@ async def test_correct_skips_full_memory_search(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/correct",
             json={"text": "그는 조용희 걸었다."},
         )
 
@@ -385,17 +379,17 @@ async def test_correct_second_identical_request_hits_cache_and_skips_llm(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["교정된 문장."])
     app.dependency_overrides[_correct_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         first = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/correct",
             json={"text": "그는 조용희 걸었다."},
         )
         second = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/correct",
             json={"text": "그는 조용희 걸었다."},
         )
 
@@ -410,17 +404,17 @@ async def test_correct_different_text_bypasses_cache(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["교정된 문장."])
     app.dependency_overrides[_correct_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/correct",
             json={"text": "그는 조용희 걸었다."},
         )
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/correct",
             json={"text": "완전히 다른 문장."},
         )
 
@@ -433,18 +427,18 @@ async def test_correct_different_work_bypasses_cache(
 ) -> None:
     owner, _ = two_users
     other_work = await _create_work(owner, "다른 작품")
-    scene_a = await _create_scene(app, owner, owner_work.id)
-    scene_b = await _create_scene(app, owner, other_work.id)
+    chapter_a = await _create_chapter(app, owner, owner_work.id)
+    chapter_b = await _create_chapter(app, owner, other_work.id)
     fake = _FakeLLMClient(["교정된 문장."])
     app.dependency_overrides[_correct_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene_a['id']}/assist/correct",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter_a['id']}/assist/correct",
             json={"text": "동일한 텍스트."},
         )
         resp = await client.post(
-            f"/api/v1/works/{other_work.id}/scenes/{scene_b['id']}/assist/correct",
+            f"/api/v1/works/{other_work.id}/chapters/{chapter_b['id']}/assist/correct",
             json={"text": "동일한 텍스트."},
         )
 
@@ -465,13 +459,13 @@ async def test_continue_proceeds_when_usage_under_budget_limit(
 ) -> None:
     monkeypatch.setenv("BUDGET_TOKEN_LIMIT", "1000")
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["문장."])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "..."},
         )
 
@@ -487,14 +481,14 @@ async def test_continue_blocked_when_usage_exceeds_budget_limit(
 ) -> None:
     monkeypatch.setenv("BUDGET_TOKEN_LIMIT", "50")
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     await record_usage(owner.id, 100)
     fake = _FakeLLMClient(["문장."])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "..."},
         )
 
@@ -512,20 +506,20 @@ async def test_continue_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["x"])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, intruder) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "..."},
         )
     assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
-# 화 제목 생성 — 현재 씬 본문 근거, 최소 메모리(검색 생략), SSE 스트리밍
+# 화 제목 생성 — 현재 화 본문 근거, 최소 메모리(검색 생략), SSE 스트리밍
 # ---------------------------------------------------------------------------
 
 
@@ -536,7 +530,7 @@ async def test_title_streams_from_body_and_skips_full_memory_search(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
 
     def _must_not_be_called(self: MemorySearchService, *args: Any, **kwargs: Any) -> Any:
         raise AssertionError("title 작업은 전체 메모리 검색을 호출하면 안 된다")
@@ -548,7 +542,7 @@ async def test_title_streams_from_body_and_skips_full_memory_search(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/title",
             json={"text": "비 오는 골목, 그는 우산도 없이 서 있었다."},
         )
 
@@ -568,14 +562,14 @@ async def test_title_rejects_blank_text(
 ) -> None:
     """빈/공백 본문은 422 — LLM 제공사 400(수위 거절로 오인)까지 가지 않게 차단."""
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["안 불려야 함"])
     app.dependency_overrides[_title_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         for blank in ("", "   "):
             resp = await client.post(
-                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+                f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/title",
                 json={"text": blank},
             )
             assert resp.status_code == 422
@@ -586,13 +580,13 @@ async def test_title_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["x"])
     app.dependency_overrides[_title_llm_client] = lambda: fake
 
     async with _client_as(app, intruder) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/title",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/title",
             json={"text": "본문 텍스트."},
         )
     assert resp.status_code == 404
@@ -612,13 +606,13 @@ async def test_continue_real_llm_returns_nonempty_text(
     텍스트인지만 확인한다.
     """
     owner, _ = two_users
-    scene = await _create_scene(
+    chapter = await _create_chapter(
         app, owner, owner_work.id, body="비 오는 골목, 그는 우산도 없이 서 있었다."
     )
 
     async with _client_as(app, owner, timeout=30.0) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "그는 하늘을 올려다보았다."},
         )
 

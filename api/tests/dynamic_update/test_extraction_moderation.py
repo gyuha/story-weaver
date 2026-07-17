@@ -92,36 +92,32 @@ class _FlakyLLMClient:
         return _FakeResponse(outcome)
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID, body: str) -> dict[str, Any]:
+async def _create_chapter(
+    app: FastAPI, owner: User, work_id: uuid.UUID, body: str
+) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
 
 
 # ---------------------------------------------------------------------------
-# S1 — 선제 가드: 씬 본문에 명백한 19금 키워드가 있으면 LLM 호출 자체를 생략
+# S1 — 선제 가드: 화 본문에 명백한 19금 키워드가 있으면 LLM 호출 자체를 생략
 # ---------------------------------------------------------------------------
 
 
-async def test_extract_updates_explicit_scene_body_never_reaches_llm(
+async def test_extract_updates_explicit_chapter_body_never_reaches_llm(
     app: FastAPI, owner_work: Work, owner: User
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id, body="그는 그녀의 성기를 만졌다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="그는 그녀의 성기를 만졌다.")
     fake = _FlakyLLMClient(
         ['{"candidateEntities": [], "attributeChanges": [], "timelineChanges": []}']
     )
@@ -129,7 +125,7 @@ async def test_extract_updates_explicit_scene_body_never_reaches_llm(
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 400
@@ -145,14 +141,14 @@ async def test_extract_updates_explicit_scene_body_never_reaches_llm(
 async def test_extract_updates_retries_once_with_softened_prompt_and_uses_result(
     app: FastAPI, owner_work: Work, owner: User
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id, body="아무 사건도 없다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="아무 사건도 없다.")
     canned = '{"candidateEntities": [{"name": "복면인", "summary": "자객"}], "attributeChanges": [], "timelineChanges": []}'
     fake = _FlakyLLMClient([RuntimeError("raw provider secret detail"), canned])
     app.dependency_overrides[_extraction_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 200
@@ -164,7 +160,7 @@ async def test_extract_updates_retries_once_with_softened_prompt_and_uses_result
 async def test_extract_updates_declines_politely_with_no_raw_error_when_retry_also_fails(
     app: FastAPI, owner_work: Work, owner: User
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id, body="아무 사건도 없다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="아무 사건도 없다.")
     fake = _FlakyLLMClient(
         [RuntimeError("raw provider secret A"), RuntimeError("raw provider secret B")]
     )
@@ -172,7 +168,7 @@ async def test_extract_updates_declines_politely_with_no_raw_error_when_retry_al
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 400

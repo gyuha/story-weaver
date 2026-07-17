@@ -17,18 +17,16 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 // 실제 useWorkChapters(useQuery + setWorkChapters 이펙트)를 그대로 사용하기 위해 API만 mock한다.
 const mockEpisodes = vi.fn();
 const mockChapters = vi.fn();
-const mockScenes = vi.fn();
-const mockSceneLinks = vi.fn();
+const mockChapterLinks = vi.fn();
 vi.mock('@/features/editor/api/manuscript.api', () => ({
   manuscriptApi: {
     episodes: (...args: unknown[]) => mockEpisodes(...args),
     chapters: (...args: unknown[]) => mockChapters(...args),
-    scenes: (...args: unknown[]) => mockScenes(...args),
   },
 }));
 vi.mock('@/features/world-bible/api/world-bible.api', () => ({
   worldBibleApi: {
-    sceneLinks: (...args: unknown[]) => mockSceneLinks(...args),
+    chapterLinks: (...args: unknown[]) => mockChapterLinks(...args),
   },
 }));
 
@@ -52,9 +50,10 @@ beforeEach(() => {
   // 딥링크 새로고침 시나리오: works 목록은 하이드레이션됐지만 chapters는 아직 [].
   useWorksStore.setState({ works: [{ id: 'w1', chapters: [] } as never] });
   mockEpisodes.mockResolvedValue([{ id: 'e1', title: '제1부' }]);
-  mockChapters.mockResolvedValue([{ id: 'c1', orderIndex: 1, title: '1화' }]);
-  mockScenes.mockResolvedValue([{ id: 's1', title: '새 씬', body: '본문' }]);
-  mockSceneLinks.mockResolvedValue([]);
+  mockChapters.mockResolvedValue([
+    { id: 'c1', episodeId: 'e1', orderIndex: 1, title: '1화', body: '본문' },
+  ]);
+  mockChapterLinks.mockResolvedValue([]);
 });
 
 // chapters 조회가 막 끝난 커밋에서 setWorkChapters 반영이 리렌더에 실리기 전,

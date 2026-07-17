@@ -4,7 +4,7 @@
 공통 테이블이다. 타입별 필드는 별도 테이블로 정규화하지 않고 ``attributes``(JSONB)에
 담는다(과한 정규화 회피 — data-model.md 3장). works 도메인의 ``Work`` 모델은 import하지
 않고 ``work_id``로만 참조한다(도메인 간 직접 모델 import 금지). ``created_at``/
-``updated_at``은 manuscript 도메인의 ``Scene`` 타임스탬프 컬럼과 동일하게 둔다.
+``updated_at``을 함께 둔다.
 """
 
 from __future__ import annotations

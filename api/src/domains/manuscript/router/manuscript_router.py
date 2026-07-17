@@ -25,7 +25,7 @@ from domains.auth.security import get_current_user
 from domains.budget.dependency import require_budget_available
 from domains.budget.service import estimate_tokens, record_usage
 from domains.chat.ports import AbstractLLMPort
-from domains.manuscript.models import Chapter, Episode, Scene, Synopsis
+from domains.manuscript.models import Chapter, Episode, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
     ChapterCreate,
@@ -34,9 +34,6 @@ from domains.manuscript.schemas import (
     EpisodeCreate,
     EpisodeResponse,
     EpisodeUpdate,
-    SceneCreate,
-    SceneResponse,
-    SceneUpdate,
     SynopsisContinueRequest,
     SynopsisResponse,
     SynopsisUpdate,
@@ -89,20 +86,8 @@ def _to_chapter_response(chapter: Chapter) -> ChapterResponse:
         episode_id=chapter.episode_id,
         title=chapter.title,
         order_index=chapter.order_index,
-    )
-
-
-def _to_scene_response(scene: Scene) -> SceneResponse:
-    return SceneResponse(
-        id=scene.id,
-        work_id=scene.work_id,
-        chapter_id=scene.chapter_id,
-        order_index=scene.order_index,
-        global_seq=scene.global_seq,
-        title=scene.title,
-        body=scene.body,
-        created_at=scene.created_at,
-        updated_at=scene.updated_at,
+        global_seq=chapter.global_seq,
+        body=chapter.body,
     )
 
 
@@ -441,115 +426,6 @@ async def delete_chapter(
 ) -> None:
     try:
         await service.delete_chapter(work_id, current_user.id, episode_id, chapter_id)
-    except AppError as exc:
-        _raise_http(exc)
-
-
-# ---------------------------------------------------------------------------
-# Scenes (씬)
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/episodes/{episode_id}/chapters/{chapter_id}/scenes",
-    response_model=list[SceneResponse],
-    summary="씬 목록",
-)
-async def list_scenes(
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    service: ManuscriptService = Depends(_get_service),
-) -> list[SceneResponse]:
-    try:
-        scenes = await service.list_scenes(work_id, current_user.id, episode_id, chapter_id)
-    except AppError as exc:
-        _raise_http(exc)
-    return [_to_scene_response(s) for s in scenes]
-
-
-@router.post(
-    "/episodes/{episode_id}/chapters/{chapter_id}/scenes",
-    response_model=SceneResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="씬 생성",
-)
-async def create_scene(
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    payload: SceneCreate,
-    current_user: User = Depends(get_current_user),
-    service: ManuscriptService = Depends(_get_service),
-) -> SceneResponse:
-    try:
-        scene = await service.create_scene(
-            work_id, current_user.id, episode_id, chapter_id, payload
-        )
-    except AppError as exc:
-        _raise_http(exc)
-    return _to_scene_response(scene)
-
-
-@router.get(
-    "/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}",
-    response_model=SceneResponse,
-    summary="씬 단건 조회",
-)
-async def get_scene(
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    scene_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    service: ManuscriptService = Depends(_get_service),
-) -> SceneResponse:
-    try:
-        scene = await service.get_scene(work_id, current_user.id, episode_id, chapter_id, scene_id)
-    except AppError as exc:
-        _raise_http(exc)
-    return _to_scene_response(scene)
-
-
-@router.patch(
-    "/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}",
-    response_model=SceneResponse,
-    summary="씬 수정",
-)
-async def update_scene(
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    scene_id: uuid.UUID,
-    payload: SceneUpdate,
-    current_user: User = Depends(get_current_user),
-    service: ManuscriptService = Depends(_get_service),
-) -> SceneResponse:
-    try:
-        scene = await service.update_scene(
-            work_id, current_user.id, episode_id, chapter_id, scene_id, payload
-        )
-    except AppError as exc:
-        _raise_http(exc)
-    return _to_scene_response(scene)
-
-
-@router.delete(
-    "/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="씬 삭제",
-)
-async def delete_scene(
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    scene_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    service: ManuscriptService = Depends(_get_service),
-) -> None:
-    try:
-        await service.delete_scene(work_id, current_user.id, episode_id, chapter_id, scene_id)
     except AppError as exc:
         _raise_http(exc)
 

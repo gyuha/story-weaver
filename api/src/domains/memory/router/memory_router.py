@@ -1,6 +1,6 @@
 """메모리 검색 HTTP 라우터 (plan.md S4).
 
-``GET /api/v1/works/{work_id}/scenes/{scene_id}/memory`` — timeline_router.py와
+``GET /api/v1/works/{work_id}/chapters/{chapter_id}/memory`` — timeline_router.py와
 동일 패턴: ``get_current_user``로 인증하고, 교차 테넌트 접근은 404(ADR-0005).
 ``MemorySearchService``는 순환 임포트를 피하려고 서브모듈에서 직접 임포트한다
 (memory_search_service.py 모듈 docstring 참조).
@@ -30,7 +30,7 @@ from domains.works.service import WorksService
 from domains.worldbible.repository import WorldBibleRepository
 from domains.worldbible.service import WorldBibleService
 
-router = APIRouter(prefix="/works/{work_id}/scenes/{scene_id}/memory", tags=["memory"])
+router = APIRouter(prefix="/works/{work_id}/chapters/{chapter_id}/memory", tags=["memory"])
 
 
 async def _get_service(
@@ -52,14 +52,14 @@ async def _get_service(
     )
 
 
-@router.get("", response_model=list[MemoryItemResponse], summary="현재 씬의 메모리 검색")
+@router.get("", response_model=list[MemoryItemResponse], summary="현재 화의 메모리 검색")
 async def search_memory(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: MemorySearchService = Depends(_get_service),
 ) -> list[MemoryItemResponse]:
     try:
-        return await service.search(work_id, current_user.id, scene_id)
+        return await service.search(work_id, current_user.id, chapter_id)
     except AppError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

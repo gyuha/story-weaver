@@ -35,11 +35,11 @@ interface Preview {
 export function SelectionAiMenu({
   editor,
   workId,
-  sceneId,
+  chapterId,
 }: {
   editor: Editor | null;
   workId: string;
-  sceneId: string;
+  chapterId: string;
 }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const assist = useAssistStream();
@@ -60,12 +60,12 @@ export function SelectionAiMenu({
     });
 
     if (action.key === 'expand') {
-      assist.start('continue', { workId, sceneId, payload: { cursorText: text } });
+      assist.start('continue', { workId, chapterId, payload: { cursorText: text } });
       return;
     }
     const targetStyle =
       action.key === 'shorten' ? SHORTEN_STYLE : action.key === 'tone' ? TONE_STYLE : REWRITE_STYLE;
-    assist.start('style', { workId, sceneId, payload: { text, targetStyle } });
+    assist.start('style', { workId, chapterId, payload: { text, targetStyle } });
   };
 
   return (

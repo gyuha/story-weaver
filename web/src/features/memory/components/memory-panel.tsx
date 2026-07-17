@@ -6,7 +6,6 @@ import type {
   Chapter,
   Entity,
   MemoryReason,
-  Scene,
   UpdateSuggestion,
   Work,
 } from '@/features/shared/types';
@@ -31,13 +30,12 @@ import { toast } from 'sonner';
 interface MemoryPanelProps {
   work: Work;
   chapter: Chapter;
-  scene: Scene;
 }
 
 type PanelTab = 'settings' | 'chat';
 
 /** Smart Editor 우측 패널 — 설정 참고(메모리) 탭 + 채팅(질의) 탭 */
-export function MemoryPanel({ work, chapter, scene }: MemoryPanelProps) {
+export function MemoryPanel({ work, chapter }: MemoryPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [tab, setTab] = useState<PanelTab>('settings');
 
@@ -79,9 +77,9 @@ export function MemoryPanel({ work, chapter, scene }: MemoryPanelProps) {
       </div>
 
       {tab === 'settings' ? (
-        <SettingsTab work={work} chapter={chapter} scene={scene} />
+        <SettingsTab work={work} chapter={chapter} />
       ) : (
-        <ChatTab work={work} sceneId={scene.id} />
+        <ChatTab work={work} chapterId={chapter.id} />
       )}
     </aside>
   );
@@ -113,15 +111,14 @@ function TabButton({
   );
 }
 
-/** 설정 참고 탭 — 씬-엔티티 링크 + 벡터 유사도 보조 + AI 동적 제안 (기존 메모리 패널) */
-function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
+/** 설정 참고 탭 — 화-엔티티 링크 + 벡터 유사도 보조 + AI 동적 제안 (기존 메모리 패널) */
+function SettingsTab({ work, chapter }: MemoryPanelProps) {
   const entityMap = new Map(work.entities.map((e) => [e.id, e]));
 
   const acceptSuggestion = useWorksStore((s) => s.acceptSuggestion);
   const dismissSuggestion = useWorksStore((s) => s.dismissSuggestion);
-  const removeLink = useWorksStore((s) => s.removeSceneEntityLink);
+  const removeLink = useWorksStore((s) => s.removeChapterEntityLink);
 
-  const sceneIndex = chapter.scenes.findIndex((s) => s.id === scene.id) + 1;
   const [addOpen, setAddOpen] = useState(false);
   const [detailEntity, setDetailEntity] = useState<Entity | null>(null);
   // 자동 추천(벡터) 항목을 세션 내에서 제외 (영속화 없음 — 실 구현 시 dismiss 영속화 필요)
@@ -135,7 +132,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   // 자동 후보 = 벡터 시드(스코어 배지) + AI 추천(1차/보조 배지)
   type AutoBadge = { label: string; tone: MemoryReason };
   const autoPool: { entityId: string; badge: AutoBadge }[] = [
-    ...scene.vectorMemory.map((v) => ({
+    ...chapter.vectorMemory.map((v) => ({
       entityId: v.entityId,
       badge: { label: `추천 ${v.score}%`, tone: 'vector' as const },
     })),
@@ -150,7 +147,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   const autoBadges = new Map(autoPool.map((v) => [v.entityId, v.badge]));
   const items: { entity: Entity; manual: boolean; autoBadge?: AutoBadge }[] = [];
   const seen = new Set<string>();
-  for (const id of scene.linkedEntityIds) {
+  for (const id of chapter.linkedEntityIds) {
     const entity = entityMap.get(id);
     if (!entity || seen.has(id)) continue;
     seen.add(id);
@@ -168,7 +165,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   const removeItem = (item: { entity: Entity; manual: boolean; autoBadge?: AutoBadge }) => {
     if (item.autoBadge != null) setDismissed((s) => new Set(s).add(item.entity.id));
     if (item.manual) {
-      removeLink(work.id, scene.id, item.entity.id)
+      removeLink(work.id, chapter.id, item.entity.id)
         .then(() => toast.success(`'${item.entity.name}' 참고를 제거했습니다`))
         .catch((err) => toast.error(apiErrorMessage(err, '참고를 제거하지 못했습니다')));
     } else {
@@ -181,9 +178,11 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   const handleRecommend = async () => {
     setRecommending(true);
     try {
-      const results = await memoryApi.search({ path: { work_id: work.id, scene_id: scene.id } });
+      const results = await memoryApi.search({
+        path: { work_id: work.id, chapter_id: chapter.id },
+      });
       const excluded = new Set<string>([
-        ...scene.linkedEntityIds,
+        ...chapter.linkedEntityIds,
         ...autoPool.map((v) => v.entityId),
         ...dismissed,
       ]);
@@ -211,7 +210,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto p-[15px_14px]">
       <div className="mb-3 text-[12px] leading-[1.4] text-faint">
-        씬 {sceneIndex} · {scene.title} — 집필에 참고할 설정
+        {chapter.index}화 · {chapter.title} — 집필에 참고할 설정
       </div>
 
       <MemoryGroupLabel left="설정 참고" right="수동 + 자동 추천" />
@@ -268,9 +267,9 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
         </button>
       </div>
 
-      {scene.pendingSuggestions && scene.pendingSuggestions.length > 0 && (
+      {chapter.pendingSuggestions && chapter.pendingSuggestions.length > 0 && (
         <div className="flex flex-col gap-2.5">
-          {scene.pendingSuggestions.map((suggestion) => (
+          {chapter.pendingSuggestions.map((suggestion) => (
             <div
               key={suggestion.id}
               className="rounded-lg border border-ai/30 bg-ai-soft p-[12px_13px]"
@@ -286,7 +285,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    acceptSuggestion(work.id, scene.id, suggestion.id)
+                    acceptSuggestion(work.id, chapter.id, suggestion.id)
                       .then(() => toast.success('엔티티 카드에 반영되었습니다'))
                       .catch((err) => toast.error(apiErrorMessage(err, '반영하지 못했습니다')));
                   }}
@@ -297,7 +296,7 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
                 <button
                   type="button"
                   onClick={() =>
-                    dismissSuggestion(work.id, scene.id, suggestion.id).catch((err) =>
+                    dismissSuggestion(work.id, chapter.id, suggestion.id).catch((err) =>
                       toast.error(apiErrorMessage(err, '처리하지 못했습니다'))
                     )
                   }
@@ -311,7 +310,9 @@ function SettingsTab({ work, chapter, scene }: MemoryPanelProps) {
         </div>
       )}
 
-      {addOpen && <AddReferenceModal work={work} scene={scene} onClose={() => setAddOpen(false)} />}
+      {addOpen && (
+        <AddReferenceModal work={work} chapter={chapter} onClose={() => setAddOpen(false)} />
+      )}
       {detailEntity && (
         <DetailModal work={work} entity={detailEntity} onClose={() => setDetailEntity(null)} />
       )}
@@ -354,19 +355,19 @@ function describeSuggestion(suggestion: UpdateSuggestion, entityMap: Map<string,
 /** 설정 참고 추가 모달 — 검색 + 미링크 엔티티 체크박스 다중선택 → 일괄 추가 */
 function AddReferenceModal({
   work,
-  scene,
+  chapter,
   onClose,
 }: {
   work: Work;
-  scene: Scene;
+  chapter: Chapter;
   onClose: () => void;
 }) {
-  const addLinks = useWorksStore((s) => s.addSceneEntityLinks);
+  const addLinks = useWorksStore((s) => s.addChapterEntityLinks);
   const [q, setQ] = useState('');
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
   // 이미 링크된 엔티티는 목록에서 제외 (추가 전용)
-  const candidates = work.entities.filter((e) => !scene.linkedEntityIds.includes(e.id));
+  const candidates = work.entities.filter((e) => !chapter.linkedEntityIds.includes(e.id));
   const term = q.trim().toLowerCase();
   const filtered = term
     ? candidates.filter((e) =>
@@ -385,7 +386,7 @@ function AddReferenceModal({
 
   const apply = () => {
     if (checked.size) {
-      addLinks(work.id, scene.id, [...checked]).catch((err) => {
+      addLinks(work.id, chapter.id, [...checked]).catch((err) => {
         toast.error(apiErrorMessage(err, '설정 참고 추가에 실패했습니다'));
       });
     }
@@ -526,9 +527,9 @@ interface ChatMessage {
   text: string;
 }
 
-/** 채팅 탭 — 작품 단위 대화(ADR-0010). 씬을 옮겨도 이어지고, 매 메시지마다 현재 화
+/** 채팅 탭 — 작품 단위 대화(ADR-0010). 화를 옮겨도 이어지고, 매 메시지마다 현재 화
  * 원고+메모리로 프레시 컨텍스트가 조립되어 스트리밍 응답한다. */
-function ChatTab({ work, sceneId }: { work: Work; sceneId: string }) {
+function ChatTab({ work, chapterId }: { work: Work; chapterId: string }) {
   const historyQuery = useQuery(chatQueries.messages({ path: { work_id: work.id } }));
   // eco: 응답 데이터는 렌더에 쓰지 않는다 — "새 대화" 버튼을 그 사이 누르지 못하도록
   // isPending만 참고한다(현재 대화 id 자체는 서버가 알아서 최신 것으로 처리).
@@ -587,7 +588,7 @@ function ChatTab({ work, sceneId }: { work: Work; sceneId: string }) {
     committedRef.current = false;
     setMessages((m) => [...m, { role: 'user', text }]);
     setInput('');
-    chatStream.start({ workId: work.id, payload: { content: text, sceneId } });
+    chatStream.start({ workId: work.id, payload: { content: text, chapterId } });
   };
 
   const newConversation = () => {

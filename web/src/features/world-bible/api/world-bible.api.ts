@@ -1,37 +1,37 @@
-// world-bible(엔티티 카드·씬-엔티티 링크·타임라인 상태) 도메인 API facade — 생성 SDK(@/api)를 감싼다.
+// world-bible(엔티티 카드·화-엔티티 링크·타임라인 상태) 도메인 API facade — 생성 SDK(@/api)를 감싼다.
 // 직접 호출 함수는 throwOnError: true로 성공 데이터만 반환하고,
 // Query/mutation option은 도메인 이름으로 다시 노출한다.
 import {
+  type DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData,
   type DeleteApiV1WorksByWorkIdEntitiesByEntityIdData,
-  type DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData,
+  type GetApiV1WorksByWorkIdChaptersByChapterIdLinksData,
   type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData,
   type GetApiV1WorksByWorkIdEntitiesData,
-  type GetApiV1WorksByWorkIdScenesBySceneIdLinksData,
   type Options,
   type PatchApiV1WorksByWorkIdEntitiesByEntityIdData,
+  type PostApiV1WorksByWorkIdChaptersByChapterIdLinksData,
   type PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData,
   type PostApiV1WorksByWorkIdEntitiesData,
-  type PostApiV1WorksByWorkIdScenesBySceneIdLinksData,
+  deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityId,
   deleteApiV1WorksByWorkIdEntitiesByEntityId,
-  deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityId,
+  getApiV1WorksByWorkIdChaptersByChapterIdLinks,
   getApiV1WorksByWorkIdEntities,
   getApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates,
-  getApiV1WorksByWorkIdScenesBySceneIdLinks,
   patchApiV1WorksByWorkIdEntitiesByEntityId,
+  postApiV1WorksByWorkIdChaptersByChapterIdLinks,
   postApiV1WorksByWorkIdEntities,
   postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates,
-  postApiV1WorksByWorkIdScenesBySceneIdLinks,
 } from '@/api';
 import {
+  deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdMutation,
   deleteApiV1WorksByWorkIdEntitiesByEntityIdMutation,
-  deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdMutation,
+  getApiV1WorksByWorkIdChaptersByChapterIdLinksOptions,
   getApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesOptions,
   getApiV1WorksByWorkIdEntitiesOptions,
-  getApiV1WorksByWorkIdScenesBySceneIdLinksOptions,
   patchApiV1WorksByWorkIdEntitiesByEntityIdMutation,
+  postApiV1WorksByWorkIdChaptersByChapterIdLinksMutation,
   postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesMutation,
   postApiV1WorksByWorkIdEntitiesMutation,
-  postApiV1WorksByWorkIdScenesBySceneIdLinksMutation,
 } from '@/api/@tanstack/react-query.gen';
 
 export const worldBibleApi = {
@@ -57,24 +57,24 @@ export const worldBibleApi = {
     });
     return data;
   },
-  async sceneLinks(options: Options<GetApiV1WorksByWorkIdScenesBySceneIdLinksData>) {
-    const { data } = await getApiV1WorksByWorkIdScenesBySceneIdLinks({
+  async chapterLinks(options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdLinksData>) {
+    const { data } = await getApiV1WorksByWorkIdChaptersByChapterIdLinks({
       ...options,
       throwOnError: true,
     });
     return data;
   },
-  async createSceneLink(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdLinksData>) {
-    const { data } = await postApiV1WorksByWorkIdScenesBySceneIdLinks({
+  async createChapterLink(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdLinksData>) {
+    const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdLinks({
       ...options,
       throwOnError: true,
     });
     return data;
   },
-  async deleteSceneLink(
-    options: Options<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData>
+  async deleteChapterLink(
+    options: Options<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData>
   ) {
-    const { data } = await deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityId({
+    const { data } = await deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityId({
       ...options,
       throwOnError: true,
     });
@@ -102,7 +102,7 @@ export const worldBibleApi = {
 
 export const worldBibleQueries = {
   entities: getApiV1WorksByWorkIdEntitiesOptions,
-  sceneLinks: getApiV1WorksByWorkIdScenesBySceneIdLinksOptions,
+  chapterLinks: getApiV1WorksByWorkIdChaptersByChapterIdLinksOptions,
   timelineStates: getApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesOptions,
 };
 
@@ -110,7 +110,7 @@ export const worldBibleMutations = {
   createEntity: postApiV1WorksByWorkIdEntitiesMutation,
   updateEntity: patchApiV1WorksByWorkIdEntitiesByEntityIdMutation,
   deleteEntity: deleteApiV1WorksByWorkIdEntitiesByEntityIdMutation,
-  createSceneLink: postApiV1WorksByWorkIdScenesBySceneIdLinksMutation,
-  deleteSceneLink: deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdMutation,
+  createChapterLink: postApiV1WorksByWorkIdChaptersByChapterIdLinksMutation,
+  deleteChapterLink: deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdMutation,
   createTimelineState: postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesMutation,
 };

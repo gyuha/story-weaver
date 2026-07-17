@@ -10,7 +10,7 @@ import io
 import re
 import zipfile
 
-from domains.manuscript.models import Chapter, Episode, Scene
+from domains.manuscript.models import Chapter, Episode
 
 # 파일시스템 금지문자(윈도우 기준 최대 상위집합) + 제어문자.
 _FORBIDDEN_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
@@ -54,13 +54,12 @@ def _chapter_file_name(order_no: int, title: str) -> str:
     return f"{order_no:03d}화_{_sanitize_name(title)}.txt"
 
 
-def _chapter_text(title: str, scenes: list[Scene]) -> str:
-    body = "\n\n".join(scene.body for scene in scenes)
+def _chapter_text(title: str, body: str) -> str:
     return f"{title}\n\n{body}"
 
 
 def build_manuscript_zip(
-    episodes_with_content: list[tuple[Episode, list[tuple[Chapter, list[Scene]]]]],
+    episodes_with_content: list[tuple[Episode, list[Chapter]]],
 ) -> bytes:
     """부→회차 구조를 zip 바이트로 조립한다.
 
@@ -78,7 +77,7 @@ def build_manuscript_zip(
                 # 덧붙여 충돌을 피한다.
                 folder = f"{folder}_{episode_no}"
             used_folders.add(folder)
-            for chapter_no, (chapter, scenes) in enumerate(chapters, start=1):
+            for chapter_no, chapter in enumerate(chapters, start=1):
                 filename = _chapter_file_name(chapter_no, chapter.title)
-                zf.writestr(f"{folder}/{filename}", _chapter_text(chapter.title, scenes))
+                zf.writestr(f"{folder}/{filename}", _chapter_text(chapter.title, chapter.body))
     return buffer.getvalue()

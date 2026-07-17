@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdErrors, DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdChatConversationData, GetApiV1WorksByWorkIdChatConversationErrors, GetApiV1WorksByWorkIdChatConversationMessagesData, GetApiV1WorksByWorkIdChatConversationMessagesErrors, GetApiV1WorksByWorkIdChatConversationMessagesResponses, GetApiV1WorksByWorkIdChatConversationResponses, GetApiV1WorksByWorkIdConflictsData, GetApiV1WorksByWorkIdConflictsErrors, GetApiV1WorksByWorkIdConflictsResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdErrors, GetApiV1WorksByWorkIdEntitiesByEntityIdResponses, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses, GetApiV1WorksByWorkIdEntitiesData, GetApiV1WorksByWorkIdEntitiesErrors, GetApiV1WorksByWorkIdEntitiesResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, GetApiV1WorksByWorkIdEpisodesData, GetApiV1WorksByWorkIdEpisodesErrors, GetApiV1WorksByWorkIdEpisodesResponses, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdExportData, GetApiV1WorksByWorkIdExportErrors, GetApiV1WorksByWorkIdExportResponses, GetApiV1WorksByWorkIdRelationshipsData, GetApiV1WorksByWorkIdRelationshipsErrors, GetApiV1WorksByWorkIdRelationshipsResponses, GetApiV1WorksByWorkIdResponses, GetApiV1WorksByWorkIdScenesBySceneIdLinksData, GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors, GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses, GetApiV1WorksByWorkIdScenesBySceneIdMemoryData, GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors, GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdSynopsisData, GetApiV1WorksByWorkIdSynopsisErrors, GetApiV1WorksByWorkIdSynopsisResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1AuthMeData, PatchApiV1AuthMeErrors, PatchApiV1AuthMeResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdErrors, PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, PatchApiV1WorksByWorkIdEpisodesReorderData, PatchApiV1WorksByWorkIdEpisodesReorderErrors, PatchApiV1WorksByWorkIdEpisodesReorderResponses, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordErrors, PostApiV1AuthChangePasswordResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksByWorkIdBeatSheetData, PostApiV1WorksByWorkIdBeatSheetErrors, PostApiV1WorksByWorkIdBeatSheetResponses, PostApiV1WorksByWorkIdChatConversationsData, PostApiV1WorksByWorkIdChatConversationsErrors, PostApiV1WorksByWorkIdChatConversationsResponses, PostApiV1WorksByWorkIdChatMessagesData, PostApiV1WorksByWorkIdChatMessagesErrors, PostApiV1WorksByWorkIdChatMessagesResponses, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses, PostApiV1WorksByWorkIdEntitiesData, PostApiV1WorksByWorkIdEntitiesErrors, PostApiV1WorksByWorkIdEntitiesResponses, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses, PostApiV1WorksByWorkIdEpisodesData, PostApiV1WorksByWorkIdEpisodesErrors, PostApiV1WorksByWorkIdEpisodesResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleData, PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors, PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleResponses, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses, PostApiV1WorksByWorkIdScenesBySceneIdLinksData, PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors, PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdSynopsisContinueData, PostApiV1WorksByWorkIdSynopsisContinueErrors, PostApiV1WorksByWorkIdSynopsisContinueResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses, PutApiV1WorksByWorkIdSynopsisData, PutApiV1WorksByWorkIdSynopsisErrors, PutApiV1WorksByWorkIdSynopsisResponses } from './types.gen';
+import type { DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses, DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdErrors, DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, DeleteApiV1WorksByWorkIdErrors, DeleteApiV1WorksByWorkIdResponses, GetApiV1AuthMeData, GetApiV1AuthMeResponses, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackErrors, GetApiV1AuthOauthByProviderCallbackResponses, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginErrors, GetApiV1AuthOauthByProviderLoginResponses, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdErrors, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesErrors, GetApiV1ChatConversationsByConversationIdMessagesResponses, GetApiV1ChatConversationsByConversationIdResponses, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponses, GetApiV1ChatProviderData, GetApiV1ChatProviderResponses, GetApiV1WorksByWorkIdChaptersByChapterIdLinksData, GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdChatConversationData, GetApiV1WorksByWorkIdChatConversationErrors, GetApiV1WorksByWorkIdChatConversationMessagesData, GetApiV1WorksByWorkIdChatConversationMessagesErrors, GetApiV1WorksByWorkIdChatConversationMessagesResponses, GetApiV1WorksByWorkIdChatConversationResponses, GetApiV1WorksByWorkIdConflictsData, GetApiV1WorksByWorkIdConflictsErrors, GetApiV1WorksByWorkIdConflictsResponses, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdErrors, GetApiV1WorksByWorkIdEntitiesByEntityIdResponses, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses, GetApiV1WorksByWorkIdEntitiesData, GetApiV1WorksByWorkIdEntitiesErrors, GetApiV1WorksByWorkIdEntitiesResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, GetApiV1WorksByWorkIdEpisodesData, GetApiV1WorksByWorkIdEpisodesErrors, GetApiV1WorksByWorkIdEpisodesResponses, GetApiV1WorksByWorkIdErrors, GetApiV1WorksByWorkIdExportData, GetApiV1WorksByWorkIdExportErrors, GetApiV1WorksByWorkIdExportResponses, GetApiV1WorksByWorkIdRelationshipsData, GetApiV1WorksByWorkIdRelationshipsErrors, GetApiV1WorksByWorkIdRelationshipsResponses, GetApiV1WorksByWorkIdResponses, GetApiV1WorksByWorkIdSynopsisData, GetApiV1WorksByWorkIdSynopsisErrors, GetApiV1WorksByWorkIdSynopsisResponses, GetApiV1WorksData, GetApiV1WorksResponses, GetHealthData, GetHealthResponses, GetReadyData, GetReadyResponses, PatchApiV1AuthMeData, PatchApiV1AuthMeErrors, PatchApiV1AuthMeResponses, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdErrors, PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdErrors, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponses, PatchApiV1WorksByWorkIdEpisodesReorderData, PatchApiV1WorksByWorkIdEpisodesReorderErrors, PatchApiV1WorksByWorkIdEpisodesReorderResponses, PatchApiV1WorksByWorkIdErrors, PatchApiV1WorksByWorkIdResponses, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordErrors, PostApiV1AuthChangePasswordResponses, PostApiV1AuthLoginData, PostApiV1AuthLoginErrors, PostApiV1AuthLoginResponses, PostApiV1AuthLogoutData, PostApiV1AuthLogoutErrors, PostApiV1AuthLogoutResponses, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmErrors, PostApiV1AuthPasswordResetConfirmResponses, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetErrors, PostApiV1AuthPasswordResetResponses, PostApiV1AuthRefreshData, PostApiV1AuthRefreshErrors, PostApiV1AuthRefreshResponses, PostApiV1AuthSignupData, PostApiV1AuthSignupErrors, PostApiV1AuthSignupResponses, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenErrors, PostApiV1AuthVerifyEmailByTokenResponses, PostApiV1ChatCompleteData, PostApiV1ChatCompleteErrors, PostApiV1ChatCompleteResponses, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesErrors, PostApiV1ChatConversationsByConversationIdMessagesResponses, PostApiV1ChatConversationsData, PostApiV1ChatConversationsErrors, PostApiV1ChatConversationsResponses, PostApiV1ChatStreamData, PostApiV1ChatStreamErrors, PostApiV1ChatStreamResponses, PostApiV1WorksByWorkIdBeatSheetData, PostApiV1WorksByWorkIdBeatSheetErrors, PostApiV1WorksByWorkIdBeatSheetResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors, PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses, PostApiV1WorksByWorkIdChaptersByChapterIdLinksData, PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdChatConversationsData, PostApiV1WorksByWorkIdChatConversationsErrors, PostApiV1WorksByWorkIdChatConversationsResponses, PostApiV1WorksByWorkIdChatMessagesData, PostApiV1WorksByWorkIdChatMessagesErrors, PostApiV1WorksByWorkIdChatMessagesResponses, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesErrors, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponses, PostApiV1WorksByWorkIdEntitiesData, PostApiV1WorksByWorkIdEntitiesErrors, PostApiV1WorksByWorkIdEntitiesResponses, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersErrors, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponses, PostApiV1WorksByWorkIdEpisodesData, PostApiV1WorksByWorkIdEpisodesErrors, PostApiV1WorksByWorkIdEpisodesResponses, PostApiV1WorksByWorkIdSynopsisContinueData, PostApiV1WorksByWorkIdSynopsisContinueErrors, PostApiV1WorksByWorkIdSynopsisContinueResponses, PostApiV1WorksData, PostApiV1WorksErrors, PostApiV1WorksResponses, PutApiV1WorksByWorkIdSynopsisData, PutApiV1WorksByWorkIdSynopsisErrors, PutApiV1WorksByWorkIdSynopsisResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -422,9 +422,9 @@ export const postApiV1WorksByWorkIdChatConversations = <ThrowOnError extends boo
 /**
  * 작품 채팅 메시지 전송 — 현재 화 원고+메모리 프레시 컨텍스트로 SSE 스트리밍
  *
- * 대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시
+ * 대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) chapter_id 검증 겸 프레시
  * 컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지
- * 저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가
+ * 저장 순으로 진행한다. chapter_id 검증을 메시지 저장보다 먼저 해 잘못된 chapter_id가
  * 고아 user 메시지를 남기지 않도록 한다.
  */
 export const postApiV1WorksByWorkIdChatMessages = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChatMessagesData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChatMessagesResponses, PostApiV1WorksByWorkIdChatMessagesErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChatMessagesResponses, PostApiV1WorksByWorkIdChatMessagesErrors, ThrowOnError>({
@@ -686,63 +686,6 @@ export const patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId = <Th
 });
 
 /**
- * 씬 목록
- */
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes',
-    ...options
-});
-
-/**
- * 씬 생성
- */
-export const postApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponses, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 씬 삭제
- */
-export const deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId = <ThrowOnError extends boolean = false>(options: Options<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, ThrowOnError>): RequestResult<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}',
-    ...options
-});
-
-/**
- * 씬 단건 조회
- */
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}',
-    ...options
-});
-
-/**
- * 씬 수정
- */
-export const patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId = <ThrowOnError extends boolean = false>(options: Options<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, ThrowOnError>): RequestResult<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError> => (options.client ?? client).patch<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponses, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
  * 작품 전체 원고 zip 내보내기
  */
 export const getApiV1WorksByWorkIdExport = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdExportData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdExportResponses, GetApiV1WorksByWorkIdExportErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdExportResponses, GetApiV1WorksByWorkIdExportErrors, ThrowOnError>({
@@ -836,20 +779,20 @@ export const postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates = <ThrowOnEr
 /**
  * 씬-엔티티 링크 목록
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdLinks = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdScenesBySceneIdLinksData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses, GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdScenesBySceneIdLinksResponses, GetApiV1WorksByWorkIdScenesBySceneIdLinksErrors, ThrowOnError>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdLinks = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdLinksData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, GetApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links',
     ...options
 });
 
 /**
  * 씬-엔티티 링크 생성(중복 시 기존 링크 반환)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdLinks = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdLinksData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses, PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdLinksResponses, PostApiV1WorksByWorkIdScenesBySceneIdLinksErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdLinks = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdLinksData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponses, PostApiV1WorksByWorkIdChaptersByChapterIdLinksErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -860,29 +803,29 @@ export const postApiV1WorksByWorkIdScenesBySceneIdLinks = <ThrowOnError extends 
 /**
  * 씬-엔티티 링크 삭제
  */
-export const deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityId = <ThrowOnError extends boolean = false>(options: Options<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData, ThrowOnError>): RequestResult<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponses, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdErrors, ThrowOnError>({
+export const deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityId = <ThrowOnError extends boolean = false>(options: Options<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData, ThrowOnError>): RequestResult<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponses, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/links/{entity_id}',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/links/{entity_id}',
     ...options
 });
 
 /**
- * 현재 씬의 메모리 검색
+ * 현재 화의 메모리 검색
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdMemory = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdScenesBySceneIdMemoryData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses, GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponses, GetApiV1WorksByWorkIdScenesBySceneIdMemoryErrors, ThrowOnError>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdMemory = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponses, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/memory',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/memory',
     ...options
 });
 
 /**
  * 이어쓰기 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistContinue = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistContinue = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/continue',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/continue',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -893,10 +836,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistContinue = <ThrowOnError
 /**
  * 인필링 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistInfill = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistInfill = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/infill',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/infill',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -907,10 +850,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistInfill = <ThrowOnError e
 /**
  * 지문/대사 변환 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistDialogue = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistDialogue = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/dialogue',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/dialogue',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -921,10 +864,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistDialogue = <ThrowOnError
 /**
  * 문체 변환 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistStyle = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistStyle = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/style',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/style',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -935,10 +878,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistStyle = <ThrowOnError ex
 /**
  * 교정 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistCorrect = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistCorrect = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/correct',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/correct',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -949,10 +892,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistCorrect = <ThrowOnError 
 /**
  * 화 제목 생성 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistTitle = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleResponses, PostApiV1WorksByWorkIdScenesBySceneIdAssistTitleErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistTitle = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleResponses, PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/assist/title',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/title',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -961,42 +904,42 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistTitle = <ThrowOnError ex
 });
 
 /**
- * 씬 본문에서 신규 설정 후보 추출 + 제안 저장
+ * 화 본문에서 신규 설정 후보 추출 + 제안 저장
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdExtractUpdates = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponses, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdExtractUpdates = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponses, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates',
     ...options
 });
 
 /**
  * 업데이트 제안 목록
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestions = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsErrors, ThrowOnError>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestions = <ThrowOnError extends boolean = false>(options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData, ThrowOnError>): RequestResult<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors, ThrowOnError> => (options.client ?? client).get<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponses, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions',
     ...options
 });
 
 /**
  * 업데이트 제안 승인 — 엔티티/타임라인 상태에 반영
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApprove = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApprove = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/approve',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/approve',
     ...options
 });
 
 /**
  * 업데이트 제안 거절 — 데이터 변경 없음
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdReject = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectErrors, ThrowOnError>({
+export const postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdReject = <ThrowOnError extends boolean = false>(options: Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData, ThrowOnError>): RequestResult<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors, ThrowOnError> => (options.client ?? client).post<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponses, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/reject',
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/reject',
     ...options
 });
 

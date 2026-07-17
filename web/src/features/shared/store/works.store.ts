@@ -51,13 +51,13 @@ interface WorksState {
   /** 서버에서 조회한 엔티티 카드로 해당 work의 entities를 전량 교체 — emoji/imageUrl/relations는
    * 백엔드에 없어(entity-mapping.ts) 기존 로컬 값이 있으면 보존 */
   setWorkEntities: (workId: string, entities: Entity[]) => void;
-  /** 씬 본문에서 신규 설정 후보를 추출·매칭시키고, 대기중(pending) 제안을 조회해 스토어에 반영 */
-  extractSceneUpdates: (workId: string, sceneId: string) => Promise<void>;
+  /** 화 본문에서 신규 설정 후보를 추출·매칭시키고, 대기중(pending) 제안을 조회해 스토어에 반영 */
+  extractChapterUpdates: (workId: string, chapterId: string) => Promise<void>;
   /** 제안을 실 API로 승인 — 엔티티/타임라인에 반영, 성공 시 대기 목록에서 제거 */
-  acceptSuggestion: (workId: string, sceneId: string, suggestionId: string) => Promise<void>;
+  acceptSuggestion: (workId: string, chapterId: string, suggestionId: string) => Promise<void>;
   /** 제안을 실 API로 거절 — 데이터 변경 없음, 성공 시 대기 목록에서 제거 */
-  dismissSuggestion: (workId: string, sceneId: string, suggestionId: string) => Promise<void>;
-  acceptInlineSuggestion: (workId: string, sceneId: string) => void;
+  dismissSuggestion: (workId: string, chapterId: string, suggestionId: string) => Promise<void>;
+  acceptInlineSuggestion: (workId: string, chapterId: string) => void;
   dismissConflict: (workId: string, conflictId: string) => void;
   renameChapter: (workId: string, chapterId: string, title: string) => Promise<void>;
   /** 작품 제목을 실 API로 수정 — 시놉시스 화면의 인라인 편집용 */
@@ -68,10 +68,10 @@ interface WorksState {
   addPart: (workId: string) => Promise<string>;
   /** 한 부에 속한 모든 화의 partLabel을 일괄 교체 */
   renamePart: (workId: string, oldLabel: string, newLabel: string) => Promise<void>;
-  /** 과거 버전의 본문으로 현재 씬 본문을 덮어쓰기 (버전 기록 — 현재로 보내기) */
-  restoreSceneVersion: (workId: string, sceneId: string, versionId: string) => void;
-  /** 씬 본문 저장(PATCH) 성공 후 로컬 캐시에도 반영 */
-  setSceneParagraphs: (workId: string, sceneId: string, paragraphs: Paragraph[]) => void;
+  /** 과거 버전의 본문으로 현재 화 본문을 덮어쓰기 (버전 기록 — 현재로 보내기) */
+  restoreChapterVersion: (workId: string, chapterId: string, versionId: string) => void;
+  /** 화 본문 저장(PATCH) 성공 후 로컬 캐시에도 반영 */
+  setChapterParagraphs: (workId: string, chapterId: string, paragraphs: Paragraph[]) => void;
   /** 화 삭제 — 제거 후 같은 부의 남은 화를 1..n 연속 재번호 (복구 불가) */
   deleteChapter: (workId: string, chapterId: string) => Promise<void>;
   /** 부 삭제 — 속한 화·씬 cascade 제거 후 남은 "제N부" 라벨 숫자 당김 (복구 불가) */
@@ -84,10 +84,10 @@ interface WorksState {
   ) => Promise<void>;
   /** 트리 드래그로 재배열한 부 순서를 실 API로 반영 — 성공 시 부 단위 블록을 새 순서로 재배치 */
   reorderParts: (workId: string, orderedPartLabels: string[]) => Promise<void>;
-  /** 씬에 엔티티(설정 참고)를 씬-엔티티 링크로 추가 — 중복 제외, 실 API 성공 후 스토어 반영 */
-  addSceneEntityLinks: (workId: string, sceneId: string, entityIds: string[]) => Promise<void>;
-  /** 씬의 씬-엔티티 링크(설정 참고) 하나 제거 — 실 API 성공 후 스토어 반영 */
-  removeSceneEntityLink: (workId: string, sceneId: string, entityId: string) => Promise<void>;
+  /** 화에 엔티티(설정 참고)를 화-엔티티 링크로 추가 — 중복 제외, 실 API 성공 후 스토어 반영 */
+  addChapterEntityLinks: (workId: string, chapterId: string, entityIds: string[]) => Promise<void>;
+  /** 화의 화-엔티티 링크(설정 참고) 하나 제거 — 실 API 성공 후 스토어 반영 */
+  removeChapterEntityLink: (workId: string, chapterId: string, entityId: string) => Promise<void>;
   /** World Bible에 새 엔티티 카드를 실 API로 생성, 성공 시 스토어에 추가하고 새 id 반환 */
   addEntity: (workId: string, input: NewEntityInput) => Promise<string>;
   /** 엔티티 카드 내용을 실 API로 수정 — type(카테고리)은 변경 불가, 성공 시 스토어에 반영 */
@@ -155,48 +155,52 @@ export const useWorksStore = create<WorksState>()(
         });
       }),
 
-    extractSceneUpdates: async (workId, sceneId) => {
-      await suggestionApi.extract({ path: { work_id: workId, scene_id: sceneId } });
+    extractChapterUpdates: async (workId, chapterId) => {
+      await suggestionApi.extract({ path: { work_id: workId, chapter_id: chapterId } });
       const suggestions = await suggestionApi.list({
-        path: { work_id: workId, scene_id: sceneId },
+        path: { work_id: workId, chapter_id: chapterId },
       });
       const pending = suggestions.filter((s) => s.status === 'pending').map(toUpdateSuggestion);
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (scene) scene.pendingSuggestions = pending;
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (chapter) chapter.pendingSuggestions = pending;
       });
     },
 
-    acceptSuggestion: async (workId, sceneId, suggestionId) => {
+    acceptSuggestion: async (workId, chapterId, suggestionId) => {
       await suggestionApi.approve({
-        path: { work_id: workId, scene_id: sceneId, suggestion_id: suggestionId },
+        path: { work_id: workId, chapter_id: chapterId, suggestion_id: suggestionId },
       });
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (scene) {
-          scene.pendingSuggestions = scene.pendingSuggestions?.filter((s) => s.id !== suggestionId);
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (chapter) {
+          chapter.pendingSuggestions = chapter.pendingSuggestions?.filter(
+            (s) => s.id !== suggestionId
+          );
         }
       });
     },
 
-    dismissSuggestion: async (workId, sceneId, suggestionId) => {
+    dismissSuggestion: async (workId, chapterId, suggestionId) => {
       await suggestionApi.reject({
-        path: { work_id: workId, scene_id: sceneId, suggestion_id: suggestionId },
+        path: { work_id: workId, chapter_id: chapterId, suggestion_id: suggestionId },
       });
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (scene) {
-          scene.pendingSuggestions = scene.pendingSuggestions?.filter((s) => s.id !== suggestionId);
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (chapter) {
+          chapter.pendingSuggestions = chapter.pendingSuggestions?.filter(
+            (s) => s.id !== suggestionId
+          );
         }
       });
     },
 
-    acceptInlineSuggestion: (workId, sceneId) =>
+    acceptInlineSuggestion: (workId, chapterId) =>
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (!scene?.aiSuggestion) return;
-        scene.paragraphs.push({ text: scene.aiSuggestion });
-        scene.aiSuggestion = undefined;
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (!chapter?.aiSuggestion) return;
+        chapter.paragraphs.push({ text: chapter.aiSuggestion });
+        chapter.aiSuggestion = undefined;
       }),
 
     dismissConflict: (workId, conflictId) =>
@@ -239,7 +243,7 @@ export const useWorksStore = create<WorksState>()(
         work.chapters
           .filter((c) => c.partLabel === partLabel)
           .reduce((m, c) => Math.max(m, c.index), 0) + 1;
-      const chapter = await createChapterAndScene(workId, episodeId, partLabel, nextIndex);
+      const chapter = await createChapter(workId, episodeId, partLabel, nextIndex);
       set((state) => {
         state.works.find((w) => w.id === workId)?.chapters.push(chapter);
       });
@@ -255,7 +259,7 @@ export const useWorksStore = create<WorksState>()(
         path: { work_id: workId },
         body: { title: `제${partCount + 1}부`, orderIndex: partCount },
       });
-      const chapter = await createChapterAndScene(workId, episode.id, episode.title, 1);
+      const chapter = await createChapter(workId, episode.id, episode.title, 1);
       set((state) => {
         state.works.find((w) => w.id === workId)?.chapters.push(chapter);
       });
@@ -280,19 +284,19 @@ export const useWorksStore = create<WorksState>()(
       });
     },
 
-    restoreSceneVersion: (workId, sceneId, versionId) =>
+    restoreChapterVersion: (workId, chapterId, versionId) =>
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        const version = scene?.versions?.find((v) => v.id === versionId);
-        if (!scene || !version) return;
+        const chapter = findChapter(state.works, workId, chapterId);
+        const version = chapter?.versions?.find((v) => v.id === versionId);
+        if (!chapter || !version) return;
         // eco: 현재 본문만 덮어쓰기 (새 스냅샷 적재는 안 함)
-        scene.paragraphs = version.paragraphs.map((p) => ({ ...p }));
+        chapter.paragraphs = version.paragraphs.map((p) => ({ ...p }));
       }),
 
-    setSceneParagraphs: (workId, sceneId, paragraphs) =>
+    setChapterParagraphs: (workId, chapterId, paragraphs) =>
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (scene) scene.paragraphs = paragraphs;
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (chapter) chapter.paragraphs = paragraphs;
       }),
 
     deleteChapter: async (workId, chapterId) => {
@@ -389,35 +393,37 @@ export const useWorksStore = create<WorksState>()(
       });
     },
 
-    addSceneEntityLinks: async (workId, sceneId, entityIds) => {
-      const scene = findScene(get().works, workId, sceneId);
-      if (!scene) return;
-      const newIds = entityIds.filter((id) => !scene.linkedEntityIds.includes(id));
+    addChapterEntityLinks: async (workId, chapterId, entityIds) => {
+      const chapter = findChapter(get().works, workId, chapterId);
+      if (!chapter) return;
+      const newIds = entityIds.filter((id) => !chapter.linkedEntityIds.includes(id));
       if (newIds.length === 0) return;
       await Promise.all(
         newIds.map((entityId) =>
-          worldBibleApi.createSceneLink({
-            path: { work_id: workId, scene_id: sceneId },
+          worldBibleApi.createChapterLink({
+            path: { work_id: workId, chapter_id: chapterId },
             body: { entityId },
           })
         )
       );
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (!scene) return;
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (!chapter) return;
         for (const id of newIds) {
-          if (!scene.linkedEntityIds.includes(id)) scene.linkedEntityIds.push(id);
+          if (!chapter.linkedEntityIds.includes(id)) chapter.linkedEntityIds.push(id);
         }
       });
     },
 
-    removeSceneEntityLink: async (workId, sceneId, entityId) => {
-      await worldBibleApi.deleteSceneLink({
-        path: { work_id: workId, scene_id: sceneId, entity_id: entityId },
+    removeChapterEntityLink: async (workId, chapterId, entityId) => {
+      await worldBibleApi.deleteChapterLink({
+        path: { work_id: workId, chapter_id: chapterId, entity_id: entityId },
       });
       set((state) => {
-        const scene = findScene(state.works, workId, sceneId);
-        if (scene) scene.linkedEntityIds = scene.linkedEntityIds.filter((id) => id !== entityId);
+        const chapter = findChapter(state.works, workId, chapterId);
+        if (chapter) {
+          chapter.linkedEntityIds = chapter.linkedEntityIds.filter((id) => id !== entityId);
+        }
       });
     },
 
@@ -468,8 +474,8 @@ function decorateFromInput(entity: Entity, input: NewEntityInput): Entity {
   return entity;
 }
 
-/** 지정한 부(episodeId)에 화 하나 + 그 안의 첫 씬을 실 API로 생성해 웹 mock Chapter 모양으로 반환. */
-async function createChapterAndScene(
+/** 지정한 부(episodeId)에 빈 화를 실 API로 생성해 웹 mock Chapter 모양으로 반환. */
+async function createChapter(
   workId: string,
   episodeId: string,
   partLabel: string,
@@ -479,26 +485,16 @@ async function createChapterAndScene(
     path: { work_id: workId, episode_id: episodeId },
     body: { title: '새 화', orderIndex },
   });
-  const scene = await manuscriptApi.createScene({
-    path: { work_id: workId, episode_id: episodeId, chapter_id: chapter.id },
-    body: { orderIndex: 0, title: '새 씬', body: '' },
-  });
   return {
     id: chapter.id,
     episodeId,
     partLabel,
     index: chapter.orderIndex,
     title: chapter.title,
-    scenes: [
-      {
-        id: scene.id,
-        title: scene.title ?? '새 씬',
-        status: 'empty',
-        paragraphs: [],
-        linkedEntityIds: [],
-        vectorMemory: [],
-      },
-    ],
+    status: 'empty',
+    paragraphs: [],
+    linkedEntityIds: [],
+    vectorMemory: [],
   };
 }
 
@@ -507,12 +503,6 @@ function toUpdateSuggestion(s: UpdateSuggestionResponse): UpdateSuggestion {
   return { id: s.id, kind: s.kind, payload: s.payload } as UpdateSuggestion;
 }
 
-function findScene(works: Work[], workId: string, sceneId: string) {
-  const work = works.find((w) => w.id === workId);
-  if (!work) return undefined;
-  for (const ch of work.chapters) {
-    const scene = ch.scenes.find((s) => s.id === sceneId);
-    if (scene) return scene;
-  }
-  return undefined;
+function findChapter(works: Work[], workId: string, chapterId: string) {
+  return works.find((w) => w.id === workId)?.chapters.find((c) => c.id === chapterId);
 }

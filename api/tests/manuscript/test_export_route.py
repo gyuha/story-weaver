@@ -87,29 +87,12 @@ async def _create_chapter(
     episode_id: uuid.UUID,
     title: str = "1장",
     order_index: int = 0,
+    body: str = "본문",
 ) -> dict[str, object]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/episodes/{episode_id}/chapters",
-            json={"title": title, "orderIndex": order_index},
-        )
-    assert resp.status_code == 201
-    return resp.json()
-
-
-async def _create_scene(
-    app: FastAPI,
-    owner: User,
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    body: str = "본문",
-    order_index: int = 0,
-) -> dict[str, object]:
-    async with _client_as(app, owner) as client:
-        resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes",
-            json={"orderIndex": order_index, "body": body},
+            json={"title": title, "orderIndex": order_index, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -142,8 +125,7 @@ async def test_export_other_tenant_returns_404(
     owner, intruder = two_users
     episode = await _create_episode(app, owner, owner_work.id)
     episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(app, owner, owner_work.id, episode_id)
-    await _create_scene(app, owner, owner_work.id, episode_id, uuid.UUID(str(chapter["id"])))
+    await _create_chapter(app, owner, owner_work.id, episode_id)
 
     async with _client_as(app, intruder) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/export")
@@ -159,15 +141,14 @@ async def test_export_builds_zip_with_part_folders_and_chapter_files(
 
     ep1 = await _create_episode(app, owner, owner_work.id, title="1부", order_index=0)
     ep1_id = uuid.UUID(str(ep1["id"]))
-    ch1 = await _create_chapter(app, owner, owner_work.id, ep1_id, title="1화", order_index=0)
-    ch1_id = uuid.UUID(str(ch1["id"]))
-    await _create_scene(app, owner, owner_work.id, ep1_id, ch1_id, body="첫 문단", order_index=0)
-    await _create_scene(app, owner, owner_work.id, ep1_id, ch1_id, body="둘째 문단", order_index=1)
+    await _create_chapter(
+        app, owner, owner_work.id, ep1_id, title="1화", order_index=0, body="첫 문단\n\n둘째 문단"
+    )
 
     ep2 = await _create_episode(app, owner, owner_work.id, title="2부", order_index=1)
     ep2_id = uuid.UUID(str(ep2["id"]))
-    await _create_chapter(app, owner, owner_work.id, ep2_id, title="2화", order_index=0)
-    # 씬이 없는 회차 — 헤더만 있는 파일이 생성돼야 한다
+    await _create_chapter(app, owner, owner_work.id, ep2_id, title="2화", order_index=0, body="")
+    # 본문이 없는 회차 — 헤더만 있는 파일이 생성돼야 한다
 
     async with _client_as(app, owner) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/export")
@@ -195,9 +176,7 @@ async def test_export_blank_episode_title_falls_back_to_generated_part_name(
 
     episode = await _create_episode(app, owner, owner_work.id, title=" ", order_index=0)
     episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(app, owner, owner_work.id, episode_id, title="1화")
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    await _create_scene(app, owner, owner_work.id, episode_id, chapter_id, body="본문")
+    await _create_chapter(app, owner, owner_work.id, episode_id, title="1화")
 
     async with _client_as(app, owner) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/export")
@@ -218,16 +197,14 @@ async def test_export_disambiguates_duplicate_episode_titles(
 
     ep1 = await _create_episode(app, owner, owner_work.id, title="외전", order_index=0)
     ep1_id = uuid.UUID(str(ep1["id"]))
-    ch1 = await _create_chapter(app, owner, owner_work.id, ep1_id, title="1화", order_index=0)
-    await _create_scene(
-        app, owner, owner_work.id, ep1_id, uuid.UUID(str(ch1["id"])), body="A부 본문"
+    await _create_chapter(
+        app, owner, owner_work.id, ep1_id, title="1화", order_index=0, body="A부 본문"
     )
 
     ep2 = await _create_episode(app, owner, owner_work.id, title="외전", order_index=1)
     ep2_id = uuid.UUID(str(ep2["id"]))
-    ch2 = await _create_chapter(app, owner, owner_work.id, ep2_id, title="1화", order_index=0)
-    await _create_scene(
-        app, owner, owner_work.id, ep2_id, uuid.UUID(str(ch2["id"])), body="B부 본문"
+    await _create_chapter(
+        app, owner, owner_work.id, ep2_id, title="1화", order_index=0, body="B부 본문"
     )
 
     async with _client_as(app, owner) as client:
@@ -254,11 +231,7 @@ async def test_export_truncates_overlong_title_to_fit_filesystem_segment_limit(
     long_title = "가" * 255
     episode = await _create_episode(app, owner, owner_work.id, title=long_title, order_index=0)
     episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(
-        app, owner, owner_work.id, episode_id, title=long_title, order_index=0
-    )
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    await _create_scene(app, owner, owner_work.id, episode_id, chapter_id, body="본문")
+    await _create_chapter(app, owner, owner_work.id, episode_id, title=long_title, order_index=0)
 
     async with _client_as(app, owner) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/export")
@@ -281,11 +254,7 @@ async def test_export_sanitizes_forbidden_and_traversal_characters(
 
     episode = await _create_episode(app, owner, owner_work.id, title="../../etc", order_index=0)
     episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(
-        app, owner, owner_work.id, episode_id, title='1?화*<>|"장', order_index=0
-    )
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    await _create_scene(app, owner, owner_work.id, episode_id, chapter_id, body="본문")
+    await _create_chapter(app, owner, owner_work.id, episode_id, title='1?화*<>|"장', order_index=0)
 
     async with _client_as(app, owner) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/export")

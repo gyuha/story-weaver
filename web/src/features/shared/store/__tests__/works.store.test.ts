@@ -33,7 +33,17 @@ describe('works store', () => {
       id: 'w1',
       title: '로컬 제목',
       chapters: [
-        { id: 'ch1', episodeId: 'ep1', partLabel: '제1부', index: 1, title: '화', scenes: [] },
+        {
+          id: 'ch1',
+          episodeId: 'ep1',
+          partLabel: '제1부',
+          index: 1,
+          title: '화',
+          status: 'empty',
+          paragraphs: [],
+          linkedEntityIds: [],
+          vectorMemory: [],
+        },
       ],
       entities: [
         {
@@ -63,8 +73,8 @@ describe('works store', () => {
           entityId: 'e1',
           entityName: '캐릭터',
           stateKey: 'k',
-          earlier: { sceneId: 'sc1', chapterRef: '1화', globalSeq: 1, stateValue: 'v1' },
-          later: { sceneId: 'sc2', chapterRef: '2화', globalSeq: 2, stateValue: 'v2' },
+          earlier: { chapterId: 'ch1', chapterRef: '1화', globalSeq: 1, stateValue: 'v1' },
+          later: { chapterId: 'ch2', chapterRef: '2화', globalSeq: 2, stateValue: 'v2' },
         },
       ],
     });

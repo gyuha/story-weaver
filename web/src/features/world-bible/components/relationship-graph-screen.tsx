@@ -29,13 +29,13 @@ function groupBySource(edges: RelationshipEdge[]) {
 }
 
 export function RelationshipGraphScreen({ work }: { work: Work }) {
-  const [sceneId, setSceneId] = useState('');
+  const [chapterId, setChapterId] = useState('');
   const { data, isPending, isError } = useQuery({
-    queryKey: ['work-relationships', work.id, sceneId || null],
+    queryKey: ['work-relationships', work.id, chapterId || null],
     queryFn: () =>
       relationshipsApi.graph({
         path: { work_id: work.id },
-        query: sceneId ? { up_to_scene_id: sceneId } : undefined,
+        query: chapterId ? { up_to_chapter_id: chapterId } : undefined,
       }),
   });
 
@@ -54,18 +54,16 @@ export function RelationshipGraphScreen({ work }: { work: Work }) {
               <h1 className="text-[28px] font-bold tracking-[-0.02em]">관계도</h1>
               <select
                 aria-label="시점 선택"
-                value={sceneId}
-                onChange={(e) => setSceneId(e.target.value)}
+                value={chapterId}
+                onChange={(e) => setChapterId(e.target.value)}
                 className="h-9 rounded-md border border-line bg-paper px-3 text-[13px] text-ink-soft"
               >
                 <option value="">전체(최신 시점)</option>
-                {work.chapters.map((chapter) =>
-                  chapter.scenes.map((scene) => (
-                    <option key={scene.id} value={scene.id}>
-                      {chapter.index}화 · {scene.title}
-                    </option>
-                  ))
-                )}
+                {work.chapters.map((chapter) => (
+                  <option key={chapter.id} value={chapter.id}>
+                    {chapter.index}화 · {chapter.title}
+                  </option>
+                ))}
               </select>
             </div>
 

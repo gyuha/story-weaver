@@ -210,6 +210,9 @@ filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
+    # langchain_core's pydantic.v1 shim warns on Python 3.14+ (unrelated to our code —
+    # tracked upstream; safe to ignore until langchain_core drops the v1 shim).
+    "ignore:Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater:UserWarning",
 ]
 addopts = [
     "--strict-markers",

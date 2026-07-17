@@ -62,16 +62,10 @@ function makeWork(): Work {
         partLabel: '제1부',
         index: 1,
         title: '첫화',
-        scenes: [
-          {
-            id: 'sc1',
-            title: '씬1',
-            status: 'draft',
-            paragraphs: [],
-            linkedEntityIds: [],
-            vectorMemory: [],
-          },
-        ],
+        status: 'draft',
+        paragraphs: [],
+        linkedEntityIds: [],
+        vectorMemory: [],
       },
       {
         id: 'ch2',
@@ -79,16 +73,10 @@ function makeWork(): Work {
         partLabel: '제1부',
         index: 2,
         title: '둘째화',
-        scenes: [
-          {
-            id: 'sc2',
-            title: '씬2',
-            status: 'draft',
-            paragraphs: [],
-            linkedEntityIds: [],
-            vectorMemory: [],
-          },
-        ],
+        status: 'draft',
+        paragraphs: [],
+        linkedEntityIds: [],
+        vectorMemory: [],
       },
       {
         id: 'ch3',
@@ -96,16 +84,10 @@ function makeWork(): Work {
         partLabel: '제2부',
         index: 1,
         title: '셋째화',
-        scenes: [
-          {
-            id: 'sc3',
-            title: '씬3',
-            status: 'draft',
-            paragraphs: [],
-            linkedEntityIds: [],
-            vectorMemory: [],
-          },
-        ],
+        status: 'draft',
+        paragraphs: [],
+        linkedEntityIds: [],
+        vectorMemory: [],
       },
     ],
     entities: [],
@@ -119,7 +101,7 @@ function makeWork(): Work {
 function Harness() {
   const work = useWorksStore((s) => s.works.find((w) => w.id === 'w1'));
   if (!work) return null;
-  return <WorkTree work={work} activeSceneId="sc1" />;
+  return <WorkTree work={work} activeChapterId="ch1" />;
 }
 
 function drag(from: HTMLElement, to: HTMLElement) {

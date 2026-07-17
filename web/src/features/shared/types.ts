@@ -5,7 +5,7 @@ export type Genre = '무협' | '로맨스 판타지' | '정통 판타지' | '현
 
 export type WritingStyle = '간결체' | '만연체' | '서정체';
 
-export type SceneStatus = 'done' | 'draft' | 'empty';
+export type ChapterStatus = 'done' | 'draft' | 'empty';
 export type EntityType = '인물' | '장소' | '사건' | '아이템';
 export type MemoryReason = 'link' | 'vector';
 export type StateSource = 'ai' | 'author';
@@ -16,23 +16,28 @@ export interface Paragraph {
   dim?: boolean;
 }
 
-/** 씬 저장 후 추출된, 승인 대기 중인 동적 업데이트 제안 (kind별 payload 모양은 백엔드 스키마와 동일) */
+/** 화 저장 후 추출된, 승인 대기 중인 동적 업데이트 제안 (kind별 payload 모양은 백엔드 스키마와 동일) */
 export type UpdateSuggestion =
   | { id: string; kind: 'new_entity'; payload: CandidateEntity }
   | { id: string; kind: 'attribute_change'; payload: AttributeChange }
   | { id: string; kind: 'timeline_state'; payload: TimelineChange };
 
 /** 버전 기록의 한 스냅샷 — 작가 집필 시간축의 과거 본문 (타임라인 상태와 다른 축) */
-export interface SceneVersion {
+export interface ChapterVersion {
   id: string;
   savedAt: string; // '2026-06-22 14:30' 등 표시용
   paragraphs: Paragraph[];
 }
 
-export interface Scene {
+/** 화(Chapter) — 씬 계층 폐지 후 원고 본문·메모리·제안을 화가 직접 보유한다(remove-scene ADR). */
+export interface Chapter {
   id: string;
+  /** 이 화가 속한 부(Episode)의 서버 id — 실 API 경로 파라미터로 필요 */
+  episodeId: string;
+  partLabel: string; // '제2부 혈산문편'
+  index: number; // 화 번호
   title: string;
-  status: SceneStatus;
+  status: ChapterStatus;
   /** 원고 본문 문단 */
   paragraphs: Paragraph[];
   /** 명시적으로 연결된 엔티티 — 메모리 1차 근거 */
@@ -44,17 +49,7 @@ export interface Scene {
   /** 인라인 AI 이어쓰기 고스트 텍스트 */
   aiSuggestion?: string;
   /** 버전 기록 — 최신순 스냅샷 (현재 본문은 paragraphs, 과거는 여기) */
-  versions?: SceneVersion[];
-}
-
-export interface Chapter {
-  id: string;
-  /** 이 화가 속한 부(Episode)의 서버 id — 씬 본문 저장 등 실 API 경로 파라미터로 필요 */
-  episodeId: string;
-  partLabel: string; // '제2부 혈산문편'
-  index: number; // 화 번호
-  title: string;
-  scenes: Scene[];
+  versions?: ChapterVersion[];
 }
 
 export interface EntityRelation {
@@ -87,7 +82,7 @@ export interface TimelineState {
   id: string;
   entityId: string;
   entityName: string;
-  chapterRef: string; // '6화 씬1'
+  chapterRef: string; // '6화'
   chapterIndex: number;
   key: string; // power_level
   value: string; // 천뢰검 1식
@@ -96,9 +91,9 @@ export interface TimelineState {
   pending?: boolean;
 }
 
-export interface ConflictSceneRef {
-  sceneId: string;
-  chapterRef: string; // '6화 씬1' — 매칭되는 화가 없으면 ''
+export interface ConflictChapterRef {
+  chapterId: string;
+  chapterRef: string; // '6화' — 매칭되는 화가 없으면 ''
   globalSeq: number;
   stateValue: string;
 }
@@ -108,8 +103,8 @@ export interface Conflict {
   entityId: string;
   entityName: string;
   stateKey: string;
-  earlier: ConflictSceneRef;
-  later: ConflictSceneRef;
+  earlier: ConflictChapterRef;
+  later: ConflictChapterRef;
 }
 
 export interface WorkStats {

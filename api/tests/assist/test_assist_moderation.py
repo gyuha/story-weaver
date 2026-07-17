@@ -100,22 +100,16 @@ class _FlakyLLMClient:
             yield chunk
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -139,13 +133,13 @@ async def _create_character(app: FastAPI, owner: User, work_id: uuid.UUID) -> di
 async def test_continue_explicit_input_never_reaches_llm(
     app: FastAPI, owner: User, owner_work: Work
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FlakyLLMClient([["절대 안 나와야 할 텍스트"]])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "그는 그녀의 성기를 만졌다."},
         )
 
@@ -183,14 +177,14 @@ async def test_explicit_input_never_reaches_llm_for_other_assist_endpoints(
     override_target: Any,
     payload_factory: Any,
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     character = await _create_character(app, owner, owner_work.id)
     fake = _FlakyLLMClient([["절대 안 나와야 할 텍스트"]])
     app.dependency_overrides[override_target] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/{endpoint}",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/{endpoint}",
             json=payload_factory(character["id"]),
         )
 
@@ -207,13 +201,13 @@ async def test_explicit_input_never_reaches_llm_for_other_assist_endpoints(
 async def test_continue_retries_once_with_softened_prompt_and_returns_notice(
     app: FastAPI, owner: User, owner_work: Work
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FlakyLLMClient([RuntimeError("raw provider secret detail"), ["완화된 결과 문장."]])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "평범한 문장."},
         )
 
@@ -229,7 +223,7 @@ async def test_continue_retries_once_with_softened_prompt_and_returns_notice(
 async def test_continue_declines_politely_with_no_raw_error_when_retry_also_fails(
     app: FastAPI, owner: User, owner_work: Work
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FlakyLLMClient(
         [RuntimeError("raw provider secret A"), RuntimeError("raw provider secret B")]
     )
@@ -237,7 +231,7 @@ async def test_continue_declines_politely_with_no_raw_error_when_retry_also_fail
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/assist/continue",
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
             json={"cursorText": "평범한 문장."},
         )
 

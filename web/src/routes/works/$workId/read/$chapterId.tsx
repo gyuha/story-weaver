@@ -79,12 +79,6 @@ export function ReadPage() {
   if (!nav) return null;
 
   return (
-    <ReadingScreen
-      work={work}
-      chapter={nav.chapter}
-      prevId={nav.prevId}
-      nextId={nav.nextId}
-      editSceneId={nav.chapter.scenes[0]?.id}
-    />
+    <ReadingScreen work={work} chapter={nav.chapter} prevId={nav.prevId} nextId={nav.nextId} />
   );
 }

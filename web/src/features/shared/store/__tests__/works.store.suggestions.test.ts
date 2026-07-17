@@ -38,7 +38,7 @@ function makeWork(overrides: Partial<Work> & { id: string }): Work {
 }
 
 const WORK_ID = 'w1';
-const SCENE_ID = 'sc1';
+const CHAPTER_ID = 'ch1';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,21 +48,15 @@ beforeEach(() => {
         id: WORK_ID,
         chapters: [
           {
-            id: 'ch1',
+            id: CHAPTER_ID,
             episodeId: 'ep1',
             partLabel: '제1부',
             index: 1,
             title: '1화',
-            scenes: [
-              {
-                id: SCENE_ID,
-                title: '씬',
-                status: 'draft',
-                paragraphs: [],
-                linkedEntityIds: [],
-                vectorMemory: [],
-              },
-            ],
+            status: 'draft',
+            paragraphs: [],
+            linkedEntityIds: [],
+            vectorMemory: [],
           },
         ],
       }),
@@ -70,11 +64,11 @@ beforeEach(() => {
   });
 });
 
-function getScene() {
-  return useWorksStore.getState().works[0].chapters[0].scenes[0];
+function getChapter() {
+  return useWorksStore.getState().works[0].chapters[0];
 }
 
-describe('extractSceneUpdates', () => {
+describe('extractChapterUpdates', () => {
   it('추출 API 호출 후 대기중(pending) 제안만 골라 스토어에 반영한다', async () => {
     mockExtract.mockResolvedValue({
       candidateEntities: [],
@@ -85,7 +79,7 @@ describe('extractSceneUpdates', () => {
       {
         id: 's1',
         workId: WORK_ID,
-        sceneId: SCENE_ID,
+        chapterId: CHAPTER_ID,
         kind: 'new_entity',
         payload: { name: '신규 인물', summary: '요약' },
         status: 'pending',
@@ -94,7 +88,7 @@ describe('extractSceneUpdates', () => {
       {
         id: 's2',
         workId: WORK_ID,
-        sceneId: SCENE_ID,
+        chapterId: CHAPTER_ID,
         kind: 'attribute_change',
         payload: { entityId: 'e1', attribute: '외모', newValue: '흉터' },
         status: 'approved',
@@ -102,11 +96,13 @@ describe('extractSceneUpdates', () => {
       },
     ]);
 
-    await useWorksStore.getState().extractSceneUpdates(WORK_ID, SCENE_ID);
+    await useWorksStore.getState().extractChapterUpdates(WORK_ID, CHAPTER_ID);
 
-    expect(mockExtract).toHaveBeenCalledWith({ path: { work_id: WORK_ID, scene_id: SCENE_ID } });
-    expect(mockList).toHaveBeenCalledWith({ path: { work_id: WORK_ID, scene_id: SCENE_ID } });
-    expect(getScene().pendingSuggestions).toEqual([
+    expect(mockExtract).toHaveBeenCalledWith({
+      path: { work_id: WORK_ID, chapter_id: CHAPTER_ID },
+    });
+    expect(mockList).toHaveBeenCalledWith({ path: { work_id: WORK_ID, chapter_id: CHAPTER_ID } });
+    expect(getChapter().pendingSuggestions).toEqual([
       { id: 's1', kind: 'new_entity', payload: { name: '신규 인물', summary: '요약' } },
     ]);
   });
@@ -114,63 +110,63 @@ describe('extractSceneUpdates', () => {
   it('실패 시 스토어를 바꾸지 않고 에러를 던진다', async () => {
     mockExtract.mockRejectedValue(new Error('network error'));
 
-    await expect(useWorksStore.getState().extractSceneUpdates(WORK_ID, SCENE_ID)).rejects.toThrow(
-      'network error'
-    );
-    expect(getScene().pendingSuggestions).toBeUndefined();
+    await expect(
+      useWorksStore.getState().extractChapterUpdates(WORK_ID, CHAPTER_ID)
+    ).rejects.toThrow('network error');
+    expect(getChapter().pendingSuggestions).toBeUndefined();
   });
 });
 
 describe('acceptSuggestion', () => {
   it('실 API로 승인하고 성공 시 대기 목록에서 제거한다', async () => {
     useWorksStore.setState((state) => {
-      const scene = state.works[0].chapters[0].scenes[0];
-      scene.pendingSuggestions = [
+      const chapter = state.works[0].chapters[0];
+      chapter.pendingSuggestions = [
         { id: 's1', kind: 'new_entity', payload: { name: '신규 인물' } },
         { id: 's2', kind: 'new_entity', payload: { name: '다른 인물' } },
       ];
     });
     mockApprove.mockResolvedValue({});
 
-    await useWorksStore.getState().acceptSuggestion(WORK_ID, SCENE_ID, 's1');
+    await useWorksStore.getState().acceptSuggestion(WORK_ID, CHAPTER_ID, 's1');
 
     expect(mockApprove).toHaveBeenCalledWith({
-      path: { work_id: WORK_ID, scene_id: SCENE_ID, suggestion_id: 's1' },
+      path: { work_id: WORK_ID, chapter_id: CHAPTER_ID, suggestion_id: 's1' },
     });
-    expect(getScene().pendingSuggestions).toEqual([
+    expect(getChapter().pendingSuggestions).toEqual([
       { id: 's2', kind: 'new_entity', payload: { name: '다른 인물' } },
     ]);
   });
 
   it('실패 시 스토어를 바꾸지 않고 에러를 던진다', async () => {
     useWorksStore.setState((state) => {
-      state.works[0].chapters[0].scenes[0].pendingSuggestions = [
+      state.works[0].chapters[0].pendingSuggestions = [
         { id: 's1', kind: 'new_entity', payload: { name: '신규 인물' } },
       ];
     });
     mockApprove.mockRejectedValue(new Error('conflict'));
 
     await expect(
-      useWorksStore.getState().acceptSuggestion(WORK_ID, SCENE_ID, 's1')
+      useWorksStore.getState().acceptSuggestion(WORK_ID, CHAPTER_ID, 's1')
     ).rejects.toThrow('conflict');
-    expect(getScene().pendingSuggestions).toHaveLength(1);
+    expect(getChapter().pendingSuggestions).toHaveLength(1);
   });
 });
 
 describe('dismissSuggestion', () => {
   it('실 API로 거절하고 성공 시 대기 목록에서 제거한다', async () => {
     useWorksStore.setState((state) => {
-      state.works[0].chapters[0].scenes[0].pendingSuggestions = [
+      state.works[0].chapters[0].pendingSuggestions = [
         { id: 's1', kind: 'new_entity', payload: { name: '신규 인물' } },
       ];
     });
     mockReject.mockResolvedValue({});
 
-    await useWorksStore.getState().dismissSuggestion(WORK_ID, SCENE_ID, 's1');
+    await useWorksStore.getState().dismissSuggestion(WORK_ID, CHAPTER_ID, 's1');
 
     expect(mockReject).toHaveBeenCalledWith({
-      path: { work_id: WORK_ID, scene_id: SCENE_ID, suggestion_id: 's1' },
+      path: { work_id: WORK_ID, chapter_id: CHAPTER_ID, suggestion_id: 's1' },
     });
-    expect(getScene().pendingSuggestions).toEqual([]);
+    expect(getChapter().pendingSuggestions).toEqual([]);
   });
 });

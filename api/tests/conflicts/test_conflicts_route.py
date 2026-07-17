@@ -74,8 +74,8 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
     return AsyncClient(transport=transport, base_url="http://test")
 
 
-async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
-    """부→챕터를 만들고 그 아래 씬 하나를 생성해 반환(global_seq는 작품 내 자동 증가)."""
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+    """부→챕터를 만들어 반환(global_seq는 작품 내 자동 증가)."""
     async with _client_as(app, owner) as client:
         episode = await client.post(
             f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
@@ -83,15 +83,10 @@ async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> 
         assert episode.status_code == 201
         chapter = await client.post(
             f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters",
-            json={"title": "1장", "orderIndex": 0},
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
         assert chapter.status_code == 201
-        scene = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters/{chapter.json()['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
-        )
-        assert scene.status_code == 201
-        return scene.json()
+        return chapter.json()
 
 
 async def _create_entity(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
@@ -109,14 +104,14 @@ async def _create_timeline_state(
     owner: User,
     work_id: uuid.UUID,
     entity_id: str,
-    scene_id: str,
+    chapter_id: str,
     state_key: str,
     state_value: str,
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/entities/{entity_id}/timeline-states",
-            json={"sceneId": scene_id, "stateKey": state_key, "stateValue": state_value},
+            json={"chapterId": chapter_id, "stateKey": state_key, "stateValue": state_value},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -136,16 +131,16 @@ async def test_dead_then_appear_alive_later_is_flagged_as_conflict(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene_dead = await _create_scene_chain(app, owner, owner_work.id)  # "3화" 격
-    scene_appear = await _create_scene_chain(app, owner, owner_work.id)  # "10화" 격
-    assert scene_dead["globalSeq"] < scene_appear["globalSeq"]
+    chapter_dead = await _create_chapter(app, owner, owner_work.id)  # "3화" 격 (챕터)
+    chapter_appear = await _create_chapter(app, owner, owner_work.id)  # "10화" 격 (챕터)
+    assert chapter_dead["globalSeq"] < chapter_appear["globalSeq"]
     entity = await _create_entity(app, owner, owner_work.id)
 
     dead_state = await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene_dead["id"], "life_status", "dead"
+        app, owner, owner_work.id, entity["id"], chapter_dead["id"], "life_status", "dead"
     )
     alive_state = await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene_appear["id"], "life_status", "alive"
+        app, owner, owner_work.id, entity["id"], chapter_appear["id"], "life_status", "alive"
     )
 
     resp = await _get_conflicts(app, owner, owner_work.id)
@@ -158,25 +153,25 @@ async def test_dead_then_appear_alive_later_is_flagged_as_conflict(
     assert conflict["stateKey"] == "life_status"
     assert conflict["earlier"]["id"] == dead_state["id"]
     assert conflict["earlier"]["stateValue"] == "dead"
-    assert conflict["earlier"]["globalSeq"] == scene_dead["globalSeq"]
+    assert conflict["earlier"]["globalSeq"] == chapter_dead["globalSeq"]
     assert conflict["later"]["id"] == alive_state["id"]
     assert conflict["later"]["stateValue"] == "alive"
-    assert conflict["later"]["globalSeq"] == scene_appear["globalSeq"]
+    assert conflict["later"]["globalSeq"] == chapter_appear["globalSeq"]
 
 
 async def test_dead_then_still_dead_is_not_flagged(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene1["id"], "life_status", "dead"
+        app, owner, owner_work.id, entity["id"], chapter1["id"], "life_status", "dead"
     )
     await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene2["id"], "life_status", "dead"
+        app, owner, owner_work.id, entity["id"], chapter2["id"], "life_status", "dead"
     )
 
     resp = await _get_conflicts(app, owner, owner_work.id)
@@ -188,15 +183,15 @@ async def test_non_reserved_state_key_is_never_checked(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene1["id"], "location", "북부 설원"
+        app, owner, owner_work.id, entity["id"], chapter1["id"], "location", "북부 설원"
     )
     await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene2["id"], "location", "남부 항구"
+        app, owner, owner_work.id, entity["id"], chapter2["id"], "location", "남부 항구"
     )
 
     resp = await _get_conflicts(app, owner, owner_work.id)

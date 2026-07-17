@@ -10,8 +10,8 @@ before the check runs — each decorated route adds a small ``Depends`` for that
 ``domains.assist.router.assist_router._bind_rate_limit_user``).
 
 ``key_style="endpoint"`` is required here: these routes are parameterized by
-``work_id``/``scene_id``, and slowapi's default ``key_style="url"`` would bucket by
-the literal resolved path — so the same user hitting different scenes would never
+``work_id``/``chapter_id``, and slowapi's default ``key_style="url"`` would bucket by
+the literal resolved path — so the same user hitting different chapters would never
 accumulate toward the same limit. Bucketing by endpoint function name instead limits
 per (user, action type), which is what "사용자별 요청 rate 상한" means.
 

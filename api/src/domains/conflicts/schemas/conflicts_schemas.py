@@ -2,7 +2,7 @@
 
 한 건의 충돌은 같은 엔티티·같은 예약 ``state_key``에 대한 두 타임라인 상태
 (``earlier``/``later``) 쌍이다 — 클라이언트가 "3화에서 사망 → 10화에서 등장" 같은
-문구를 조립할 수 있게 각 상태의 ``scene_id``/``global_seq``/``state_value``를 담는다.
+문구를 조립할 수 있게 각 상태의 ``chapter_id``/``global_seq``/``state_value``를 담는다.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ class ConflictStateRef(_CamelModel):
     """충돌 쌍의 한쪽 타임라인 상태."""
 
     id: uuid.UUID
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
     global_seq: int
     state_value: str
     created_at: datetime

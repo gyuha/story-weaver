@@ -49,8 +49,8 @@ const WORK: Work = {
       entityId: 'en1',
       entityName: '이서하',
       stateKey: 'life_status',
-      earlier: { sceneId: 'sc1', chapterRef: '3화 씬1', globalSeq: 30, stateValue: 'dead' },
-      later: { sceneId: 'sc2', chapterRef: '10화 씬1', globalSeq: 100, stateValue: 'alive' },
+      earlier: { chapterId: 'ch1', chapterRef: '3화', globalSeq: 30, stateValue: 'dead' },
+      later: { chapterId: 'ch2', chapterRef: '10화', globalSeq: 100, stateValue: 'alive' },
     },
   ],
   reviewSummary: { scenes: 0, states: 0, conflicts: 1 },
@@ -68,13 +68,13 @@ beforeEach(() => {
 });
 
 describe('TimelineScreen 충돌 표시', () => {
-  it('충돌 후보의 엔티티명·상태키·이전/이후 씬 참조와 값을 표시한다', () => {
+  it('충돌 후보의 엔티티명·상태키·이전/이후 화 참조와 값을 표시한다', () => {
     render(<Harness />);
 
     expect(screen.getByText('이서하')).toBeInTheDocument();
     expect(screen.getByText('life_status')).toBeInTheDocument();
-    expect(screen.getByText('3화 씬1')).toBeInTheDocument();
-    expect(screen.getByText('10화 씬1')).toBeInTheDocument();
+    expect(screen.getByText('3화')).toBeInTheDocument();
+    expect(screen.getByText('10화')).toBeInTheDocument();
     expect(screen.getByText('dead')).toBeInTheDocument();
     expect(screen.getByText('alive')).toBeInTheDocument();
   });

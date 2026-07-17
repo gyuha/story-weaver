@@ -1,6 +1,6 @@
 import { WorkShell } from '@/components/layout/work-shell';
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Conflict, ConflictSceneRef, Work } from '@/features/shared/types';
+import type { Conflict, ConflictChapterRef, Work } from '@/features/shared/types';
 import { ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,7 +26,7 @@ export function TimelineScreen({ work }: { work: Work }) {
             </div>
 
             <div className="mb-6 flex gap-3">
-              <Stat value={work.reviewSummary.scenes} label="씬" />
+              <Stat value={work.reviewSummary.scenes} label="화" />
               <Stat value={work.reviewSummary.states} label="타임라인 상태 기록" />
               <Stat value={work.reviewSummary.conflicts} label="충돌 후보" danger />
             </div>
@@ -34,7 +34,7 @@ export function TimelineScreen({ work }: { work: Work }) {
             {work.conflicts.map((conflict) => {
               const gotoLabel = conflict.later.chapterRef
                 ? `${conflict.later.chapterRef}로 이동`
-                : '해당 씬으로 이동';
+                : '해당 화로 이동';
               return (
                 <ConflictCallout
                   key={conflict.id}
@@ -186,7 +186,7 @@ function ConflictStateRow({
 }: {
   label: string;
   color: string;
-  state: ConflictSceneRef;
+  state: ConflictChapterRef;
 }) {
   return (
     <div className="flex items-center gap-2.5 text-[13px]">

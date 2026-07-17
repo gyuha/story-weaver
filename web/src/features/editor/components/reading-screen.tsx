@@ -10,19 +10,14 @@ interface ReadingScreenProps {
   prevId?: string;
   /** 다음 화 챕터 id (없으면 마지막 화) */
   nextId?: string;
-  /** "편집" 복귀 대상 — 이 챕터의 첫 씬 id */
-  editSceneId?: string;
 }
 
 /**
  * 읽기 모드 — 작가용 read-only 몰입 뷰. 전역 TopBar·작업트리·메모리·AI를 모두
- * 걷어내고, 한 챕터(=화)의 비어있지 않은 씬을 씬 경계 없이 연속으로 보여준다.
+ * 걷어내고, 한 챕터(=화)의 본문을 단일 렌더로 보여준다.
  */
-export function ReadingScreen({ work, chapter, prevId, nextId, editSceneId }: ReadingScreenProps) {
-  // 비어있지 않은 씬만 이어 붙인다 — 독자 시점엔 빈 씬은 존재하지 않는다.
-  const paragraphs = chapter.scenes
-    .filter((s) => s.status !== 'empty' && s.paragraphs.length > 0)
-    .flatMap((s) => s.paragraphs.map((p, i) => ({ ...p, key: `${s.id}-p${i}` })));
+export function ReadingScreen({ work, chapter, prevId, nextId }: ReadingScreenProps) {
+  const paragraphs = chapter.paragraphs;
 
   return (
     <div className="flex h-screen flex-col bg-paper text-ink">
@@ -38,25 +33,14 @@ export function ReadingScreen({ work, chapter, prevId, nextId, editSceneId }: Re
         <div className="flex-1" />
         <ChapterArrow work={work} chapterId={prevId} dir="prev" />
         <ChapterArrow work={work} chapterId={nextId} dir="next" />
-        {editSceneId ? (
-          <Link
-            to="/works/$workId/write/$sceneId"
-            params={{ workId: work.id, sceneId: editSceneId }}
-            className="ml-1 flex h-7 items-center gap-1.5 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <Pencil className="size-[13px]" strokeWidth={2.2} />
-            편집
-          </Link>
-        ) : (
-          <Link
-            to="/works/$workId/write"
-            params={{ workId: work.id }}
-            className="ml-1 flex h-7 items-center gap-1.5 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <Pencil className="size-[13px]" strokeWidth={2.2} />
-            편집
-          </Link>
-        )}
+        <Link
+          to="/works/$workId/write/$chapterId"
+          params={{ workId: work.id, chapterId: chapter.id }}
+          className="ml-1 flex h-7 items-center gap-1.5 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          <Pencil className="size-[13px]" strokeWidth={2.2} />
+          편집
+        </Link>
       </header>
 
       {/* 본문 */}
@@ -75,11 +59,9 @@ export function ReadingScreen({ work, chapter, prevId, nextId, editSceneId }: Re
             </p>
           ) : (
             <div className="font-serif text-[16.5px] leading-[1.95] text-ink">
-              {paragraphs.map((p) => (
-                <p
-                  key={p.key}
-                  className={cn('mb-[17px]', p.text.startsWith('「') && 'text-ink-soft')}
-                >
+              {paragraphs.map((p, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 읽기 전용 화 본문 문단
+                <p key={i} className={cn('mb-[17px]', p.text.startsWith('「') && 'text-ink-soft')}>
                   {p.text}
                 </p>
               ))}

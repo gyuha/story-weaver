@@ -1,6 +1,6 @@
 """집필 보조 5개 작업 HTTP 라우터 (plan.md M3-S3).
 
-``POST /api/v1/works/{work_id}/scenes/{scene_id}/assist/{continue|infill|dialogue|
+``POST /api/v1/works/{work_id}/chapters/{chapter_id}/assist/{continue|infill|dialogue|
 style|correct}`` — memory_router.py와 동일 패턴: ``get_current_user``로 인증하고,
 교차 테넌트 접근은 404(ADR-0005). 요청 스키마는 chat_router.py처럼 라우터 모듈에
 직접 둔다(작업별 입력 모양이 서로 다르고 재사용되지 않아 별도 schemas 모듈은
@@ -63,7 +63,7 @@ from domains.worldbible.service import WorldBibleService
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/works/{work_id}/scenes/{scene_id}/assist", tags=["assist"])
+router = APIRouter(prefix="/works/{work_id}/chapters/{chapter_id}/assist", tags=["assist"])
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ def _raise_http(exc: AppError) -> NoReturn:
 async def assist_continue(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: ContinueRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -285,7 +285,7 @@ async def assist_continue(
         messages = await service.build_messages(
             work_id,
             current_user.id,
-            scene_id,
+            chapter_id,
             TaskType.continue_,
             ContinueInput(cursor_text=payload.cursor_text),
         )
@@ -303,7 +303,7 @@ async def assist_continue(
 async def assist_infill(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: InfillRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -316,7 +316,7 @@ async def assist_infill(
         messages = await service.build_messages(
             work_id,
             current_user.id,
-            scene_id,
+            chapter_id,
             TaskType.infill,
             InfillInput(before_text=payload.before_text, after_text=payload.after_text),
         )
@@ -334,7 +334,7 @@ async def assist_infill(
 async def assist_dialogue(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: DialogueRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -350,7 +350,7 @@ async def assist_dialogue(
         messages = await service.build_messages(
             work_id,
             current_user.id,
-            scene_id,
+            chapter_id,
             TaskType.dialogue,
             DialogueInput(intent=payload.intent, characters=[character]),
         )
@@ -368,7 +368,7 @@ async def assist_dialogue(
 async def assist_style(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: StyleRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -381,7 +381,7 @@ async def assist_style(
         messages = await service.build_messages(
             work_id,
             current_user.id,
-            scene_id,
+            chapter_id,
             TaskType.style,
             StyleInput(text=payload.text, target_style=payload.target_style),
         )
@@ -399,7 +399,7 @@ async def assist_style(
 async def assist_correct(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: CorrectRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -409,11 +409,11 @@ async def assist_correct(
     if is_explicit_content(payload.text):
         return EventSourceResponse(_precheck_declined_stream())
     try:
-        # 소유권/씬 존재 확인(ADR-0005)은 캐시 히트 여부와 무관하게 항상 거친다 —
+        # 소유권/화 존재 확인(ADR-0005)은 캐시 히트 여부와 무관하게 항상 거친다 —
         # LLM은 안 부르더라도 다른 테넌트의 캐시된 결과가 새어나가면 안 된다.
         # correct는 메모리 검색을 안 하므로(S3) 이 호출 자체는 비용이 들지 않는다.
         messages = await service.build_messages(
-            work_id, current_user.id, scene_id, TaskType.correct, CorrectInput(text=payload.text)
+            work_id, current_user.id, chapter_id, TaskType.correct, CorrectInput(text=payload.text)
         )
     except AppError as exc:
         _raise_http(exc)
@@ -434,7 +434,7 @@ async def assist_correct(
 async def assist_title(
     request: Request,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: TitleRequest,
     current_user: User = Depends(get_current_user),
     service: AssistService = Depends(_get_service),
@@ -445,7 +445,7 @@ async def assist_title(
         return EventSourceResponse(_precheck_declined_stream())
     try:
         messages = await service.build_messages(
-            work_id, current_user.id, scene_id, TaskType.title_, TitleInput(text=payload.text)
+            work_id, current_user.id, chapter_id, TaskType.title_, TitleInput(text=payload.text)
         )
     except AppError as exc:
         _raise_http(exc)

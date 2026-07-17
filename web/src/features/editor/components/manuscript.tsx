@@ -3,7 +3,7 @@ import { useAssistStream } from '@/features/editor/api/assist.api';
 import { manuscriptApi } from '@/features/editor/api/manuscript.api';
 import { toParagraphs } from '@/features/editor/lib/hydrate-chapters';
 import { useWorksStore } from '@/features/shared/store/works.store';
-import type { Chapter, Scene, SceneVersion, Work } from '@/features/shared/types';
+import type { Chapter, ChapterVersion, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
@@ -46,11 +46,9 @@ const escapeHtml = (s: string) =>
 export function ManuscriptEditor({
   work,
   chapter,
-  scene,
 }: {
   work: Work;
   chapter: Chapter;
-  scene: Scene;
 }) {
   const [tier, setTier] = useState<QualityTier>('고품질');
   const [showHistory, setShowHistory] = useState(false);
@@ -61,12 +59,12 @@ export function ManuscriptEditor({
   const prevStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
-  const restoreSceneVersion = useWorksStore((s) => s.restoreSceneVersion);
-  const setSceneParagraphs = useWorksStore((s) => s.setSceneParagraphs);
-  const extractSceneUpdates = useWorksStore((s) => s.extractSceneUpdates);
+  const restoreChapterVersion = useWorksStore((s) => s.restoreChapterVersion);
+  const setChapterParagraphs = useWorksStore((s) => s.setChapterParagraphs);
+  const extractChapterUpdates = useWorksStore((s) => s.extractChapterUpdates);
 
-  const initialContent = scene.paragraphs.length
-    ? scene.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
+  const initialContent = chapter.paragraphs.length
+    ? chapter.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
     : '';
 
   const editor = useEditor({
@@ -105,8 +103,8 @@ export function ManuscriptEditor({
   const runContinue = () => {
     if (!editor) return;
     const beforeCursor = editor.state.doc.textBetween(0, editor.state.selection.from, '\n');
-    // 커서가 씬 맨 앞이면 선행 텍스트가 비어 LLM이 400으로 거부한다(수위 거절로 오인되던 원인)
-    // — 씬 전체 본문으로 폴백하고, 그것마저 비면 호출하지 않는다.
+    // 커서가 화 맨 앞이면 선행 텍스트가 비어 LLM이 400으로 거부한다(수위 거절로 오인되던 원인)
+    // — 화 전체 본문으로 폴백하고, 그것마저 비면 호출하지 않는다.
     const cursorText = beforeCursor.trim()
       ? beforeCursor
       : editor.getText({ blockSeparator: '\n' });
@@ -116,12 +114,12 @@ export function ManuscriptEditor({
     }
     setGeneratingTitle(false); // 이어쓰기 시작은 진행 중이던 제목 생성 스트림을 대체한다
     setShowDraft(true);
-    assist.start('continue', { workId: work.id, sceneId: scene.id, payload: { cursorText } });
+    assist.start('continue', { workId: work.id, chapterId: chapter.id, payload: { cursorText } });
   };
 
   const dismissDraft = () => setShowDraft(false);
 
-  // 현재 씬 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
+  // 현재 화 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
   const generateTitle = () => {
     if (!editor) return;
     const text = editor.getText({ blockSeparator: '\n' });
@@ -131,7 +129,7 @@ export function ManuscriptEditor({
     }
     setShowDraft(false); // 제목 생성은 이어쓰기 제안 패널과 같은 스트림을 쓰므로 패널을 닫는다
     setGeneratingTitle(true);
-    assist.start('title', { workId: work.id, sceneId: scene.id, payload: { text } });
+    assist.start('title', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
 
   // useAssistStream엔 완료 콜백이 없어, 스트리밍 true→false 전이로 제목 생성 완료를 감지한다.
@@ -156,23 +154,18 @@ export function ManuscriptEditor({
     if (showDraft) draftRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [showDraft]);
 
-  const saveScene = async () => {
+  const saveChapter = async () => {
     if (!editor) return;
     const body = editor.getText({ blockSeparator: '\n' });
     try {
-      await manuscriptApi.updateScene({
-        path: {
-          work_id: work.id,
-          episode_id: chapter.episodeId,
-          chapter_id: chapter.id,
-          scene_id: scene.id,
-        },
+      await manuscriptApi.updateChapter({
+        path: { work_id: work.id, episode_id: chapter.episodeId, chapter_id: chapter.id },
         body: { body },
       });
-      setSceneParagraphs(work.id, scene.id, toParagraphs(body));
+      setChapterParagraphs(work.id, chapter.id, toParagraphs(body));
       toast.success('저장했습니다');
       // 신규 설정 추출·제안 — 저장 자체와 독립된 후속 작업이라 실패해도 저장 성공은 유지한다.
-      extractSceneUpdates(work.id, scene.id).catch((err) => {
+      extractChapterUpdates(work.id, chapter.id).catch((err) => {
         toast.error(apiErrorMessage(err, '설정 변경 감지에 실패했습니다'));
       });
     } catch (err) {
@@ -189,8 +182,8 @@ export function ManuscriptEditor({
     });
   };
 
-  const restoreVersion = (version: SceneVersion) => {
-    restoreSceneVersion(work.id, scene.id, version.id);
+  const restoreVersion = (version: ChapterVersion) => {
+    restoreChapterVersion(work.id, chapter.id, version.id);
     editor?.commands.setContent(
       version.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
     );
@@ -255,7 +248,7 @@ export function ManuscriptEditor({
 
           {/* 액션 칩 + 품질 티어 */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <ActionChip icon={Save} label="저장" onClick={saveScene} />
+            <ActionChip icon={Save} label="저장" onClick={saveChapter} />
             <ActionChip
               icon={ClipboardList}
               label="요약"
@@ -376,7 +369,7 @@ export function ManuscriptEditor({
           {/* 본문 에디터 */}
           <div className="mt-6" data-testid="editor-container">
             <EditorContent editor={editor} />
-            <SelectionAiMenu editor={editor} workId={work.id} sceneId={scene.id} />
+            <SelectionAiMenu editor={editor} workId={work.id} chapterId={chapter.id} />
           </div>
 
           {showDraft && (
@@ -435,8 +428,8 @@ export function ManuscriptEditor({
 
       {showHistory && (
         <VersionHistoryModal
-          scene={scene}
-          currentText={scene.paragraphs.map((p) => p.text).join('\n')}
+          chapter={chapter}
+          currentText={chapter.paragraphs.map((p) => p.text).join('\n')}
           onRestore={restoreVersion}
           onClose={() => setShowHistory(false)}
         />

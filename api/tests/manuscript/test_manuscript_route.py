@@ -1,4 +1,4 @@
-"""부(episode)·챕터·씬 HTTP 라우트 — 실 DB + 실 라우터 경로.
+"""부(episode)·챕터 HTTP 라우트 — 실 DB + 실 라우터 경로.
 
 works 도메인의 ``test_works_isolation.py`` 패턴(실 DB, `get_current_user`만 override)을
 따른다. CRUD 계약(camelCase, 상태 코드), DB 레벨 cascade 삭제, 작품 전역 `global_seq`
@@ -18,7 +18,7 @@ from sqlalchemy import select
 from core.database import AsyncSessionFactory, engine
 from domains.auth.models import User
 from domains.auth.security import get_current_user
-from domains.manuscript.models import Chapter, Scene
+from domains.manuscript.models import Chapter
 from domains.manuscript.router import router
 from domains.works.models import Work
 
@@ -87,28 +87,12 @@ async def _create_chapter(
     episode_id: uuid.UUID,
     title: str = "1장",
     order_index: int = 0,
+    body: str = "본문",
 ) -> dict[str, object]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/episodes/{episode_id}/chapters",
-            json={"title": title, "orderIndex": order_index},
-        )
-    assert resp.status_code == 201
-    return resp.json()
-
-
-async def _create_scene(
-    app: FastAPI,
-    owner: User,
-    work_id: uuid.UUID,
-    episode_id: uuid.UUID,
-    chapter_id: uuid.UUID,
-    order_index: int = 0,
-) -> dict[str, object]:
-    async with _client_as(app, owner) as client:
-        resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes",
-            json={"orderIndex": order_index, "body": "본문"},
+            json={"title": title, "orderIndex": order_index, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -168,15 +152,12 @@ async def test_get_episode_other_tenant_returns_404(
     assert resp.status_code == 404
 
 
-async def test_delete_episode_cascades_chapters_and_scenes(app: FastAPI, owner_work: Work) -> None:
+async def test_delete_episode_cascades_chapters(app: FastAPI, owner_work: Work) -> None:
     async with AsyncSessionFactory() as session:
         owner = await session.get(User, owner_work.user_id)
     assert owner is not None
     episode = await _create_episode(app, owner, owner_work.id)
     chapter = await _create_chapter(app, owner, owner_work.id, uuid.UUID(str(episode["id"])))
-    scene = await _create_scene(
-        app, owner, owner_work.id, uuid.UUID(str(episode["id"])), uuid.UUID(str(chapter["id"]))
-    )
 
     async with _client_as(app, owner) as client:
         resp = await client.delete(f"/api/v1/works/{owner_work.id}/episodes/{episode['id']}")
@@ -187,18 +168,14 @@ async def test_delete_episode_cascades_chapters_and_scenes(app: FastAPI, owner_w
             select(Chapter).where(Chapter.id == uuid.UUID(str(chapter["id"])))
         )
         assert chapter_row.scalar_one_or_none() is None
-        scene_row = await session.execute(
-            select(Scene).where(Scene.id == uuid.UUID(str(scene["id"])))
-        )
-        assert scene_row.scalar_one_or_none() is None
 
 
 # ---------------------------------------------------------------------------
-# Chapter CRUD
+# Chapter CRUD + global_seq
 # ---------------------------------------------------------------------------
 
 
-async def test_create_list_update_chapter(app: FastAPI, owner_work: Work) -> None:
+async def test_create_list_update_delete_chapter(app: FastAPI, owner_work: Work) -> None:
     async with AsyncSessionFactory() as session:
         owner = await session.get(User, owner_work.user_id)
     assert owner is not None
@@ -206,6 +183,8 @@ async def test_create_list_update_chapter(app: FastAPI, owner_work: Work) -> Non
     episode_id = uuid.UUID(str(episode["id"]))
     chapter = await _create_chapter(app, owner, owner_work.id, episode_id, title="1장")
     assert chapter["episodeId"] == str(episode_id)
+    assert chapter["globalSeq"] == 1
+    assert chapter["body"] == "본문"
 
     async with _client_as(app, owner) as client:
         resp = await client.get(f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters")
@@ -215,32 +194,23 @@ async def test_create_list_update_chapter(app: FastAPI, owner_work: Work) -> Non
     async with _client_as(app, owner) as client:
         resp = await client.patch(
             f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter['id']}",
-            json={"title": "개정 1장"},
+            json={"title": "개정 1장", "body": "수정된 본문"},
         )
     assert resp.status_code == 200
     assert resp.json()["title"] == "개정 1장"
-
-
-async def test_delete_chapter_cascades_scenes(app: FastAPI, owner_work: Work) -> None:
-    async with AsyncSessionFactory() as session:
-        owner = await session.get(User, owner_work.user_id)
-    assert owner is not None
-    episode = await _create_episode(app, owner, owner_work.id)
-    episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(app, owner, owner_work.id, episode_id)
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    scene = await _create_scene(app, owner, owner_work.id, episode_id, chapter_id)
-    scene_id = uuid.UUID(str(scene["id"]))
+    assert resp.json()["body"] == "수정된 본문"
 
     async with _client_as(app, owner) as client:
         resp = await client.delete(
-            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter_id}"
+            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter['id']}"
         )
     assert resp.status_code == 204
 
     async with AsyncSessionFactory() as session:
-        scene_row = await session.execute(select(Scene).where(Scene.id == scene_id))
-        assert scene_row.scalar_one_or_none() is None
+        chapter_row = await session.execute(
+            select(Chapter).where(Chapter.id == uuid.UUID(str(chapter["id"])))
+        )
+        assert chapter_row.scalar_one_or_none() is None
 
 
 async def test_get_chapter_other_tenant_returns_404(
@@ -258,85 +228,24 @@ async def test_get_chapter_other_tenant_returns_404(
     assert resp.status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Scene CRUD + global_seq
-# ---------------------------------------------------------------------------
-
-
-async def test_create_list_update_delete_scene(app: FastAPI, owner_work: Work) -> None:
-    async with AsyncSessionFactory() as session:
-        owner = await session.get(User, owner_work.user_id)
-    assert owner is not None
-    episode = await _create_episode(app, owner, owner_work.id)
-    episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(app, owner, owner_work.id, episode_id)
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    scene = await _create_scene(app, owner, owner_work.id, episode_id, chapter_id)
-    assert scene["chapterId"] == str(chapter_id)
-    assert scene["globalSeq"] == 1
-
-    async with _client_as(app, owner) as client:
-        resp = await client.get(
-            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter_id}/scenes"
-        )
-    assert resp.status_code == 200
-    assert len(resp.json()) == 1
-
-    async with _client_as(app, owner) as client:
-        resp = await client.patch(
-            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene['id']}",
-            json={"body": "수정된 본문"},
-        )
-    assert resp.status_code == 200
-    assert resp.json()["body"] == "수정된 본문"
-
-    async with _client_as(app, owner) as client:
-        resp = await client.delete(
-            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene['id']}"
-        )
-    assert resp.status_code == 204
-
-
-async def test_get_scene_other_tenant_returns_404(
-    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
-) -> None:
-    owner, intruder = two_users
-    episode = await _create_episode(app, owner, owner_work.id)
-    episode_id = uuid.UUID(str(episode["id"]))
-    chapter = await _create_chapter(app, owner, owner_work.id, episode_id)
-    chapter_id = uuid.UUID(str(chapter["id"]))
-    scene = await _create_scene(app, owner, owner_work.id, episode_id, chapter_id)
-
-    async with _client_as(app, intruder) as client:
-        resp = await client.get(
-            f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter_id}"
-            f"/scenes/{scene['id']}"
-        )
-    assert resp.status_code == 404
-
-
 async def test_global_seq_increases_monotonically_across_chapters_and_episodes(
     app: FastAPI, owner_work: Work
 ) -> None:
-    """씬의 global_seq는 챕터·부가 달라도 작품 내에서 계속 증가해야 한다."""
+    """챕터의 global_seq는 부가 달라도 작품 내에서 계속 증가해야 한다."""
     async with AsyncSessionFactory() as session:
         owner = await session.get(User, owner_work.user_id)
     assert owner is not None
 
     episode1 = await _create_episode(app, owner, owner_work.id, title="1부")
     episode1_id = uuid.UUID(str(episode1["id"]))
-    chapter1 = await _create_chapter(app, owner, owner_work.id, episode1_id, title="1장")
-    chapter1_id = uuid.UUID(str(chapter1["id"]))
+    chapter_a = await _create_chapter(app, owner, owner_work.id, episode1_id, title="1장")
 
     episode2 = await _create_episode(app, owner, owner_work.id, title="2부", order_index=1)
     episode2_id = uuid.UUID(str(episode2["id"]))
-    chapter2 = await _create_chapter(app, owner, owner_work.id, episode2_id, title="2장")
-    chapter2_id = uuid.UUID(str(chapter2["id"]))
+    chapter_b = await _create_chapter(app, owner, owner_work.id, episode2_id, title="2장")
 
-    scene_a = await _create_scene(app, owner, owner_work.id, episode1_id, chapter1_id)
-    scene_b = await _create_scene(app, owner, owner_work.id, episode2_id, chapter2_id)
-    scene_c = await _create_scene(
-        app, owner, owner_work.id, episode1_id, chapter1_id, order_index=1
+    chapter_c = await _create_chapter(
+        app, owner, owner_work.id, episode1_id, title="3장", order_index=1
     )
 
-    assert [scene_a["globalSeq"], scene_b["globalSeq"], scene_c["globalSeq"]] == [1, 2, 3]
+    assert [chapter_a["globalSeq"], chapter_b["globalSeq"], chapter_c["globalSeq"]] == [1, 2, 3]

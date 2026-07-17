@@ -1,6 +1,6 @@
 """동적 업데이트 추출·제안 API 라우터 (plan.md M3-S1/S2/S3).
 
-``POST /api/v1/works/{work_id}/scenes/{scene_id}/extract-updates`` — assist_router.py와
+``POST /api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates`` — assist_router.py와
 동일 패턴(``get_current_user``로 인증, 교차 테넌트 접근은 404 — ADR-0005). LLM 호출은
 LOW_COST 티어(assist 도메인의 ``tier_routing`` 재사용). 추출 직후 결과를 기존 엔티티와
 매칭해 노이즈가 아닌 항목을 제안으로 저장한다(S2, ``SuggestionService.process_extraction``)
@@ -41,7 +41,7 @@ from domains.works.service import WorksService
 from domains.worldbible.repository import WorldBibleRepository
 from domains.worldbible.service import WorldBibleService
 
-router = APIRouter(prefix="/works/{work_id}/scenes/{scene_id}", tags=["dynamic-update"])
+router = APIRouter(prefix="/works/{work_id}/chapters/{chapter_id}", tags=["dynamic-update"])
 
 
 async def _get_service(
@@ -97,7 +97,7 @@ def _to_suggestion_response(suggestion: UpdateSuggestion) -> UpdateSuggestionRes
     return UpdateSuggestionResponse(
         id=suggestion.id,
         work_id=suggestion.work_id,
-        scene_id=suggestion.scene_id,
+        chapter_id=suggestion.chapter_id,
         kind=suggestion.kind,
         payload=suggestion.payload,
         status=suggestion.status,
@@ -108,7 +108,7 @@ def _to_suggestion_response(suggestion: UpdateSuggestion) -> UpdateSuggestionRes
 @router.post(
     "/extract-updates",
     response_model=ExtractUpdatesResponse,
-    summary="씬 본문에서 신규 설정 후보 추출 + 제안 저장",
+    summary="화 본문에서 신규 설정 후보 추출 + 제안 저장",
     dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
 )
 @limiter.limit(LLM_RATE_LIMIT)
@@ -116,7 +116,7 @@ async def extract_updates(
     request: Request,
     response: Response,
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: DynamicUpdateService = Depends(_get_service),
     suggestion_service: SuggestionService = Depends(_get_suggestion_service),
@@ -124,8 +124,8 @@ async def extract_updates(
 ) -> ExtractUpdatesResponse:
     bind_llm_call_context(user_id=current_user.id, task="dynamic_update.extract")
     try:
-        result = await service.extract_updates(work_id, current_user.id, scene_id, llm)
-        await suggestion_service.process_extraction(work_id, current_user.id, scene_id, result)
+        result = await service.extract_updates(work_id, current_user.id, chapter_id, llm)
+        await suggestion_service.process_extraction(work_id, current_user.id, chapter_id, result)
     except AppError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     # budget 도메인 사용량 기록(plan.md M4-S1) — invoke()의 usage_metadata는 프로바이더마다
@@ -141,12 +141,14 @@ async def extract_updates(
 )
 async def list_update_suggestions(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     suggestion_service: SuggestionService = Depends(_get_suggestion_service),
 ) -> list[UpdateSuggestionResponse]:
     try:
-        suggestions = await suggestion_service.list_suggestions(work_id, current_user.id, scene_id)
+        suggestions = await suggestion_service.list_suggestions(
+            work_id, current_user.id, chapter_id
+        )
     except AppError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     return [_to_suggestion_response(s) for s in suggestions]
@@ -159,7 +161,7 @@ async def list_update_suggestions(
 )
 async def approve_update_suggestion(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     suggestion_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     suggestion_service: SuggestionService = Depends(_get_suggestion_service),
@@ -180,7 +182,7 @@ async def approve_update_suggestion(
 )
 async def reject_update_suggestion(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     suggestion_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     suggestion_service: SuggestionService = Depends(_get_suggestion_service),

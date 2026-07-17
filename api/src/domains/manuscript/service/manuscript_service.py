@@ -1,12 +1,12 @@
-"""원고 계층(시놉시스·부·챕터·씬) 비즈니스 로직.
+"""원고 계층(시놉시스·부·챕터) 비즈니스 로직.
 
 작품 소유권 확인은 works 도메인이 확립한 소유권 헬퍼(``WorksService.get_work``)를
 재사용한다(ADR-0005 — "소유권 헬퍼를 works에서 확립해 하위 도메인이 재사용"). works의
 ``Work`` 모델은 import하지 않고 ID만 주고받는다(도메인 간 직접 모델 import 금지). 부·
-챕터·씬은 각자 직속 부모(work_id→episode_id→chapter_id) 조회를 재귀적으로 거쳐 경로의
-각 id가 실제로 그 부모에 속하는지까지 함께 검증한다 — 아니면 ``NotFoundError``. 씬
-본문 저장(생성/수정) 시 ``MemoryService``로 본문을 임베딩해 메모리 검색의 근거
-데이터를 갱신한다(plan.md S3 — 정교한 재임베딩 최적화는 비목표라 동기 처리로 충분).
+챕터는 각자 직속 부모(work_id→episode_id) 조회를 재귀적으로 거쳐 경로의 각 id가 실제로
+그 부모에 속하는지까지 함께 검증한다 — 아니면 ``NotFoundError``. 챕터 본문 저장(생성/
+수정) 시 ``MemoryService``로 본문을 문단 그룹핑 청크로 임베딩해 메모리 검색의 근거
+데이터를 갱신한다(remove-scene ADR — 씬 단위 임베딩을 화 본문 청킹 임베딩으로 대체).
 """
 
 from __future__ import annotations
@@ -14,18 +14,15 @@ from __future__ import annotations
 import uuid
 
 from core.exceptions import AppError, NotFoundError
-from domains.manuscript.models import Chapter, Episode, Scene, Synopsis
+from domains.manuscript.models import Chapter, Episode, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
     ChapterCreate,
     ChapterUpdate,
     EpisodeCreate,
     EpisodeUpdate,
-    SceneCreate,
-    SceneUpdate,
 )
 from domains.manuscript.service.export_service import build_manuscript_zip
-from domains.memory.models import EmbeddingSourceType
 from domains.memory.service import MemoryService
 from domains.works.service import WorksService
 
@@ -88,7 +85,7 @@ class ManuscriptService:
     async def reorder_episodes(
         self, work_id: uuid.UUID, user_id: uuid.UUID, episode_ids: list[uuid.UUID]
     ) -> list[Episode]:
-        """``episode_ids`` 순서대로 ``order_index``를 재부여하고 씬 ``global_seq``를 재계산."""
+        """``episode_ids`` 순서대로 ``order_index``를 재부여하고 챕터 ``global_seq``를 재계산."""
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
         existing = {e.id: e for e in await self._repo.list_episodes(work_id)}
         if set(episode_ids) != set(existing):
@@ -114,10 +111,18 @@ class ManuscriptService:
         data: ChapterCreate,
     ) -> Chapter:
         await self.get_episode(work_id, user_id, episode_id)
+        next_seq = await self._repo.next_global_seq(work_id)
         chapter = Chapter(
-            work_id=work_id, episode_id=episode_id, title=data.title, order_index=data.order_index
+            work_id=work_id,
+            episode_id=episode_id,
+            title=data.title,
+            order_index=data.order_index,
+            global_seq=next_seq,
+            body=data.body,
         )
-        return await self._repo.add_chapter(chapter)
+        chapter = await self._repo.add_chapter(chapter)
+        await self._memory_service.index_chapter(work_id, chapter.id, chapter.body)
+        return chapter
 
     async def get_chapter(
         self, work_id: uuid.UUID, user_id: uuid.UUID, episode_id: uuid.UUID, chapter_id: uuid.UUID
@@ -139,6 +144,7 @@ class ManuscriptService:
         chapter = await self.get_chapter(work_id, user_id, episode_id, chapter_id)
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(chapter, field, value)
+        await self._memory_service.index_chapter(work_id, chapter.id, chapter.body)
         return chapter
 
     async def delete_chapter(
@@ -154,7 +160,7 @@ class ManuscriptService:
         episode_id: uuid.UUID,
         chapter_ids: list[uuid.UUID],
     ) -> list[Chapter]:
-        """``chapter_ids`` 순서대로 ``order_index``를 재부여하고 씬 ``global_seq``를 재계산."""
+        """``chapter_ids`` 순서대로 ``order_index``를 재부여하고 챕터 ``global_seq``를 재계산."""
         await self.get_episode(work_id, user_id, episode_id)  # 소유권+존재 확인 (미소유 시 404)
         existing = {c.id: c for c in await self._repo.list_chapters(episode_id)}
         if set(chapter_ids) != set(existing):
@@ -165,144 +171,50 @@ class ManuscriptService:
         return [existing[chapter_id] for chapter_id in chapter_ids]
 
     async def _recompute_global_seq(self, work_id: uuid.UUID) -> None:
-        """작품 전체를 부→챕터→씬 문서 순서로 훑어 ``global_seq``를 1부터 재부여.
+        """작품 전체를 부→챕터 문서 순서로 훑어 ``global_seq``를 1부터 재부여.
 
-        재정렬 후 영향받는 씬만 골라내는 대신 전체를 다시 매기는 단순한 방식(저빈도
+        재정렬 후 영향받는 챕터만 골라내는 대신 전체를 다시 매기는 단순한 방식(저빈도
         관리자 동작이라 성능보다 단순함을 우선— plan.md S1).
         """
         await self._repo.flush()  # order_index 변경을 내보내야 아래 재조회에 반영된다
         seq = 1
         for episode in await self._repo.list_episodes(work_id):
             for chapter in await self._repo.list_chapters(episode.id):
-                for scene in await self._repo.list_scenes(chapter.id):
-                    scene.global_seq = seq
-                    seq += 1
+                chapter.global_seq = seq
+                seq += 1
 
-    # -- Scenes ------------------------------------------------------------
-
-    async def list_scenes(
-        self,
-        work_id: uuid.UUID,
-        user_id: uuid.UUID,
-        episode_id: uuid.UUID,
-        chapter_id: uuid.UUID,
-    ) -> list[Scene]:
-        await self.get_chapter(work_id, user_id, episode_id, chapter_id)
-        return await self._repo.list_scenes(chapter_id)
-
-    async def create_scene(
-        self,
-        work_id: uuid.UUID,
-        user_id: uuid.UUID,
-        episode_id: uuid.UUID,
-        chapter_id: uuid.UUID,
-        data: SceneCreate,
-    ) -> Scene:
-        await self.get_chapter(work_id, user_id, episode_id, chapter_id)
-        next_seq = await self._repo.next_global_seq(work_id)
-        scene = Scene(
-            work_id=work_id,
-            chapter_id=chapter_id,
-            order_index=data.order_index,
-            global_seq=next_seq,
-            title=data.title,
-            body=data.body,
-        )
-        scene = await self._repo.add_scene(scene)
-        await self._memory_service.index_source(
-            work_id, EmbeddingSourceType.scene, scene.id, scene.body
-        )
-        return scene
-
-    async def get_scene(
-        self,
-        work_id: uuid.UUID,
-        user_id: uuid.UUID,
-        episode_id: uuid.UUID,
-        chapter_id: uuid.UUID,
-        scene_id: uuid.UUID,
-    ) -> Scene:
-        await self.get_chapter(work_id, user_id, episode_id, chapter_id)
-        scene = await self._repo.get_scene(chapter_id, scene_id)
-        if scene is None:
-            raise NotFoundError("Scene")
-        return scene
-
-    async def update_scene(
-        self,
-        work_id: uuid.UUID,
-        user_id: uuid.UUID,
-        episode_id: uuid.UUID,
-        chapter_id: uuid.UUID,
-        scene_id: uuid.UUID,
-        data: SceneUpdate,
-    ) -> Scene:
-        scene = await self.get_scene(work_id, user_id, episode_id, chapter_id, scene_id)
-        for field, value in data.model_dump(exclude_unset=True).items():
-            setattr(scene, field, value)
-        await self._memory_service.index_source(
-            work_id, EmbeddingSourceType.scene, scene.id, scene.body
-        )
-        return scene
-
-    async def delete_scene(
-        self,
-        work_id: uuid.UUID,
-        user_id: uuid.UUID,
-        episode_id: uuid.UUID,
-        chapter_id: uuid.UUID,
-        scene_id: uuid.UUID,
-    ) -> None:
-        scene = await self.get_scene(work_id, user_id, episode_id, chapter_id, scene_id)
-        await self._repo.delete_scene(scene)
-
-    async def get_scene_by_id(
-        self, work_id: uuid.UUID, user_id: uuid.UUID, scene_id: uuid.UUID
-    ) -> Scene:
-        """계층 경로 없이 ``scene_id``만으로 조회(다른 도메인의 ID-only 크로스 도메인 참조용)."""
-        await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
-        scene = await self._repo.get_scene_by_id(work_id, scene_id)
-        if scene is None:
-            raise NotFoundError("Scene")
-        return scene
-
-    async def list_scenes_by_chapter_id(
+    async def get_chapter_by_id(
         self, work_id: uuid.UUID, user_id: uuid.UUID, chapter_id: uuid.UUID
-    ) -> list[Scene]:
-        """계층 경로(episode_id) 없이 ``chapter_id``만으로 챕터의 전체 씬 조회.
-
-        ``get_scene_by_id``와 동일 패턴(다른 도메인의 ID-only 크로스 도메인 참조용) —
-        chat 도메인이 "현재 화(챕터) 전체 씬"을 얻을 때 쓴다(work-chat-context S2).
-        """
+    ) -> Chapter:
+        """계층 경로 없이 ``chapter_id``만으로 조회(다른 도메인의 ID-only 크로스 도메인 참조용)."""
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
-        return await self._repo.list_scenes(chapter_id)
+        chapter = await self._repo.get_chapter_by_id(work_id, chapter_id)
+        if chapter is None:
+            raise NotFoundError("Chapter")
+        return chapter
 
-    async def list_scene_ids_up_to(
-        self, work_id: uuid.UUID, user_id: uuid.UUID, up_to_scene_id: uuid.UUID
+    async def list_chapter_ids_up_to(
+        self, work_id: uuid.UUID, user_id: uuid.UUID, up_to_chapter_id: uuid.UUID
     ) -> list[uuid.UUID]:
-        """``up_to_scene_id``의 ``global_seq`` 이하인 씬 id 목록(타임라인 시점 필터의 근거)."""
-        up_to_scene = await self.get_scene_by_id(work_id, user_id, up_to_scene_id)
-        return await self._repo.list_scene_ids_up_to_seq(work_id, up_to_scene.global_seq)
+        """``up_to_chapter_id``의 ``global_seq`` 이하인 챕터 id 목록(타임라인 시점 필터의 근거)."""
+        up_to_chapter = await self.get_chapter_by_id(work_id, user_id, up_to_chapter_id)
+        return await self._repo.list_chapter_ids_up_to_seq(work_id, up_to_chapter.global_seq)
 
     # -- Export --------------------------------------------------------------
 
     async def export_manuscript_zip(self, work_id: uuid.UUID, user_id: uuid.UUID) -> bytes:
         """작품 전체 원고를 부=폴더/회차=txt 구조의 zip 바이트로 조립.
 
-        소유권 확인은 ``list_episodes``/``list_chapters``/``list_scenes``에 내장(미소유
-        시 404). 부·회차가 하나도 없으면 내보낼 원고가 없다는 뜻이라 400.
+        소유권 확인은 ``list_episodes``/``list_chapters``에 내장(미소유 시 404). 부·회차가
+        하나도 없으면 내보낼 원고가 없다는 뜻이라 400.
         """
         episodes = await self.list_episodes(work_id, user_id)
-        episodes_with_content: list[tuple[Episode, list[tuple[Chapter, list[Scene]]]]] = []
+        episodes_with_content: list[tuple[Episode, list[Chapter]]] = []
         total_chapters = 0
         for episode in episodes:
             chapters = await self.list_chapters(work_id, user_id, episode.id)
             total_chapters += len(chapters)
-            chapters_with_scenes = [
-                (chapter, await self.list_scenes(work_id, user_id, episode.id, chapter.id))
-                for chapter in chapters
-            ]
-            episodes_with_content.append((episode, chapters_with_scenes))
+            episodes_with_content.append((episode, chapters))
 
         if not episodes or total_chapters == 0:
             raise AppError("내보낼 원고가 없습니다")
