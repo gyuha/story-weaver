@@ -3,7 +3,7 @@
 자체 테이블은 두지 않는다. S1은 worldbible 엔티티의 ``attributes.relations``를 그대로
 그래프 엣지로 옮긴다. S2는 timeline의 ``TimelineState``에 ``relation_to_<entity_id>``
 state_key 관례(새 테이블 없이 기존 key/value 컬럼을 그대로 재사용)로 기록된 시점별
-관계 변화를 ``up_to_scene_id``까지 모아 엣지에 덮어쓰고(그 시점의 최신값), 모인 사실
+관계 변화를 ``up_to_chapter_id``까지 모아 엣지에 덮어쓰고(그 시점의 최신값), 모인 사실
 전체를 LOW_COST 티어 LLM에 단 1회 넘겨 자연어 요약을 만든다(엣지별 호출 없음 — plan.md
 "단일 요약 호출로 충분, 엣지별 호출 과설계 금지"). 대상 엔티티가 더 이상 존재하지
 않는 관계/사실은 에러 대신 조용히 생략한다(conflicts_service.py와 동일하게 ID 기반
@@ -79,7 +79,7 @@ class RelationshipsService:
         self,
         work_id: uuid.UUID,
         user_id: uuid.UUID,
-        up_to_scene_id: uuid.UUID | None,
+        up_to_chapter_id: uuid.UUID | None,
         llm: AbstractLLMPort,
     ) -> tuple[list[RelationshipEdge], str | None]:
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
@@ -103,10 +103,10 @@ class RelationshipsService:
                 )
 
         facts: list[str] = []
-        if up_to_scene_id is not None:
+        if up_to_chapter_id is not None:
             for character in characters:
                 await self._apply_relation_states(
-                    work_id, user_id, character, up_to_scene_id, entity_by_id, edges, facts
+                    work_id, user_id, character, up_to_chapter_id, entity_by_id, edges, facts
                 )
 
         summary = await self._summarize(llm, facts) if facts else None
@@ -128,18 +128,18 @@ class RelationshipsService:
         work_id: uuid.UUID,
         user_id: uuid.UUID,
         character: Entity,
-        up_to_scene_id: uuid.UUID,
+        up_to_chapter_id: uuid.UUID,
         entity_by_id: dict[uuid.UUID, Entity],
         edges: dict[tuple[uuid.UUID, uuid.UUID], _Edge],
         facts: list[str],
     ) -> None:
-        """``character``의 ``relation_to_*`` 상태를 ``up_to_scene_id``까지 모아 엣지/사실에 반영.
+        """``character``의 ``relation_to_*`` 상태를 ``up_to_chapter_id``까지 모아 엣지/사실에 반영.
 
-        같은 대상에 대해 여러 시점의 상태가 있으면 씬 ``global_seq``가 가장 큰(가장
+        같은 대상에 대해 여러 시점의 상태가 있으면 화 ``global_seq``가 가장 큰(가장
         나중) 상태만 "그 시점의 관계"로 채택한다.
         """
         states = await self._timeline_service.list_timeline_states(
-            work_id, user_id, character.id, up_to_scene_id
+            work_id, user_id, character.id, up_to_chapter_id
         )
         latest_seq: dict[uuid.UUID, int] = {}
         latest_state: dict[uuid.UUID, TimelineState] = {}
@@ -147,9 +147,11 @@ class RelationshipsService:
             target_id = _parse_relation_target(state.state_key)
             if target_id is None or target_id not in entity_by_id:
                 continue  # 관계 상태가 아니거나 대상이 사라짐 — 생략
-            scene = await self._manuscript_service.get_scene_by_id(work_id, user_id, state.scene_id)
-            if target_id not in latest_seq or scene.global_seq >= latest_seq[target_id]:
-                latest_seq[target_id] = scene.global_seq
+            chapter = await self._manuscript_service.get_chapter_by_id(
+                work_id, user_id, state.chapter_id
+            )
+            if target_id not in latest_seq or chapter.global_seq >= latest_seq[target_id]:
+                latest_seq[target_id] = chapter.global_seq
                 latest_state[target_id] = state
 
         for target_id, state in latest_state.items():

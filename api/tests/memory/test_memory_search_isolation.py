@@ -1,10 +1,10 @@
 """메모리 검색 API 격리 테스트 (plan.md S5, 2/2 — S4에 의존).
 
-``GET /api/v1/works/{work_id}/scenes/{scene_id}/memory``(S4, 동시 진행 중인 형제 작업)가
-실제로 work_id로 벡터 검색을 필터링해 타 작품의 데이터를 새지 않게 하는지 HTTP e2e로
-확인한다. S4가 아직 랜딩되지 않았다면 이 테스트는 (의도적으로) 실패한다 — S4 완성 기준
-문구("벡터 검색에 work_id 필터가 없으면 격리 테스트가 실패함을 먼저 확인")가 요구하는
-그 실패다. S4가 랜딩되면 코드 변경 없이 그대로 통과해야 한다.
+``GET /api/v1/works/{work_id}/chapters/{chapter_id}/memory``(S4, 동시 진행 중인 형제
+작업)가 실제로 work_id로 벡터 검색을 필터링해 타 작품의 데이터를 새지 않게 하는지 HTTP
+e2e로 확인한다. S4가 아직 랜딩되지 않았다면 이 테스트는 (의도적으로) 실패한다 — S4
+완성 기준 문구("벡터 검색에 work_id 필터가 없으면 격리 테스트가 실패함을 먼저 확인")가
+요구하는 그 실패다. S4가 랜딩되면 코드 변경 없이 그대로 통과해야 한다.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from core.database import AsyncSessionFactory, engine
 from domains.auth.models import User
 from domains.auth.security import get_current_user
 from domains.manuscript.repository import ManuscriptRepository
-from domains.manuscript.schemas import ChapterCreate, EpisodeCreate, SceneCreate
+from domains.manuscript.schemas import ChapterCreate, EpisodeCreate
 from domains.manuscript.service import ManuscriptService
 from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
@@ -74,8 +74,8 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
 
 
 @pytest.fixture
-async def scene_with_marker_leak() -> AsyncIterator[tuple[User, Work, uuid.UUID, str]]:
-    """작품 A(소유자 owner_a)에 ``_LEAK_PHRASE``를 본문으로 한 씬 하나, 작품 B(다른
+async def chapter_with_marker_leak() -> AsyncIterator[tuple[User, Work, uuid.UUID, str]]:
+    """작품 A(소유자 owner_a)에 ``_LEAK_PHRASE``를 본문으로 한 화 하나, 작품 B(다른
     소유자 owner_b)에 같은 문구 + 고유 마커를 summary로 가진 엔티티 하나를 만든다."""
     marker = f"LEAK-MARKER-{uuid.uuid4().hex}"
     async with AsyncSessionFactory() as session:
@@ -102,14 +102,10 @@ async def scene_with_marker_leak() -> AsyncIterator[tuple[User, Work, uuid.UUID,
             work_a.id, owner_a.id, EpisodeCreate(title="1부", order_index=0)
         )
         chapter = await manuscript_service.create_chapter(
-            work_a.id, owner_a.id, episode.id, ChapterCreate(title="1장", order_index=0)
-        )
-        scene = await manuscript_service.create_scene(
             work_a.id,
             owner_a.id,
             episode.id,
-            chapter.id,
-            SceneCreate(order_index=0, body=_LEAK_PHRASE),
+            ChapterCreate(title="1장", order_index=0, body=_LEAK_PHRASE),
         )
 
         worldbible_service = WorldBibleService(
@@ -126,20 +122,20 @@ async def scene_with_marker_leak() -> AsyncIterator[tuple[User, Work, uuid.UUID,
         )
 
         await session.commit()
-        yield owner_a, work_a, scene.id, marker
+        yield owner_a, work_a, chapter.id, marker
 
-        await session.delete(owner_a)  # cascade: user -> work -> scenes/entities/embeddings
+        await session.delete(owner_a)  # cascade: user -> work -> chapters/entities/embeddings
         await session.delete(owner_b)
         await session.commit()
 
 
 async def test_memory_search_never_leaks_other_work_data(
-    app: FastAPI, scene_with_marker_leak: tuple[User, Work, uuid.UUID, str]
+    app: FastAPI, chapter_with_marker_leak: tuple[User, Work, uuid.UUID, str]
 ) -> None:
-    owner_a, work_a, scene_id, marker = scene_with_marker_leak
+    owner_a, work_a, chapter_id, marker = chapter_with_marker_leak
 
     async with _client_as(app, owner_a) as client:
-        resp = await client.get(f"/api/v1/works/{work_a.id}/scenes/{scene_id}/memory")
+        resp = await client.get(f"/api/v1/works/{work_a.id}/chapters/{chapter_id}/memory")
 
     assert resp.status_code == 200
     assert marker not in resp.text  # 작품 B의 데이터가 절대 새지 않아야 함

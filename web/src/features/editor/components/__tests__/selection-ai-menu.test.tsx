@@ -64,29 +64,29 @@ beforeEach(() => {
 
 describe('SelectionAiMenu 액션 → 태스크 매핑', () => {
   it('다시쓰기는 style 태스크를 선택 텍스트+재작성 지시로 호출한다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
 
     expect(startSpy).toHaveBeenCalledWith('style', {
       workId: 'w1',
-      sceneId: 'sc1',
+      chapterId: 'ch1',
       payload: { text: SELECTED_TEXT, targetStyle: expect.any(String) },
     });
   });
 
   it('늘리기는 continue 태스크를 선택 텍스트를 cursorText로 호출한다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '늘리기' }));
 
     expect(startSpy).toHaveBeenCalledWith('continue', {
       workId: 'w1',
-      sceneId: 'sc1',
+      chapterId: 'ch1',
       payload: { cursorText: SELECTED_TEXT },
     });
   });
 
   it('줄이기는 style 태스크를 축약 지시로 호출한다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '줄이기' }));
 
     const [taskType, params] = startSpy.mock.calls[0];
@@ -95,7 +95,7 @@ describe('SelectionAiMenu 액션 → 태스크 매핑', () => {
   });
 
   it('톤 변경은 style 태스크를 격식 지시로 호출한다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '톤 변경' }));
 
     const [taskType, params] = startSpy.mock.calls[0];
@@ -106,7 +106,7 @@ describe('SelectionAiMenu 액션 → 태스크 매핑', () => {
 
 describe('SelectionAiMenu 스트리밍 미리보기', () => {
   it('스트림 청크가 도착하는 대로 미리보기에 점진적으로 반영된다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
 
     act(() => setMockAssistState({ isStreaming: true, text: '그가' }));
@@ -118,7 +118,7 @@ describe('SelectionAiMenu 스트리밍 미리보기', () => {
   });
 
   it('스트리밍 중에는 적용 버튼이 없고, 완료되면 나타나 적용할 수 있다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
 
     act(() => setMockAssistState({ isStreaming: true, text: '그가' }));
@@ -132,7 +132,7 @@ describe('SelectionAiMenu 스트리밍 미리보기', () => {
   });
 
   it('스트림 에러가 발생하면 에러 메시지를 화면에 표시하고 적용 버튼을 감춘다', async () => {
-    render(<SelectionAiMenu editor={fakeEditor} workId="w1" sceneId="sc1" />);
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '늘리기' }));
 
     act(() => setMockAssistState({ isStreaming: false, error: new Error('LLM provider error') }));

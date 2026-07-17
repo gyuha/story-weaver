@@ -1,7 +1,7 @@
 """캐릭터 관계도 HTTP 라우터 — ``/api/v1/works/{work_id}/relationships`` (v2-C).
 
 conflicts_router.py와 동일 패턴: ``get_current_user``로 인증하고, 교차 테넌트 접근은
-404(ADR-0005). 응답은 camelCase. ``up_to_scene_id`` 쿼리 파라미터를 주면(S2) 그
+404(ADR-0005). 응답은 camelCase. ``up_to_chapter_id`` 쿼리 파라미터를 주면(S2) 그
 시점까지의 ``relation_to_*`` 타임라인 상태를 엣지에 반영하고 LOW_COST 티어 LLM으로
 관계 요약을 함께 생성한다(``summary`` — 반영할 사실이 없으면 null, LLM 호출도 생략).
 """
@@ -81,7 +81,7 @@ async def get_relationships(
     request: Request,
     response: Response,
     work_id: uuid.UUID,
-    up_to_scene_id: uuid.UUID | None = Query(default=None),
+    up_to_chapter_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     service: RelationshipsService = Depends(_get_service),
     llm: AbstractLLMPort = Depends(_relationships_llm_client),
@@ -89,7 +89,7 @@ async def get_relationships(
     bind_llm_call_context(user_id=current_user.id, task="relationships")
     try:
         edges, summary = await service.get_relationships(
-            work_id, current_user.id, up_to_scene_id, llm
+            work_id, current_user.id, up_to_chapter_id, llm
         )
     except AppError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

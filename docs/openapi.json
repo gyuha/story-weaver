@@ -1079,7 +1079,7 @@
           "chat"
         ],
         "summary": "작품 채팅 메시지 전송 — 현재 화 원고+메모리 프레시 컨텍스트로 SSE 스트리밍",
-        "description": "대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시\n컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지\n저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가\n고아 user 메시지를 남기지 않도록 한다.",
+        "description": "대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) chapter_id 검증 겸 프레시\n컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지\n저장 순으로 진행한다. chapter_id 검증을 메시지 저장보다 먼저 해 잘못된 chapter_id가\n고아 user 메시지를 남기지 않도록 한다.",
         "operationId": "send_work_chat_message_api_v1_works__work_id__chat_messages_post",
         "security": [
           {
@@ -2311,387 +2311,6 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes": {
-      "get": {
-        "tags": [
-          "manuscript"
-        ],
-        "summary": "씬 목록",
-        "operationId": "list_scenes_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "work_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Work Id"
-            }
-          },
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "chapter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Chapter Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SceneResponse"
-                  },
-                  "title": "Response List Scenes Api V1 Works  Work Id  Episodes  Episode Id  Chapters  Chapter Id  Scenes Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "manuscript"
-        ],
-        "summary": "씬 생성",
-        "operationId": "create_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "work_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Work Id"
-            }
-          },
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "chapter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Chapter Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SceneCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SceneResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/scenes/{scene_id}": {
-      "get": {
-        "tags": [
-          "manuscript"
-        ],
-        "summary": "씬 단건 조회",
-        "operationId": "get_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "work_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Work Id"
-            }
-          },
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "chapter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Chapter Id"
-            }
-          },
-          {
-            "name": "scene_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Scene Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SceneResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "manuscript"
-        ],
-        "summary": "씬 수정",
-        "operationId": "update_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "work_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Work Id"
-            }
-          },
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "chapter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Chapter Id"
-            }
-          },
-          {
-            "name": "scene_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Scene Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SceneUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SceneResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "manuscript"
-        ],
-        "summary": "씬 삭제",
-        "operationId": "delete_scene_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__scenes__scene_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "work_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Work Id"
-            }
-          },
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "chapter_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Chapter Id"
-            }
-          },
-          {
-            "name": "scene_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Scene Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/works/{work_id}/export": {
       "get": {
         "tags": [
@@ -3119,7 +2738,7 @@
             }
           },
           {
-            "name": "up_to_scene_id",
+            "name": "up_to_chapter_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -3132,7 +2751,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Up To Scene Id"
+              "title": "Up To Chapter Id"
             }
           }
         ],
@@ -3164,13 +2783,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/links": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/links": {
       "get": {
         "tags": [
           "timeline"
         ],
         "summary": "씬-엔티티 링크 목록",
-        "operationId": "list_links_api_v1_works__work_id__scenes__scene_id__links_get",
+        "operationId": "list_links_api_v1_works__work_id__chapters__chapter_id__links_get",
         "security": [
           {
             "HTTPBearer": []
@@ -3188,13 +2807,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3208,7 +2827,7 @@
                   "items": {
                     "$ref": "#/components/schemas/SceneEntityLinkResponse"
                   },
-                  "title": "Response List Links Api V1 Works  Work Id  Scenes  Scene Id  Links Get"
+                  "title": "Response List Links Api V1 Works  Work Id  Chapters  Chapter Id  Links Get"
                 }
               }
             }
@@ -3230,7 +2849,7 @@
           "timeline"
         ],
         "summary": "씬-엔티티 링크 생성(중복 시 기존 링크 반환)",
-        "operationId": "create_link_api_v1_works__work_id__scenes__scene_id__links_post",
+        "operationId": "create_link_api_v1_works__work_id__chapters__chapter_id__links_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3248,13 +2867,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3292,13 +2911,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/links/{entity_id}": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/links/{entity_id}": {
       "delete": {
         "tags": [
           "timeline"
         ],
         "summary": "씬-엔티티 링크 삭제",
-        "operationId": "delete_link_api_v1_works__work_id__scenes__scene_id__links__entity_id__delete",
+        "operationId": "delete_link_api_v1_works__work_id__chapters__chapter_id__links__entity_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -3316,13 +2935,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           },
           {
@@ -3353,13 +2972,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/memory": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/memory": {
       "get": {
         "tags": [
           "memory"
         ],
-        "summary": "현재 씬의 메모리 검색",
-        "operationId": "search_memory_api_v1_works__work_id__scenes__scene_id__memory_get",
+        "summary": "현재 화의 메모리 검색",
+        "operationId": "search_memory_api_v1_works__work_id__chapters__chapter_id__memory_get",
         "security": [
           {
             "HTTPBearer": []
@@ -3377,13 +2996,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3397,7 +3016,7 @@
                   "items": {
                     "$ref": "#/components/schemas/MemoryItemResponse"
                   },
-                  "title": "Response Search Memory Api V1 Works  Work Id  Scenes  Scene Id  Memory Get"
+                  "title": "Response Search Memory Api V1 Works  Work Id  Chapters  Chapter Id  Memory Get"
                 }
               }
             }
@@ -3415,13 +3034,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/continue": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/continue": {
       "post": {
         "tags": [
           "assist"
         ],
         "summary": "이어쓰기 (SSE)",
-        "operationId": "assist_continue_api_v1_works__work_id__scenes__scene_id__assist_continue_post",
+        "operationId": "assist_continue_api_v1_works__work_id__chapters__chapter_id__assist_continue_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3439,13 +3058,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3481,13 +3100,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/infill": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/infill": {
       "post": {
         "tags": [
           "assist"
         ],
         "summary": "인필링 (SSE)",
-        "operationId": "assist_infill_api_v1_works__work_id__scenes__scene_id__assist_infill_post",
+        "operationId": "assist_infill_api_v1_works__work_id__chapters__chapter_id__assist_infill_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3505,13 +3124,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3547,13 +3166,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/dialogue": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/dialogue": {
       "post": {
         "tags": [
           "assist"
         ],
         "summary": "지문/대사 변환 (SSE)",
-        "operationId": "assist_dialogue_api_v1_works__work_id__scenes__scene_id__assist_dialogue_post",
+        "operationId": "assist_dialogue_api_v1_works__work_id__chapters__chapter_id__assist_dialogue_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3571,13 +3190,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3613,13 +3232,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/style": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/style": {
       "post": {
         "tags": [
           "assist"
         ],
         "summary": "문체 변환 (SSE)",
-        "operationId": "assist_style_api_v1_works__work_id__scenes__scene_id__assist_style_post",
+        "operationId": "assist_style_api_v1_works__work_id__chapters__chapter_id__assist_style_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3637,13 +3256,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3679,13 +3298,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/assist/correct": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/correct": {
       "post": {
         "tags": [
           "assist"
         ],
         "summary": "교정 (SSE)",
-        "operationId": "assist_correct_api_v1_works__work_id__scenes__scene_id__assist_correct_post",
+        "operationId": "assist_correct_api_v1_works__work_id__chapters__chapter_id__assist_correct_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3703,13 +3322,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3745,13 +3364,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates": {
       "post": {
         "tags": [
           "dynamic-update"
         ],
-        "summary": "씬 본문에서 신규 설정 후보 추출 + 제안 저장",
-        "operationId": "extract_updates_api_v1_works__work_id__scenes__scene_id__extract_updates_post",
+        "summary": "화 본문에서 신규 설정 후보 추출 + 제안 저장",
+        "operationId": "extract_updates_api_v1_works__work_id__chapters__chapter_id__extract_updates_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3769,13 +3388,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3803,13 +3422,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions": {
       "get": {
         "tags": [
           "dynamic-update"
         ],
         "summary": "업데이트 제안 목록",
-        "operationId": "list_update_suggestions_api_v1_works__work_id__scenes__scene_id__update_suggestions_get",
+        "operationId": "list_update_suggestions_api_v1_works__work_id__chapters__chapter_id__update_suggestions_get",
         "security": [
           {
             "HTTPBearer": []
@@ -3827,13 +3446,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           }
         ],
@@ -3847,7 +3466,7 @@
                   "items": {
                     "$ref": "#/components/schemas/UpdateSuggestionResponse"
                   },
-                  "title": "Response List Update Suggestions Api V1 Works  Work Id  Scenes  Scene Id  Update Suggestions Get"
+                  "title": "Response List Update Suggestions Api V1 Works  Work Id  Chapters  Chapter Id  Update Suggestions Get"
                 }
               }
             }
@@ -3865,13 +3484,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/approve": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/approve": {
       "post": {
         "tags": [
           "dynamic-update"
         ],
         "summary": "업데이트 제안 승인 — 엔티티/타임라인 상태에 반영",
-        "operationId": "approve_update_suggestion_api_v1_works__work_id__scenes__scene_id__update_suggestions__suggestion_id__approve_post",
+        "operationId": "approve_update_suggestion_api_v1_works__work_id__chapters__chapter_id__update_suggestions__suggestion_id__approve_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3889,13 +3508,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           },
           {
@@ -3933,13 +3552,13 @@
         }
       }
     },
-    "/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions/{suggestion_id}/reject": {
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions/{suggestion_id}/reject": {
       "post": {
         "tags": [
           "dynamic-update"
         ],
         "summary": "업데이트 제안 거절 — 데이터 변경 없음",
-        "operationId": "reject_update_suggestion_api_v1_works__work_id__scenes__scene_id__update_suggestions__suggestion_id__reject_post",
+        "operationId": "reject_update_suggestion_api_v1_works__work_id__chapters__chapter_id__update_suggestions__suggestion_id__reject_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3957,13 +3576,13 @@
             }
           },
           {
-            "name": "scene_id",
+            "name": "chapter_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Scene Id"
+              "title": "Chapter Id"
             }
           },
           {
@@ -4077,7 +3696,7 @@
             }
           },
           {
-            "name": "up_to_scene_id",
+            "name": "up_to_chapter_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -4090,7 +3709,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Up To Scene Id"
+              "title": "Up To Chapter Id"
             }
           }
         ],
@@ -4228,6 +3847,11 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Orderindex"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
           }
         },
         "type": "object",
@@ -4236,7 +3860,7 @@
           "orderIndex"
         ],
         "title": "ChapterCreate",
-        "description": "챕터 생성 입력."
+        "description": "챕터 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다."
       },
       "ChapterResponse": {
         "properties": {
@@ -4262,6 +3886,14 @@
           "orderIndex": {
             "type": "integer",
             "title": "Orderindex"
+          },
+          "globalSeq": {
+            "type": "integer",
+            "title": "Globalseq"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
           }
         },
         "type": "object",
@@ -4270,10 +3902,12 @@
           "workId",
           "episodeId",
           "title",
-          "orderIndex"
+          "orderIndex",
+          "globalSeq",
+          "body"
         ],
         "title": "ChapterResponse",
-        "description": "챕터 응답."
+        "description": "챕터 응답 — 본문(``body``)을 직접 보유한다(scenes 계층 폐지, remove-scene ADR)."
       },
       "ChapterUpdate": {
         "properties": {
@@ -4301,11 +3935,22 @@
               }
             ],
             "title": "Orderindex"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
           }
         },
         "type": "object",
         "title": "ChapterUpdate",
-        "description": "챕터 수정 입력 — 모든 필드 선택(PATCH)."
+        "description": "챕터 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가."
       },
       "ChatMessage": {
         "properties": {
@@ -4419,10 +4064,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           },
           "globalSeq": {
             "type": "integer",
@@ -4441,7 +4086,7 @@
         "type": "object",
         "required": [
           "id",
-          "sceneId",
+          "chapterId",
           "globalSeq",
           "stateValue",
           "createdAt"
@@ -4621,7 +4266,7 @@
         "type": "string",
         "enum": [
           "entity",
-          "scene"
+          "chapter"
         ],
         "title": "EmbeddingSourceType",
         "description": "임베딩 출처 판별 타입 (data-model.md 6장)."
@@ -5351,7 +4996,7 @@
           "edges"
         ],
         "title": "RelationshipGraphResponse",
-        "description": "관계 그래프 응답 — ``up_to_scene_id`` 미지정 시 ``summary``는 null."
+        "description": "관계 그래프 응답 — ``up_to_chapter_id`` 미지정 시 ``summary``는 null."
       },
       "ReviewSummary": {
         "properties": {
@@ -5373,38 +5018,6 @@
         },
         "type": "object",
         "title": "ReviewSummary"
-      },
-      "SceneCreate": {
-        "properties": {
-          "orderIndex": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Orderindex"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "orderIndex"
-        ],
-        "title": "SceneCreate",
-        "description": "씬 생성 입력. ``global_seq``는 서버가 부여하므로 입력에 없다."
       },
       "SceneEntityLinkCreate": {
         "properties": {
@@ -5433,10 +5046,10 @@
             "format": "uuid",
             "title": "Workid"
           },
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           },
           "entityId": {
             "type": "string",
@@ -5456,7 +5069,7 @@
         "required": [
           "id",
           "workId",
-          "sceneId",
+          "chapterId",
           "entityId",
           "source",
           "createdAt"
@@ -5472,114 +5085,6 @@
         ],
         "title": "SceneEntityLinkSource",
         "description": "씬-엔티티 링크 출처 (data-model.md 5.1). 이 슬라이스는 ``author``만 기록한다."
-      },
-      "SceneResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "workId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Workid"
-          },
-          "chapterId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Chapterid"
-          },
-          "orderIndex": {
-            "type": "integer",
-            "title": "Orderindex"
-          },
-          "globalSeq": {
-            "type": "integer",
-            "title": "Globalseq"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdat"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updatedat"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workId",
-          "chapterId",
-          "orderIndex",
-          "globalSeq",
-          "title",
-          "body",
-          "createdAt",
-          "updatedAt"
-        ],
-        "title": "SceneResponse",
-        "description": "씬 응답."
-      },
-      "SceneUpdate": {
-        "properties": {
-          "orderIndex": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Orderindex"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "body": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Body"
-          }
-        },
-        "type": "object",
-        "title": "SceneUpdate",
-        "description": "씬 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가."
       },
       "SendMessageRequest": {
         "properties": {
@@ -5611,16 +5116,16 @@
             "minLength": 1,
             "title": "Content"
           },
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           }
         },
         "type": "object",
         "required": [
           "content",
-          "sceneId"
+          "chapterId"
         ],
         "title": "SendWorkChatMessageRequest"
       },
@@ -5787,10 +5292,10 @@
       },
       "TimelineStateCreate": {
         "properties": {
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           },
           "stateKey": {
             "type": "string",
@@ -5818,7 +5323,7 @@
         },
         "type": "object",
         "required": [
-          "sceneId",
+          "chapterId",
           "stateKey",
           "stateValue"
         ],
@@ -5842,10 +5347,10 @@
             "format": "uuid",
             "title": "Entityid"
           },
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           },
           "stateKey": {
             "type": "string",
@@ -5880,7 +5385,7 @@
           "id",
           "workId",
           "entityId",
-          "sceneId",
+          "chapterId",
           "stateKey",
           "stateValue",
           "note",
@@ -5990,10 +5495,10 @@
             "format": "uuid",
             "title": "Workid"
           },
-          "sceneId": {
+          "chapterId": {
             "type": "string",
             "format": "uuid",
-            "title": "Sceneid"
+            "title": "Chapterid"
           },
           "kind": {
             "$ref": "#/components/schemas/SuggestionKind"
@@ -6016,7 +5521,7 @@
         "required": [
           "id",
           "workId",
-          "sceneId",
+          "chapterId",
           "kind",
           "payload",
           "status",

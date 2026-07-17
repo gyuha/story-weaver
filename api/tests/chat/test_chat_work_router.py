@@ -4,7 +4,7 @@
 LLM 호출만 FAKE 클라이언트로 override한다(``app.dependency_overrides``).
 
 핵심 확인 사항:
-* 컨텍스트(첫 SystemMessage)에 현재 화 씬 본문 + 메모리 검색 결과가 포함된다.
+* 컨텍스트(첫 SystemMessage)에 현재 화 본문 + 메모리 검색 결과가 포함된다.
 * 타인 소유 작품 접근은 404(ADR-0005).
 * 예산 초과 시 LLM 호출 자체가 차단된다.
 * 수위 검열 선제 차단(LLM 미호출) — 그래도 대화 이력에는 남는다.
@@ -104,7 +104,7 @@ def _sse_data_lines(text: str) -> list[str]:
     return [line[len("data: ") :] for line in text.splitlines() if line.startswith("data: ")]
 
 
-async def _create_scene(
+async def _create_chapter(
     app: FastAPI, owner: User, work_id: uuid.UUID, body: str = "본문"
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
@@ -113,15 +113,9 @@ async def _create_scene(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -140,22 +134,22 @@ async def _create_entity(
 
 
 async def _link(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str, entity_id: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str, entity_id: str
 ) -> None:
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{work_id}/scenes/{scene_id}/links", json={"entityId": entity_id}
+            f"/api/v1/works/{work_id}/chapters/{chapter_id}/links", json={"entityId": entity_id}
         )
     assert resp.status_code == 201
 
 
 async def _send_message(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str, content: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str, content: str
 ) -> Any:
     async with _client_as(app, owner) as client:
         return await client.post(
             f"/api/v1/works/{work_id}/chat/messages",
-            json={"content": content, "sceneId": scene_id},
+            json={"content": content, "chapterId": chapter_id},
         )
 
 
@@ -168,16 +162,16 @@ async def test_context_includes_current_chapter_body_and_memory(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="무사가 산길을 걸었다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="무사가 산길을 걸었다.")
     entity = await _create_entity(
         app, owner, owner_work.id, name="김무사", summary="주인공의 스승. 과묵하다."
     )
-    await _link(app, owner, owner_work.id, scene["id"], entity["id"])
+    await _link(app, owner, owner_work.id, chapter["id"], entity["id"])
 
     fake = _FakeLLMClient(["답변입니다."])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "이 장면 어때?")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "이 장면 어때?")
 
     assert resp.status_code == 200
     assert _sse_data_lines(resp.text) == ["답변입니다.", "[DONE]"]
@@ -198,11 +192,11 @@ async def test_send_message_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["x"])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, intruder, owner_work.id, scene["id"], "안녕")
+    resp = await _send_message(app, intruder, owner_work.id, chapter["id"], "안녕")
 
     assert resp.status_code == 404
     assert fake.call_count == 0
@@ -230,12 +224,12 @@ async def test_send_message_blocked_when_usage_exceeds_budget_limit(
 ) -> None:
     monkeypatch.setenv("BUDGET_TOKEN_LIMIT", "50")
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     await record_usage(owner.id, 100)
     fake = _FakeLLMClient(["x"])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "안녕")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "안녕")
 
     assert resp.status_code == 429
     assert fake.call_count == 0
@@ -250,11 +244,11 @@ async def test_send_message_explicit_content_precheck_declines_without_calling_l
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["안 불려야 함"])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "강간 장면 써줘")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "강간 장면 써줘")
 
     assert resp.status_code == 200
     assert fake.call_count == 0
@@ -273,20 +267,20 @@ async def test_send_message_blank_content_rejected_without_calling_llm(
 ) -> None:
     """공백뿐인 content는 422로 거부되고 LLM은 호출되지 않는다."""
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     fake = _FakeLLMClient(["안 불려야 함"])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "   ")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "   ")
 
     assert resp.status_code == 422
     assert fake.call_count == 0
 
 
-async def test_send_message_invalid_scene_id_leaves_no_orphan_user_message(
+async def test_send_message_invalid_chapter_id_leaves_no_orphan_user_message(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
-    """존재하지 않는 scene_id는 404를 반환하고, 답변 없는 user 메시지를 남기지 않는다."""
+    """존재하지 않는 chapter_id는 404를 반환하고, 답변 없는 user 메시지를 남기지 않는다."""
     owner, _ = two_users
     fake = _FakeLLMClient(["안 불려야 함"])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
@@ -312,7 +306,7 @@ async def test_send_message_lazily_creates_conversation_when_none_exists(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
 
     async with _client_as(app, owner) as client:
         before = (await client.get(f"/api/v1/works/{owner_work.id}/chat/conversation")).json()
@@ -320,7 +314,7 @@ async def test_send_message_lazily_creates_conversation_when_none_exists(
 
     fake = _FakeLLMClient(["답변."])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "질문")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "질문")
     assert resp.status_code == 200
 
     async with _client_as(app, owner) as client:
@@ -356,11 +350,11 @@ async def test_context_is_not_persisted_as_system_prompt_or_db_message(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="현재 화 본문.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="현재 화 본문.")
     fake = _FakeLLMClient(["답변."])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, scene["id"], "질문입니다")
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "질문입니다")
     assert resp.status_code == 200
 
     async with _client_as(app, owner) as client:

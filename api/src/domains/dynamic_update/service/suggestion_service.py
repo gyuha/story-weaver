@@ -11,10 +11,10 @@
 
 승인(approve) 시 worldbible/timeline 도메인이 이미 확립한 쓰기 헬퍼
 (``create_entity``/``update_entity``/``create_timeline_state``)를 그대로 재사용한다
-(ADR-0005) — entities/scenes 등 다른 도메인의 ORM 모델은 import하지 않는다.
+(ADR-0005) — entities/chapters 등 다른 도메인의 ORM 모델은 import하지 않는다.
 새 엔티티 재임베딩은 ``create_entity``/``update_entity`` 내부에서 이미 처리되므로
 여기서 별도로 트리거하지 않는다. timeline_states는 원래부터 재임베딩 대상이 아니다
-(memory 도메인의 ``EmbeddingSourceType``에 entity/scene만 있음).
+(memory 도메인의 ``EmbeddingSourceType``에 entity/chapter만 있음).
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class SuggestionService:
         self,
         work_id: uuid.UUID,
         user_id: uuid.UUID,
-        scene_id: uuid.UUID,
+        chapter_id: uuid.UUID,
         extraction: ExtractUpdatesResponse,
     ) -> list[UpdateSuggestion]:
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인
@@ -79,7 +79,7 @@ class SuggestionService:
                 await self._repo.add(
                     UpdateSuggestion(
                         work_id=work_id,
-                        scene_id=scene_id,
+                        chapter_id=chapter_id,
                         kind=SuggestionKind.new_entity,
                         payload=candidate.model_dump(by_alias=True),
                         status=SuggestionStatus.pending,
@@ -95,7 +95,7 @@ class SuggestionService:
                 await self._repo.add(
                     UpdateSuggestion(
                         work_id=work_id,
-                        scene_id=scene_id,
+                        chapter_id=chapter_id,
                         kind=SuggestionKind.attribute_change,
                         payload=change.model_dump(by_alias=True),
                         status=SuggestionStatus.pending,
@@ -116,7 +116,7 @@ class SuggestionService:
                 await self._repo.add(
                     UpdateSuggestion(
                         work_id=work_id,
-                        scene_id=scene_id,
+                        chapter_id=chapter_id,
                         kind=SuggestionKind.timeline_state,
                         payload=timeline_change.model_dump(by_alias=True),
                         status=SuggestionStatus.pending,
@@ -148,10 +148,10 @@ class SuggestionService:
     # -- S3: 조회 + 승인/거절 ------------------------------------------------
 
     async def list_suggestions(
-        self, work_id: uuid.UUID, user_id: uuid.UUID, scene_id: uuid.UUID
+        self, work_id: uuid.UUID, user_id: uuid.UUID, chapter_id: uuid.UUID
     ) -> list[UpdateSuggestion]:
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인
-        return await self._repo.list_by_scene(work_id, scene_id)
+        return await self._repo.list_by_chapter(work_id, chapter_id)
 
     async def approve_suggestion(
         self, work_id: uuid.UUID, user_id: uuid.UUID, suggestion_id: uuid.UUID
@@ -188,7 +188,7 @@ class SuggestionService:
                 user_id,
                 entity_id,
                 TimelineStateCreate(
-                    scene_id=suggestion.scene_id,
+                    chapter_id=suggestion.chapter_id,
                     state_key=timeline_change.state_key,
                     state_value=timeline_change.state_value,
                 ),

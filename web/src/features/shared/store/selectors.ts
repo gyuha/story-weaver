@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useShallow } from 'zustand/react/shallow';
-import type { Chapter, Entity, Scene, Work } from '../types';
+import type { Chapter, Entity, Work } from '../types';
 import { useWorksStore } from './works.store';
 
 export function useWorks(): Work[] {
@@ -30,26 +30,12 @@ export function useEntity(workId: string | undefined, entityId: string | undefin
   );
 }
 
-export interface SceneLocation {
-  scene: Scene;
-  chapter: Chapter;
-}
-
-/** 작품 내 모든 씬을 (씬, 챕터) 쌍으로 펼친다. */
-export function flattenScenes(work: Work): SceneLocation[] {
-  return work.chapters.flatMap((chapter) => chapter.scenes.map((scene) => ({ scene, chapter })));
-}
-
-export function findSceneLocation(
+/** 지정한 id의 화를 찾는다 — 씬 계층 폐지 후 findSceneLocation의 화 버전. */
+export function findChapter(
   work: Work | undefined,
-  sceneId: string | undefined
-): SceneLocation | undefined {
-  if (!work) return undefined;
-  for (const chapter of work.chapters) {
-    const scene = chapter.scenes.find((s) => s.id === sceneId);
-    if (scene) return { scene, chapter };
-  }
-  return undefined;
+  chapterId: string | undefined
+): Chapter | undefined {
+  return work?.chapters.find((c) => c.id === chapterId);
 }
 
 export interface ChapterNav {
@@ -75,12 +61,11 @@ export function findChapterNav(
   };
 }
 
-/** 편집 대상으로 적합한 첫 씬(빈 씬 제외, 없으면 첫 씬) */
-export function defaultSceneId(work: Work | undefined): string | undefined {
+/** 편집 대상으로 적합한 첫 화(빈 화 제외, 없으면 첫 화) — 씬 계층 폐지 후 defaultSceneId의 화 버전. */
+export function defaultChapterId(work: Work | undefined): string | undefined {
   if (!work) return undefined;
-  const all = flattenScenes(work);
-  const draft = all.find((l) => l.scene.status === 'draft');
-  return (draft ?? all[0])?.scene.id;
+  const draft = work.chapters.find((c) => c.status === 'draft');
+  return (draft ?? work.chapters[0])?.id;
 }
 
 /** 작품의 챕터를 부(part) 단위로 묶는다. */

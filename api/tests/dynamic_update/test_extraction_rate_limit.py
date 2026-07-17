@@ -82,22 +82,16 @@ class _FakeLLMClient:
         return _FakeResponse("{}")
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -106,13 +100,13 @@ async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[s
 async def test_requests_up_to_the_limit_all_succeed(
     app: FastAPI, owner: User, owner_work: Work
 ) -> None:
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     app.dependency_overrides[_extraction_llm_client] = lambda: _FakeLLMClient()
 
     async with _client_as(app, owner) as client:
         for _ in range(_LIMIT_COUNT):
             resp = await client.post(
-                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+                f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
             )
             assert resp.status_code == 200
 
@@ -122,18 +116,18 @@ async def test_exceeding_the_limit_returns_429(app: FastAPI, owner: User, owner_
     ``tests/test_rate_limit.py``에서 main.py와 동일한 앱 배선으로 확인한다 — 여기서는
     라우터에 데코레이터가 실제로 걸려 상한을 넘으면 차단되는지만 본다.
     """
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     app.dependency_overrides[_extraction_llm_client] = lambda: _FakeLLMClient()
 
     async with _client_as(app, owner) as client:
         for _ in range(_LIMIT_COUNT):
             resp = await client.post(
-                f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+                f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
             )
             assert resp.status_code == 200
 
         resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/extract-updates"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
     assert resp.status_code == 429

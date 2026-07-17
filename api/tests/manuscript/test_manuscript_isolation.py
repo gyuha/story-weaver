@@ -1,4 +1,4 @@
-"""교차 테넌트 격리 확인(S4) — 부/챕터/씬의 PATCH·DELETE 404.
+"""교차 테넌트 격리 확인(S4) — 부/챕터의 PATCH·DELETE 404.
 
 `test_works_isolation.py`의 실 DB e2e 패턴을 그대로 재사용한다: 서비스를 fake로
 override하지 않고 실 라우터 → `ManuscriptService`/`WorksService` → 실 DB 경로를 그대로
@@ -7,11 +7,10 @@ override하지 않고 실 라우터 → `ManuscriptService`/`WorksService` → �
 이미 충분히 커버되어 이 파일에서 중복하지 않는 것 (둘 다 실 DB 경로, 인증만 override):
 - 시놉시스 GET/PUT 교차 테넌트 404 — `test_synopsis_route.py`의
   `test_get_synopsis_other_tenant_returns_404`, `test_put_synopsis_other_tenant_returns_404`.
-- 부/챕터/씬 GET 교차 테넌트 404 — `test_manuscript_route.py`의
-  `test_get_episode_other_tenant_returns_404`, `test_get_chapter_other_tenant_returns_404`,
-  `test_get_scene_other_tenant_returns_404`.
+- 부/챕터 GET 교차 테넌트 404 — `test_manuscript_route.py`의
+  `test_get_episode_other_tenant_returns_404`, `test_get_chapter_other_tenant_returns_404`.
 
-이 파일이 채우는 빈 칸: 부/챕터/씬의 PATCH·DELETE 교차 테넌트 404 —
+이 파일이 채우는 빈 칸: 부/챕터의 PATCH·DELETE 교차 테넌트 404 —
 `test_works_isolation.py`가 work에 대해 커버하는 것과 대칭이며, 지금까지 어디에도 없었다.
 """
 
@@ -67,8 +66,8 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
 @pytest.fixture
 async def owner_hierarchy(
     app: FastAPI, two_users: tuple[User, User]
-) -> tuple[User, User, Work, dict[str, object], dict[str, object], dict[str, object]]:
-    """소유자(owner) 명의로 work → episode → chapter → scene을 한 줄씩 만들어 반환."""
+) -> tuple[User, User, Work, dict[str, object], dict[str, object]]:
+    """소유자(owner) 명의로 work → episode → chapter를 한 줄씩 만들어 반환."""
     owner, intruder = two_users
     async with AsyncSessionFactory() as session:
         work = Work(
@@ -86,26 +85,20 @@ async def owner_hierarchy(
         chapter = (
             await client.post(
                 f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
-        scene = (
-            await client.post(
-                f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-                json={"orderIndex": 0, "body": "본문"},
+                json={"title": "1장", "orderIndex": 0, "body": "본문"},
             )
         ).json()
 
-    return owner, intruder, work, episode, chapter, scene
+    return owner, intruder, work, episode, chapter
 
 
-_Hierarchy = tuple[User, User, Work, dict[str, object], dict[str, object], dict[str, object]]
+_Hierarchy = tuple[User, User, Work, dict[str, object], dict[str, object]]
 
 
 async def test_update_episode_other_tenant_returns_404(
     app: FastAPI, owner_hierarchy: _Hierarchy
 ) -> None:
-    _owner, intruder, work, episode, _chapter, _scene = owner_hierarchy
+    _owner, intruder, work, episode, _chapter = owner_hierarchy
     async with _client_as(app, intruder) as client:
         resp = await client.patch(
             f"/api/v1/works/{work.id}/episodes/{episode['id']}", json={"title": "가로채기"}
@@ -116,7 +109,7 @@ async def test_update_episode_other_tenant_returns_404(
 async def test_delete_episode_other_tenant_returns_404(
     app: FastAPI, owner_hierarchy: _Hierarchy
 ) -> None:
-    owner, intruder, work, episode, _chapter, _scene = owner_hierarchy
+    owner, intruder, work, episode, _chapter = owner_hierarchy
     async with _client_as(app, intruder) as client:
         resp = await client.delete(f"/api/v1/works/{work.id}/episodes/{episode['id']}")
     assert resp.status_code == 404
@@ -130,7 +123,7 @@ async def test_delete_episode_other_tenant_returns_404(
 async def test_update_chapter_other_tenant_returns_404(
     app: FastAPI, owner_hierarchy: _Hierarchy
 ) -> None:
-    _owner, intruder, work, episode, chapter, _scene = owner_hierarchy
+    _owner, intruder, work, episode, chapter = owner_hierarchy
     async with _client_as(app, intruder) as client:
         resp = await client.patch(
             f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}",
@@ -142,7 +135,7 @@ async def test_update_chapter_other_tenant_returns_404(
 async def test_delete_chapter_other_tenant_returns_404(
     app: FastAPI, owner_hierarchy: _Hierarchy
 ) -> None:
-    owner, intruder, work, episode, chapter, _scene = owner_hierarchy
+    owner, intruder, work, episode, chapter = owner_hierarchy
     async with _client_as(app, intruder) as client:
         resp = await client.delete(
             f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}"
@@ -152,37 +145,5 @@ async def test_delete_chapter_other_tenant_returns_404(
     async with _client_as(app, owner) as client:
         resp = await client.get(
             f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}"
-        )
-    assert resp.status_code == 200
-
-
-async def test_update_scene_other_tenant_returns_404(
-    app: FastAPI, owner_hierarchy: _Hierarchy
-) -> None:
-    _owner, intruder, work, episode, chapter, scene = owner_hierarchy
-    async with _client_as(app, intruder) as client:
-        resp = await client.patch(
-            f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}"
-            f"/scenes/{scene['id']}",
-            json={"body": "가로채기"},
-        )
-    assert resp.status_code == 404
-
-
-async def test_delete_scene_other_tenant_returns_404(
-    app: FastAPI, owner_hierarchy: _Hierarchy
-) -> None:
-    owner, intruder, work, episode, chapter, scene = owner_hierarchy
-    async with _client_as(app, intruder) as client:
-        resp = await client.delete(
-            f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}"
-            f"/scenes/{scene['id']}"
-        )
-    assert resp.status_code == 404
-
-    async with _client_as(app, owner) as client:
-        resp = await client.get(
-            f"/api/v1/works/{work.id}/episodes/{episode['id']}/chapters/{chapter['id']}"
-            f"/scenes/{scene['id']}"
         )
     assert resp.status_code == 200

@@ -1,6 +1,6 @@
 """매칭·제안 저장(S2) + 승인/거절 반영(S3) 테스트 (TDD, plan.md M3-S2/S3).
 
-``POST /works/{work_id}/scenes/{scene_id}/extract-updates``가 추출 후 자동으로
+``POST /works/{work_id}/chapters/{chapter_id}/extract-updates``가 추출 후 자동으로
 기존 엔티티와 매칭해 노이즈(동일 값)를 걸러내고 제안 레코드를 저장한다(S2).
 ``GET .../update-suggestions``로 조회하고, ``POST .../update-suggestions/{id}/approve``
 로 승인(엔티티/타임라인 상태 반영)하거나 ``.../reject``로 거절(데이터 변경 없음)한다(S3).
@@ -94,22 +94,18 @@ class _FakeLLMClient:
         return _FakeResponse(self._content)
 
 
-async def _create_scene(app: FastAPI, owner: User, work_id: uuid.UUID, body: str) -> dict[str, Any]:
+async def _create_chapter(
+    app: FastAPI, owner: User, work_id: uuid.UUID, body: str
+) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         episode = (
             await client.post(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -137,11 +133,11 @@ async def _create_character(
 
 
 async def _link_entity(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str, entity_id: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str, entity_id: str
 ) -> None:
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{work_id}/scenes/{scene_id}/links", json={"entityId": entity_id}
+            f"/api/v1/works/{work_id}/chapters/{chapter_id}/links", json={"entityId": entity_id}
         )
     assert resp.status_code == 201
 
@@ -151,34 +147,34 @@ async def _create_timeline_state(
     owner: User,
     work_id: uuid.UUID,
     entity_id: str,
-    scene_id: str,
+    chapter_id: str,
     state_key: str,
     state_value: str,
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/entities/{entity_id}/timeline-states",
-            json={"sceneId": scene_id, "stateKey": state_key, "stateValue": state_value},
+            json={"chapterId": chapter_id, "stateKey": state_key, "stateValue": state_value},
         )
     assert resp.status_code == 201
     return resp.json()
 
 
 async def _extract_updates(
-    app: FastAPI, user: User, work_id: uuid.UUID, scene_id: str, canned: str
+    app: FastAPI, user: User, work_id: uuid.UUID, chapter_id: str, canned: str
 ) -> dict[str, Any]:
     app.dependency_overrides[_extraction_llm_client] = lambda: _FakeLLMClient(canned)
     async with _client_as(app, user) as client:
-        resp = await client.post(f"/api/v1/works/{work_id}/scenes/{scene_id}/extract-updates")
+        resp = await client.post(f"/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates")
     assert resp.status_code == 200
     return resp.json()
 
 
 async def _list_suggestions(
-    app: FastAPI, user: User, work_id: uuid.UUID, scene_id: str
+    app: FastAPI, user: User, work_id: uuid.UUID, chapter_id: str
 ) -> list[dict[str, Any]]:
     async with _client_as(app, user) as client:
-        resp = await client.get(f"/api/v1/works/{work_id}/scenes/{scene_id}/update-suggestions")
+        resp = await client.get(f"/api/v1/works/{work_id}/chapters/{chapter_id}/update-suggestions")
     assert resp.status_code == 200
     return resp.json()
 
@@ -208,11 +204,11 @@ async def test_extract_updates_persists_genuinely_new_candidate_entity_as_sugges
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="복면인이 나타났다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="복면인이 나타났다.")
     canned = _empty_extraction(candidate_entities=[{"name": "복면인", "summary": "자객"}])
 
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter["id"])
 
     assert len(suggestions) == 1
     assert suggestions[0]["kind"] == "new_entity"
@@ -225,12 +221,12 @@ async def test_extract_updates_drops_candidate_entity_matching_existing_entity_n
 ) -> None:
     owner, _ = two_users
     await _create_character(app, owner, owner_work.id, "한지원")
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원이 나타났다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원이 나타났다.")
     # 대소문자만 다른 이름도 매칭되어야 한다.
     canned = _empty_extraction(candidate_entities=[{"name": "한지원", "summary": "주인공"}])
 
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter["id"])
 
     assert suggestions == []
 
@@ -242,15 +238,15 @@ async def test_extract_updates_persists_attribute_change_when_value_differs(
     character = await _create_character(
         app, owner, owner_work.id, "한지원", attributes={"appearance": "차분한 인상"}
     )
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원의 얼굴이 피투성이였다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원의 얼굴이 피투성이였다.")
     canned = _empty_extraction(
         attribute_changes=[
             {"entityId": character["id"], "attribute": "appearance", "newValue": "피투성이"}
         ]
     )
 
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter["id"])
 
     assert len(suggestions) == 1
     assert suggestions[0]["kind"] == "attribute_change"
@@ -268,15 +264,15 @@ async def test_extract_updates_drops_attribute_change_matching_current_value(
     character = await _create_character(
         app, owner, owner_work.id, "한지원", attributes={"appearance": "차분한 인상"}
     )
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원은 여전히 차분했다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원은 여전히 차분했다.")
     canned = _empty_extraction(
         attribute_changes=[
             {"entityId": character["id"], "attribute": "appearance", "newValue": "차분한 인상"}
         ]
     )
 
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter["id"])
 
     assert suggestions == []
 
@@ -286,19 +282,19 @@ async def test_extract_updates_persists_timeline_change_when_value_differs(
 ) -> None:
     owner, _ = two_users
     character = await _create_character(app, owner, owner_work.id, "한지원")
-    scene1 = await _create_scene(app, owner, owner_work.id, body="한지원은 살아있었다.")
+    chapter1 = await _create_chapter(app, owner, owner_work.id, body="한지원은 살아있었다.")
     await _create_timeline_state(
-        app, owner, owner_work.id, character["id"], scene1["id"], "life_status", "alive"
+        app, owner, owner_work.id, character["id"], chapter1["id"], "life_status", "alive"
     )
-    scene2 = await _create_scene(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
+    chapter2 = await _create_chapter(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
     canned = _empty_extraction(
         timeline_changes=[
             {"entityId": character["id"], "stateKey": "life_status", "stateValue": "dead"}
         ]
     )
 
-    await _extract_updates(app, owner, owner_work.id, scene2["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene2["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter2["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter2["id"])
 
     assert len(suggestions) == 1
     assert suggestions[0]["kind"] == "timeline_state"
@@ -314,19 +310,19 @@ async def test_extract_updates_drops_timeline_change_matching_latest_state(
 ) -> None:
     owner, _ = two_users
     character = await _create_character(app, owner, owner_work.id, "한지원")
-    scene1 = await _create_scene(app, owner, owner_work.id, body="한지원은 살아있었다.")
+    chapter1 = await _create_chapter(app, owner, owner_work.id, body="한지원은 살아있었다.")
     await _create_timeline_state(
-        app, owner, owner_work.id, character["id"], scene1["id"], "life_status", "alive"
+        app, owner, owner_work.id, character["id"], chapter1["id"], "life_status", "alive"
     )
-    scene2 = await _create_scene(app, owner, owner_work.id, body="한지원은 여전히 살아있다.")
+    chapter2 = await _create_chapter(app, owner, owner_work.id, body="한지원은 여전히 살아있다.")
     canned = _empty_extraction(
         timeline_changes=[
             {"entityId": character["id"], "stateKey": "life_status", "stateValue": "alive"}
         ]
     )
 
-    await _extract_updates(app, owner, owner_work.id, scene2["id"], canned)
-    suggestions = await _list_suggestions(app, owner, owner_work.id, scene2["id"])
+    await _extract_updates(app, owner, owner_work.id, chapter2["id"], canned)
+    suggestions = await _list_suggestions(app, owner, owner_work.id, chapter2["id"])
 
     assert suggestions == []
 
@@ -340,14 +336,14 @@ async def test_approve_new_entity_suggestion_creates_entity(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="복면인이 나타났다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="복면인이 나타났다.")
     canned = _empty_extraction(candidate_entities=[{"name": "복면인", "summary": "자객"}])
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestion = (await _list_suggestions(app, owner, owner_work.id, scene["id"]))[0]
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestion = (await _list_suggestions(app, owner, owner_work.id, chapter["id"]))[0]
 
     async with _client_as(app, owner) as client:
         approve_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}"
             f"/update-suggestions/{suggestion['id']}/approve"
         )
         entities_resp = await client.get(f"/api/v1/works/{owner_work.id}/entities")
@@ -365,18 +361,18 @@ async def test_approve_attribute_change_suggestion_updates_entity_attributes(
     character = await _create_character(
         app, owner, owner_work.id, "한지원", attributes={"appearance": "차분한 인상"}
     )
-    scene = await _create_scene(app, owner, owner_work.id, body="한지원의 얼굴이 피투성이였다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="한지원의 얼굴이 피투성이였다.")
     canned = _empty_extraction(
         attribute_changes=[
             {"entityId": character["id"], "attribute": "appearance", "newValue": "피투성이"}
         ]
     )
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestion = (await _list_suggestions(app, owner, owner_work.id, scene["id"]))[0]
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestion = (await _list_suggestions(app, owner, owner_work.id, chapter["id"]))[0]
 
     async with _client_as(app, owner) as client:
         approve_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}"
             f"/update-suggestions/{suggestion['id']}/approve"
         )
         entity_resp = await client.get(f"/api/v1/works/{owner_work.id}/entities/{character['id']}")
@@ -390,22 +386,22 @@ async def test_approve_timeline_change_suggestion_creates_ai_suggested_state(
 ) -> None:
     owner, _ = two_users
     character = await _create_character(app, owner, owner_work.id, "한지원")
-    scene1 = await _create_scene(app, owner, owner_work.id, body="한지원은 살아있었다.")
+    chapter1 = await _create_chapter(app, owner, owner_work.id, body="한지원은 살아있었다.")
     await _create_timeline_state(
-        app, owner, owner_work.id, character["id"], scene1["id"], "life_status", "alive"
+        app, owner, owner_work.id, character["id"], chapter1["id"], "life_status", "alive"
     )
-    scene2 = await _create_scene(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
+    chapter2 = await _create_chapter(app, owner, owner_work.id, body="한지원은 그 자리에서 죽었다.")
     canned = _empty_extraction(
         timeline_changes=[
             {"entityId": character["id"], "stateKey": "life_status", "stateValue": "dead"}
         ]
     )
-    await _extract_updates(app, owner, owner_work.id, scene2["id"], canned)
-    suggestion = (await _list_suggestions(app, owner, owner_work.id, scene2["id"]))[0]
+    await _extract_updates(app, owner, owner_work.id, chapter2["id"], canned)
+    suggestion = (await _list_suggestions(app, owner, owner_work.id, chapter2["id"]))[0]
 
     async with _client_as(app, owner) as client:
         approve_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene2['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter2['id']}"
             f"/update-suggestions/{suggestion['id']}/approve"
         )
         states_resp = await client.get(
@@ -425,14 +421,14 @@ async def test_reject_suggestion_marks_rejected_without_mutating_data(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="복면인이 나타났다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="복면인이 나타났다.")
     canned = _empty_extraction(candidate_entities=[{"name": "복면인", "summary": "자객"}])
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestion = (await _list_suggestions(app, owner, owner_work.id, scene["id"]))[0]
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestion = (await _list_suggestions(app, owner, owner_work.id, chapter["id"]))[0]
 
     async with _client_as(app, owner) as client:
         reject_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}"
             f"/update-suggestions/{suggestion['id']}/reject"
         )
         entities_resp = await client.get(f"/api/v1/works/{owner_work.id}/entities")
@@ -451,21 +447,21 @@ async def test_suggestions_other_tenant_returns_404_on_all_endpoints(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="복면인이 나타났다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="복면인이 나타났다.")
     canned = _empty_extraction(candidate_entities=[{"name": "복면인", "summary": "자객"}])
-    await _extract_updates(app, owner, owner_work.id, scene["id"], canned)
-    suggestion = (await _list_suggestions(app, owner, owner_work.id, scene["id"]))[0]
+    await _extract_updates(app, owner, owner_work.id, chapter["id"], canned)
+    suggestion = (await _list_suggestions(app, owner, owner_work.id, chapter["id"]))[0]
 
     async with _client_as(app, intruder) as client:
         list_resp = await client.get(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/update-suggestions"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/update-suggestions"
         )
         approve_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}"
             f"/update-suggestions/{suggestion['id']}/approve"
         )
         reject_resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}"
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}"
             f"/update-suggestions/{suggestion['id']}/reject"
         )
 

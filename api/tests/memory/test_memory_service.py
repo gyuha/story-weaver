@@ -73,14 +73,14 @@ async def test_index_source_upserts_instead_of_duplicating(fixture: _Fixture) ->
     async with AsyncSessionFactory() as session:
         service = MemoryService(MemoryRepository(session))
         await service.index_source(
-            fixture.work.id, EmbeddingSourceType.scene, source_id, "첫 번째 본문"
+            fixture.work.id, EmbeddingSourceType.chapter, source_id, "첫 번째 본문"
         )
         await session.commit()
 
     async with AsyncSessionFactory() as session:
         service = MemoryService(MemoryRepository(session))
         await service.index_source(
-            fixture.work.id, EmbeddingSourceType.scene, source_id, "수정된 본문"
+            fixture.work.id, EmbeddingSourceType.chapter, source_id, "수정된 본문"
         )
         await session.commit()
 
@@ -147,3 +147,75 @@ async def test_index_source_reembeds_when_content_changed(
         await session.commit()
 
     assert len(calls) == 2  # 내용이 바뀌었으니 재임베딩
+
+
+async def test_index_chapter_splits_long_body_into_multiple_chunks(fixture: _Fixture) -> None:
+    """문단(빈 줄) 3개(각 300자, 합 900자+구분자)를 ~800자 그룹핑하면 청크 2개가 된다."""
+    chapter_id = uuid.uuid4()
+    paragraph = "가" * 300
+    body = "\n\n".join([paragraph, paragraph, paragraph])
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, body)
+        await session.commit()
+
+    async with AsyncSessionFactory() as session:
+        result = await session.execute(
+            select(Embedding)
+            .where(
+                Embedding.source_id == chapter_id,
+                Embedding.source_type == EmbeddingSourceType.chapter,
+            )
+            .order_by(Embedding.chunk_index)
+        )
+        rows = list(result.scalars().all())
+
+    assert len(rows) == 2
+    assert [row.chunk_index for row in rows] == [0, 1]
+    assert rows[0].content == f"{paragraph}\n\n{paragraph}"
+    assert rows[1].content == paragraph
+
+
+async def test_index_chapter_short_body_indexes_single_chunk(fixture: _Fixture) -> None:
+    chapter_id = uuid.uuid4()
+    body = "김무사가 산문을 나섰다."
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, body)
+        await session.commit()
+
+    async with AsyncSessionFactory() as session:
+        result = await session.execute(select(Embedding).where(Embedding.source_id == chapter_id))
+        rows = list(result.scalars().all())
+
+    assert len(rows) == 1
+    assert rows[0].chunk_index == 0
+    assert rows[0].content == body
+
+
+async def test_index_chapter_reindex_trims_orphan_chunks_when_shrinking(
+    fixture: _Fixture,
+) -> None:
+    """재수정으로 청크 수가 줄면 이전 인덱싱의 뒤쪽 chunk_index 행이 고아로 남지 않는다."""
+    chapter_id = uuid.uuid4()
+    paragraph = "나" * 300
+    long_body = "\n\n".join([paragraph, paragraph, paragraph])  # 청크 2개
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, long_body)
+        await session.commit()
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, "짧아진 본문")  # 청크 1개
+        await session.commit()
+
+    async with AsyncSessionFactory() as session:
+        result = await session.execute(select(Embedding).where(Embedding.source_id == chapter_id))
+        rows = list(result.scalars().all())
+
+    assert len(rows) == 1
+    assert rows[0].content == "짧아진 본문"

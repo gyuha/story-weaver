@@ -1,7 +1,7 @@
 """메모리 검색 API 실 DB e2e 테스트 (TDD, plan.md S4).
 
-``GET /works/{work_id}/scenes/{scene_id}/memory`` — 1차(scene_entity_links로 링크된
-엔티티 + 현재 시점까지의 타임라인 상태)와 보조(씬 본문 벡터 ANN, work_id 선필터,
+``GET /works/{work_id}/chapters/{chapter_id}/memory`` — 1차(scene_entity_links로 링크된
+엔티티 + 현재 시점까지의 타임라인 상태)와 보조(화 본문 벡터 ANN, work_id 선필터,
 1차에서 이미 나온 엔티티는 제외)를 병합해 반환하는지 확인한다. 실 로컬 임베딩
 모델을 그대로 호출한다(mock 없음 — API 키/비용 없는 로컬 모델이라 가능, S2/S3와
 동일 패턴).
@@ -74,7 +74,7 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
     return AsyncClient(transport=transport, base_url="http://test")
 
 
-async def _create_scene(
+async def _create_chapter(
     app: FastAPI, owner: User, work_id: uuid.UUID, body: str = "본문"
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
@@ -83,15 +83,9 @@ async def _create_scene(
                 f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
             )
         ).json()
-        chapter = (
-            await client.post(
-                f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
-                json={"title": "1장", "orderIndex": 0},
-            )
-        ).json()
         resp = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters/{chapter['id']}/scenes",
-            json={"orderIndex": 0, "body": body},
+            f"/api/v1/works/{work_id}/episodes/{episode['id']}/chapters",
+            json={"title": "1장", "orderIndex": 0, "body": body},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -110,20 +104,20 @@ async def _create_entity(
 
 
 async def _link(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str, entity_id: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str, entity_id: str
 ) -> None:
     async with _client_as(app, owner) as client:
         resp = await client.post(
-            f"/api/v1/works/{work_id}/scenes/{scene_id}/links", json={"entityId": entity_id}
+            f"/api/v1/works/{work_id}/chapters/{chapter_id}/links", json={"entityId": entity_id}
         )
     assert resp.status_code == 201
 
 
 async def _get_memory(
-    app: FastAPI, owner: User, work_id: uuid.UUID, scene_id: str
+    app: FastAPI, owner: User, work_id: uuid.UUID, chapter_id: str
 ) -> list[dict[str, Any]]:
     async with _client_as(app, owner) as client:
-        resp = await client.get(f"/api/v1/works/{work_id}/scenes/{scene_id}/memory")
+        resp = await client.get(f"/api/v1/works/{work_id}/chapters/{chapter_id}/memory")
     assert resp.status_code == 200
     result: list[dict[str, Any]] = resp.json()
     return result
@@ -138,13 +132,13 @@ async def test_linked_entity_is_returned(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(app, owner, owner_work.id, body="무사가 산길을 걸었다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body="무사가 산길을 걸었다.")
     entity = await _create_entity(
         app, owner, owner_work.id, name="김무사", summary="주인공의 스승. 과묵하다."
     )
-    await _link(app, owner, owner_work.id, scene["id"], entity["id"])
+    await _link(app, owner, owner_work.id, chapter["id"], entity["id"])
 
-    items = await _get_memory(app, owner, owner_work.id, scene["id"])
+    items = await _get_memory(app, owner, owner_work.id, chapter["id"])
 
     linked = [i for i in items if i["type"] == "entity" and i["entityId"] == entity["id"]]
     assert len(linked) == 1
@@ -161,7 +155,7 @@ async def test_unlinked_similar_entity_returned_as_vector_match(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene(
+    chapter = await _create_chapter(
         app, owner, owner_work.id, body="무영곡 깊은 안개 속에서 검은 그림자가 나타났다."
     )
     unlinked = await _create_entity(
@@ -172,7 +166,7 @@ async def test_unlinked_similar_entity_returned_as_vector_match(
         summary="짙은 안개가 깔린 협곡. 그림자들이 은둔하는 곳으로 알려져 있다.",
     )
 
-    items = await _get_memory(app, owner, owner_work.id, scene["id"])
+    items = await _get_memory(app, owner, owner_work.id, chapter["id"])
 
     vector_matches = [
         i for i in items if i["type"] == "vector_match" and i["sourceId"] == unlinked["id"]
@@ -194,12 +188,12 @@ async def test_linked_entity_also_similar_by_vector_appears_once(
 ) -> None:
     owner, _ = two_users
     body = "폭풍 속에서 늙은 대장장이가 검을 벼렸다."
-    scene = await _create_scene(app, owner, owner_work.id, body=body)
-    # summary를 씬 본문과 거의 동일하게 둬 벡터 검색에서도 최상위로 잡히도록 한다.
+    chapter = await _create_chapter(app, owner, owner_work.id, body=body)
+    # summary를 화 본문과 거의 동일하게 둬 벡터 검색에서도 최상위로 잡히도록 한다.
     entity = await _create_entity(app, owner, owner_work.id, name="대장장이", summary=body)
-    await _link(app, owner, owner_work.id, scene["id"], entity["id"])
+    await _link(app, owner, owner_work.id, chapter["id"], entity["id"])
 
-    items = await _get_memory(app, owner, owner_work.id, scene["id"])
+    items = await _get_memory(app, owner, owner_work.id, chapter["id"])
 
     matches_for_entity = [
         i
@@ -220,8 +214,8 @@ async def test_memory_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
 
     async with _client_as(app, intruder) as client:
-        resp = await client.get(f"/api/v1/works/{owner_work.id}/scenes/{scene['id']}/memory")
+        resp = await client.get(f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/memory")
     assert resp.status_code == 404

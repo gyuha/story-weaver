@@ -1,7 +1,7 @@
 """타임라인 상태·씬-엔티티 링크 ORM 모델 (data-model.md 4·5장).
 
-두 테이블 모두 ``work_id``로 격리되고(ADR-0005), ``entity_id``/``scene_id``로 worldbible의
-``Entity``·manuscript의 ``Scene``을 참조한다 — FK는 테이블명 문자열로만 선언하고 해당
+두 테이블 모두 ``work_id``로 격리되고(ADR-0005), ``entity_id``/``chapter_id``로 worldbible의
+``Entity``·manuscript의 ``Chapter``를 참조한다 — FK는 테이블명 문자열로만 선언하고 해당
 ORM 모델은 import하지 않는다(도메인 간 직접 모델 import 금지 — works를 참조하는 기존
 도메인들과 동일 패턴). ``created_at``만 두고 ``updated_at``은 두지 않는다: 두 테이블 모두
 "시점에 묶인 불변 사실의 누적"이라 행 자체가 수정되지 않는다(data-model.md 4장).
@@ -54,9 +54,9 @@ class TimelineState(Base):
         nullable=False,
         index=True,
     )
-    scene_id: Mapped[uuid.UUID] = mapped_column(
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("scenes.id", ondelete="CASCADE"),
+        ForeignKey("chapters.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -82,7 +82,7 @@ class SceneEntityLink(Base):
 
     __tablename__ = "scene_entity_links"
     __table_args__ = (
-        UniqueConstraint("scene_id", "entity_id", name="uq_scene_entity_links_scene_entity"),
+        UniqueConstraint("chapter_id", "entity_id", name="uq_scene_entity_links_chapter_entity"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -92,9 +92,9 @@ class SceneEntityLink(Base):
         nullable=False,
         index=True,
     )
-    scene_id: Mapped[uuid.UUID] = mapped_column(
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("scenes.id", ondelete="CASCADE"),
+        ForeignKey("chapters.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -113,6 +113,6 @@ class SceneEntityLink(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<SceneEntityLink id={self.id!r} scene_id={self.scene_id!r} "
+            f"<SceneEntityLink id={self.id!r} chapter_id={self.chapter_id!r} "
             f"entity_id={self.entity_id!r}>"
         )

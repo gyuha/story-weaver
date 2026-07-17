@@ -4,7 +4,7 @@ conflicts/timeline/worldbible 도메인의 실 DB e2e 패턴(서비스 fake over
 ``get_current_user``/LLM 클라이언트만 override)을 따른다.
 
 S1(기본 그래프): 인물 카드 ``attributes.relations``가 그대로 엣지로 반영되는지,
-대상이 사라진 관계는 생략되는지 확인한다. S2(시점별 요약): ``up_to_scene_id``까지의
+대상이 사라진 관계는 생략되는지 확인한다. S2(시점별 요약): ``up_to_chapter_id``까지의
 ``relation_to_*`` 타임라인 상태가 엣지에 반영되고 FAKE LLM으로 요약이 생성되는지,
 그 시점 이후의 상태는 반영되지 않는지, 사실이 없으면 LLM을 호출하지 않는지 확인한다.
 마지막으로 실 LLM 1건(mock 없음)과 교차 테넌트 404를 확인한다.
@@ -98,8 +98,8 @@ class _FakeLLMClient:
         return _FakeResponse(self._content)
 
 
-async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
-    """부→챕터를 만들고 그 아래 씬 하나를 생성해 반환(global_seq는 작품 내 자동 증가)."""
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+    """부→챕터를 만들어 반환(global_seq는 작품 내 자동 증가)."""
     async with _client_as(app, owner) as client:
         episode = await client.post(
             f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
@@ -107,15 +107,10 @@ async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> 
         assert episode.status_code == 201
         chapter = await client.post(
             f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters",
-            json={"title": "1장", "orderIndex": 0},
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
         assert chapter.status_code == 201
-        scene = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters/{chapter.json()['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
-        )
-        assert scene.status_code == 201
-        return scene.json()
+        return chapter.json()
 
 
 async def _create_entity(
@@ -139,23 +134,23 @@ async def _create_timeline_state(
     owner: User,
     work_id: uuid.UUID,
     entity_id: str,
-    scene_id: str,
+    chapter_id: str,
     state_key: str,
     state_value: str,
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/entities/{entity_id}/timeline-states",
-            json={"sceneId": scene_id, "stateKey": state_key, "stateValue": state_value},
+            json={"chapterId": chapter_id, "stateKey": state_key, "stateValue": state_value},
         )
     assert resp.status_code == 201
     return resp.json()
 
 
 async def _get_relationships(
-    app: FastAPI, user: User, work_id: uuid.UUID, up_to_scene_id: str | None = None
+    app: FastAPI, user: User, work_id: uuid.UUID, up_to_chapter_id: str | None = None
 ) -> Any:
-    params = {"up_to_scene_id": up_to_scene_id} if up_to_scene_id else {}
+    params = {"up_to_chapter_id": up_to_chapter_id} if up_to_chapter_id else {}
     async with _client_as(app, user) as client:
         return await client.get(f"/api/v1/works/{work_id}/relationships", params=params)
 
@@ -216,15 +211,15 @@ async def test_relationships_omits_edge_with_dangling_target(
 
 
 # ---------------------------------------------------------------------------
-# S2 — 시점별(up_to_scene_id) 관계 요약
+# S2 — 시점별(up_to_chapter_id) 관계 요약
 # ---------------------------------------------------------------------------
 
 
-async def test_up_to_scene_id_incorporates_relation_state_and_generates_summary(
+async def test_up_to_chapter_id_incorporates_relation_state_and_generates_summary(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene_chain(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     source = await _create_entity(app, owner, owner_work.id, "김무사")
     target = await _create_entity(app, owner, owner_work.id, "이서연")
     await _create_timeline_state(
@@ -232,14 +227,14 @@ async def test_up_to_scene_id_incorporates_relation_state_and_generates_summary(
         owner,
         owner_work.id,
         source["id"],
-        scene["id"],
+        chapter["id"],
         f"relation_to_{target['id']}",
         "라이벌",
     )
     fake = _FakeLLMClient("김무사와 이서연은 라이벌 관계다.")
     app.dependency_overrides[_relationships_llm_client] = lambda: fake
 
-    resp = await _get_relationships(app, owner, owner_work.id, up_to_scene_id=scene["id"])
+    resp = await _get_relationships(app, owner, owner_work.id, up_to_chapter_id=chapter["id"])
 
     assert resp.status_code == 200
     body = resp.json()
@@ -257,13 +252,13 @@ async def test_up_to_scene_id_incorporates_relation_state_and_generates_summary(
     assert fake.call_count == 1
 
 
-async def test_up_to_scene_id_excludes_relation_state_after_that_point(
+async def test_up_to_chapter_id_excludes_relation_state_after_that_point(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
-    assert scene1["globalSeq"] < scene2["globalSeq"]
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
+    assert chapter1["globalSeq"] < chapter2["globalSeq"]
     source = await _create_entity(app, owner, owner_work.id, "김무사")
     target = await _create_entity(app, owner, owner_work.id, "이서연")
     await _create_timeline_state(
@@ -271,14 +266,14 @@ async def test_up_to_scene_id_excludes_relation_state_after_that_point(
         owner,
         owner_work.id,
         source["id"],
-        scene2["id"],
+        chapter2["id"],
         f"relation_to_{target['id']}",
         "라이벌",
     )
     fake = _FakeLLMClient("(사용 안 됨)")
     app.dependency_overrides[_relationships_llm_client] = lambda: fake
 
-    resp = await _get_relationships(app, owner, owner_work.id, up_to_scene_id=scene1["id"])
+    resp = await _get_relationships(app, owner, owner_work.id, up_to_chapter_id=chapter1["id"])
 
     assert resp.status_code == 200
     body = resp.json()
@@ -300,7 +295,7 @@ async def test_relationships_real_llm_returns_nonempty_summary(
     문구는 어설션하지 않는다(비결정적, LLM 응답) — 비어있지 않은지만 확인한다.
     """
     owner, _ = two_users
-    scene = await _create_scene_chain(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     source = await _create_entity(app, owner, owner_work.id, "김무사")
     target = await _create_entity(app, owner, owner_work.id, "이서연")
     await _create_timeline_state(
@@ -308,12 +303,12 @@ async def test_relationships_real_llm_returns_nonempty_summary(
         owner,
         owner_work.id,
         source["id"],
-        scene["id"],
+        chapter["id"],
         f"relation_to_{target['id']}",
         "라이벌",
     )
 
-    resp = await _get_relationships(app, owner, owner_work.id, up_to_scene_id=scene["id"])
+    resp = await _get_relationships(app, owner, owner_work.id, up_to_chapter_id=chapter["id"])
 
     assert resp.status_code == 200
     summary = resp.json()["summary"]

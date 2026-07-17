@@ -2,9 +2,9 @@
 
 1차(scene_entity_links로 링크된 엔티티 + 각 엔티티의 현재 시점까지 타임라인 상태)는
 worldbible/timeline 도메인의 기존 서비스 메서드를 그대로 재사용해 구한다(timeline
-도메인의 ``list_timeline_states(..., up_to_scene_id=...)``가 이미 manuscript의
-``list_scene_ids_up_to``를 통해 시점 필터를 구현해 두었다 — 재구현하지 않음).
-보조(벡터 ANN)는 씬 본문을 임베딩해 ``MemoryRepository.search_similar``로 조회하고,
+도메인의 ``list_timeline_states(..., up_to_chapter_id=...)``가 이미 manuscript의
+``list_chapter_ids_up_to``를 통해 시점 필터를 구현해 두었다 — 재구현하지 않음).
+보조(벡터 ANN)는 화 본문을 임베딩해 ``MemoryRepository.search_similar``로 조회하고,
 1차에서 이미 나온 엔티티는 제외한다(병합 중복제거, 링크 우선).
 
 이 클래스는 ``worldbible``/``manuscript``/``timeline`` 서비스에 의존한다 — 그런데
@@ -43,10 +43,10 @@ class MemorySearchService:
         self._timeline_service = timeline_service
 
     async def search(
-        self, work_id: uuid.UUID, user_id: uuid.UUID, scene_id: uuid.UUID
+        self, work_id: uuid.UUID, user_id: uuid.UUID, chapter_id: uuid.UUID
     ) -> list[MemoryItemResponse]:
-        scene = await self._manuscript_service.get_scene_by_id(work_id, user_id, scene_id)
-        links = await self._timeline_service.list_links(work_id, user_id, scene_id)
+        chapter = await self._manuscript_service.get_chapter_by_id(work_id, user_id, chapter_id)
+        links = await self._timeline_service.list_links(work_id, user_id, chapter_id)
 
         items: list[MemoryItemResponse] = []
         linked_entity_ids: set[uuid.UUID] = set()
@@ -63,7 +63,7 @@ class MemorySearchService:
                 )
             )
             states = await self._timeline_service.list_timeline_states(
-                work_id, user_id, entity.id, up_to_scene_id=scene_id
+                work_id, user_id, entity.id, up_to_chapter_id=chapter_id
             )
             for state in states:
                 items.append(
@@ -77,13 +77,13 @@ class MemorySearchService:
                     )
                 )
 
-        query_vector = embed_text(scene.body)
+        query_vector = embed_text(chapter.body)
         matches = await self._repo.search_similar(
             work_id,
             query_vector,
             limit=_VECTOR_TOP_K,
             exclude_entity_ids=linked_entity_ids,
-            exclude_scene_id=scene_id,
+            exclude_chapter_id=chapter_id,
         )
         for match in matches:
             items.append(

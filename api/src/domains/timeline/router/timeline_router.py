@@ -1,12 +1,12 @@
 """타임라인 상태·씬-엔티티 링크 HTTP 라우터.
 
 ``router``는 ``/api/v1/works/{work_id}/entities/{entity_id}/timeline-states``,
-``links_router``는 ``/api/v1/works/{work_id}/scenes/{scene_id}/links`` — 경로 파라미터
-(entity_id vs scene_id)가 달라 하나의 ``APIRouter``에 같은 prefix로 묶을 수 없어 별도
+``links_router``는 ``/api/v1/works/{work_id}/chapters/{chapter_id}/links`` — 경로 파라미터
+(entity_id vs chapter_id)가 달라 하나의 ``APIRouter``에 같은 prefix로 묶을 수 없어 별도
 라우터 인스턴스로 둔다. 둘 다 같은 ``TimelineService``/``_get_service`` 의존성을
 공유한다. worldbible_router.py/manuscript_router.py와 동일 패턴: ``get_current_user``로
 인증하고 현재 사용자 스코프로 동작한다(교차 테넌트 접근은 404 — ADR-0005). 응답은
-camelCase. ``up_to_scene_id`` 쿼리 파라미터로 시점 필터(스포일러 방지)를 적용한다.
+camelCase. ``up_to_chapter_id`` 쿼리 파라미터로 시점 필터(스포일러 방지)를 적용한다.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ from domains.worldbible.service import WorldBibleService
 router = APIRouter(
     prefix="/works/{work_id}/entities/{entity_id}/timeline-states", tags=["timeline"]
 )
-links_router = APIRouter(prefix="/works/{work_id}/scenes/{scene_id}/links", tags=["timeline"])
+links_router = APIRouter(prefix="/works/{work_id}/chapters/{chapter_id}/links", tags=["timeline"])
 
 
 async def _get_service(
@@ -62,7 +62,7 @@ def _to_response(state: TimelineState) -> TimelineStateResponse:
         id=state.id,
         work_id=state.work_id,
         entity_id=state.entity_id,
-        scene_id=state.scene_id,
+        chapter_id=state.chapter_id,
         state_key=state.state_key,
         state_value=state.state_value,
         note=state.note,
@@ -75,7 +75,7 @@ def _to_link_response(link: SceneEntityLink) -> SceneEntityLinkResponse:
     return SceneEntityLinkResponse(
         id=link.id,
         work_id=link.work_id,
-        scene_id=link.scene_id,
+        chapter_id=link.chapter_id,
         entity_id=link.entity_id,
         source=link.source,
         created_at=link.created_at,
@@ -110,13 +110,13 @@ async def create_timeline_state(
 async def list_timeline_states(
     work_id: uuid.UUID,
     entity_id: uuid.UUID,
-    up_to_scene_id: uuid.UUID | None = Query(default=None),
+    up_to_chapter_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     service: TimelineService = Depends(_get_service),
 ) -> list[TimelineStateResponse]:
     try:
         states = await service.list_timeline_states(
-            work_id, current_user.id, entity_id, up_to_scene_id
+            work_id, current_user.id, entity_id, up_to_chapter_id
         )
     except AppError as exc:
         _raise_http(exc)
@@ -131,12 +131,12 @@ async def list_timeline_states(
 @links_router.get("", response_model=list[SceneEntityLinkResponse], summary="씬-엔티티 링크 목록")
 async def list_links(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: TimelineService = Depends(_get_service),
 ) -> list[SceneEntityLinkResponse]:
     try:
-        links = await service.list_links(work_id, current_user.id, scene_id)
+        links = await service.list_links(work_id, current_user.id, chapter_id)
     except AppError as exc:
         _raise_http(exc)
     return [_to_link_response(link) for link in links]
@@ -150,13 +150,13 @@ async def list_links(
 )
 async def create_link(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     payload: SceneEntityLinkCreate,
     current_user: User = Depends(get_current_user),
     service: TimelineService = Depends(_get_service),
 ) -> SceneEntityLinkResponse:
     try:
-        link = await service.create_link(work_id, current_user.id, scene_id, payload.entity_id)
+        link = await service.create_link(work_id, current_user.id, chapter_id, payload.entity_id)
     except AppError as exc:
         _raise_http(exc)
     return _to_link_response(link)
@@ -167,12 +167,12 @@ async def create_link(
 )
 async def delete_link(
     work_id: uuid.UUID,
-    scene_id: uuid.UUID,
+    chapter_id: uuid.UUID,
     entity_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: TimelineService = Depends(_get_service),
 ) -> None:
     try:
-        await service.delete_link(work_id, current_user.id, scene_id, entity_id)
+        await service.delete_link(work_id, current_user.id, chapter_id, entity_id)
     except AppError as exc:
         _raise_http(exc)

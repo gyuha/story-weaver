@@ -50,23 +50,21 @@ beforeEach(() => {
 });
 
 describe('fetchWorkConflicts', () => {
-  it('충돌 후보를 조회해 sceneId를 chapterRef로 조립한 웹 Conflict[] 모양으로 매핑한다', async () => {
+  it('충돌 후보를 조회해 chapterId를 chapterRef로 조립한 웹 Conflict[] 모양으로 매핑한다', async () => {
     mockFetchWorkChapters.mockResolvedValue([
       {
-        id: 'ch1',
+        id: 'ch-dead',
         episodeId: 'ep1',
         partLabel: '제1부',
         index: 3,
         title: '3화',
-        scenes: [{ id: 'sc-dead' }],
       },
       {
-        id: 'ch2',
+        id: 'ch-alive',
         episodeId: 'ep1',
         partLabel: '제1부',
         index: 10,
         title: '10화',
-        scenes: [{ id: 'sc-alive' }],
       },
     ]);
     mockList.mockResolvedValue([
@@ -76,14 +74,14 @@ describe('fetchWorkConflicts', () => {
         stateKey: 'life_status',
         earlier: {
           id: 'ts1',
-          sceneId: 'sc-dead',
+          chapterId: 'ch-dead',
           globalSeq: 30,
           stateValue: 'dead',
           createdAt: '2026-01-01T00:00:00Z',
         },
         later: {
           id: 'ts2',
-          sceneId: 'sc-alive',
+          chapterId: 'ch-alive',
           globalSeq: 100,
           stateValue: 'alive',
           createdAt: '2026-01-02T00:00:00Z',
@@ -99,14 +97,14 @@ describe('fetchWorkConflicts', () => {
         entityId: 'en1',
         entityName: '이서하',
         stateKey: 'life_status',
-        earlier: { sceneId: 'sc-dead', chapterRef: '3화 씬1', globalSeq: 30, stateValue: 'dead' },
-        later: { sceneId: 'sc-alive', chapterRef: '10화 씬1', globalSeq: 100, stateValue: 'alive' },
+        earlier: { chapterId: 'ch-dead', chapterRef: '3화', globalSeq: 30, stateValue: 'dead' },
+        later: { chapterId: 'ch-alive', chapterRef: '10화', globalSeq: 100, stateValue: 'alive' },
       },
     ]);
     expect(mockList).toHaveBeenCalledWith({ path: { work_id: WORK_ID } });
   });
 
-  it('씬 목록에 없는 sceneId는 chapterRef를 빈 문자열로 둔다', async () => {
+  it('화 목록에 없는 chapterId는 chapterRef를 빈 문자열로 둔다', async () => {
     mockFetchWorkChapters.mockResolvedValue([]);
     mockList.mockResolvedValue([
       {
@@ -115,14 +113,14 @@ describe('fetchWorkConflicts', () => {
         stateKey: 'life_status',
         earlier: {
           id: 'ts1',
-          sceneId: 'sc-unknown',
+          chapterId: 'ch-unknown',
           globalSeq: 1,
           stateValue: 'dead',
           createdAt: '2026-01-01T00:00:00Z',
         },
         later: {
           id: 'ts2',
-          sceneId: 'sc-unknown-2',
+          chapterId: 'ch-unknown-2',
           globalSeq: 2,
           stateValue: 'alive',
           createdAt: '2026-01-02T00:00:00Z',
@@ -168,14 +166,14 @@ describe('useWorkConflicts', () => {
         stateKey: 'life_status',
         earlier: {
           id: 'ts1',
-          sceneId: 'sc1',
+          chapterId: 'ch1',
           globalSeq: 1,
           stateValue: 'dead',
           createdAt: '2026-01-01T00:00:00Z',
         },
         later: {
           id: 'ts2',
-          sceneId: 'sc2',
+          chapterId: 'ch2',
           globalSeq: 2,
           stateValue: 'alive',
           createdAt: '2026-01-02T00:00:00Z',
@@ -193,8 +191,8 @@ describe('useWorkConflicts', () => {
           entityId: 'en1',
           entityName: '이서하',
           stateKey: 'life_status',
-          earlier: { sceneId: 'sc1', chapterRef: '', globalSeq: 1, stateValue: 'dead' },
-          later: { sceneId: 'sc2', chapterRef: '', globalSeq: 2, stateValue: 'alive' },
+          earlier: { chapterId: 'ch1', chapterRef: '', globalSeq: 1, stateValue: 'dead' },
+          later: { chapterId: 'ch2', chapterRef: '', globalSeq: 2, stateValue: 'alive' },
         },
       ]);
     });

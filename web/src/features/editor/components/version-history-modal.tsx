@@ -1,20 +1,20 @@
-import type { Scene, SceneVersion } from '@/features/shared/types';
+import type { Chapter, ChapterVersion } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import { diffWords } from '../lib/word-diff';
 
 interface Props {
-  scene: Scene;
-  /** 현재 씬 본문(비교 기준) — 보통 scene.paragraphs에서 합친 텍스트 */
+  chapter: Chapter;
+  /** 현재 화 본문(비교 기준) — 보통 chapter.paragraphs에서 합친 텍스트 */
   currentText: string;
-  onRestore: (version: SceneVersion) => void;
+  onRestore: (version: ChapterVersion) => void;
   onClose: () => void;
 }
 
 /** 버전 기록 모달 — 시간대별 보기 · 현재로 보내기 · 인라인 단어 diff */
-export function VersionHistoryModal({ scene, currentText, onRestore, onClose }: Props) {
-  const versions = scene.versions ?? [];
+export function VersionHistoryModal({ chapter, currentText, onRestore, onClose }: Props) {
+  const versions = chapter.versions ?? [];
   const [selId, setSelId] = useState<string | null>(versions[0]?.id ?? null);
   const [showDiff, setShowDiff] = useState(false);
   const selected = versions.find((v) => v.id === selId) ?? null;
@@ -30,7 +30,7 @@ export function VersionHistoryModal({ scene, currentText, onRestore, onClose }: 
       />
       <div className="relative flex h-[80vh] w-[760px] max-w-full flex-col overflow-hidden rounded-xl border border-line bg-paper shadow-xl">
         <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
-          <span className="flex-1 text-sm font-semibold text-ink">버전 기록 · {scene.title}</span>
+          <span className="flex-1 text-sm font-semibold text-ink">버전 기록 · {chapter.title}</span>
           <button
             type="button"
             onClick={() => setShowDiff((d) => !d)}

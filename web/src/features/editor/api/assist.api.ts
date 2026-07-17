@@ -32,8 +32,8 @@ export type AssistPayload<T extends AssistTaskType> = AssistPayloadMap[T];
 // (axios client를 거치지 않으므로 별도 상수로 중복 정의).
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
-function assistUrl(workId: string, sceneId: string, taskType: AssistTaskType): string {
-  return `${API_BASE}/api/v1/works/${workId}/scenes/${sceneId}/assist/${taskType}`;
+function assistUrl(workId: string, chapterId: string, taskType: AssistTaskType): string {
+  return `${API_BASE}/api/v1/works/${workId}/chapters/${chapterId}/assist/${taskType}`;
 }
 
 /** ReadableStream<Uint8Array>를 디코딩된 텍스트 청크의 async iterable로 변환. */
@@ -87,7 +87,7 @@ export async function* parseSseTextStream(source: AsyncIterable<string>): AsyncG
 
 interface StreamAssistParams<T extends AssistTaskType> {
   workId: string;
-  sceneId: string;
+  chapterId: string;
   taskType: T;
   payload: AssistPayload<T>;
 }
@@ -102,10 +102,10 @@ export async function* streamAssist<T extends AssistTaskType>(
   params: StreamAssistParams<T>,
   init?: { signal?: AbortSignal }
 ): AsyncGenerator<string> {
-  const { workId, sceneId, taskType, payload } = params;
+  const { workId, chapterId, taskType, payload } = params;
 
   const fetchWithToken = (token: string | null) =>
-    fetch(assistUrl(workId, sceneId, taskType), {
+    fetch(assistUrl(workId, chapterId, taskType), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export async function* streamAssist<T extends AssistTaskType>(
 
 export interface AssistStartParams<T extends AssistTaskType> {
   workId: string;
-  sceneId: string;
+  chapterId: string;
   payload: AssistPayload<T>;
 }
 

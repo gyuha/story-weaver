@@ -4,7 +4,7 @@
 저장하는 테이블. ``kind``별로 ``payload`` JSONB 모양이 다르다(new_entity: name/summary,
 attribute_change: entityId/attribute/newValue, timeline_state: entityId/stateKey/
 stateValue — dynamic_update_schemas.py의 CandidateEntity/AttributeChange/TimelineChange와
-동일 키). works/scenes 테이블은 FK로만 참조하고 해당 ORM 모델은 import하지 않는다
+동일 키). works/chapters 테이블은 FK로만 참조하고 해당 ORM 모델은 import하지 않는다
 (도메인 간 직접 모델 import 금지).
 """
 
@@ -52,9 +52,9 @@ class UpdateSuggestion(Base):
         nullable=False,
         index=True,
     )
-    scene_id: Mapped[uuid.UUID] = mapped_column(
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("scenes.id", ondelete="CASCADE"),
+        ForeignKey("chapters.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

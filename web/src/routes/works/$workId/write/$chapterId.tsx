@@ -4,19 +4,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { requireAuth } from '@/features/auth/lib/guard';
 import { EditorScreen } from '@/features/editor/components/editor-screen';
 import { useWorkChapters } from '@/features/editor/lib/hydrate-chapters';
-import { findSceneLocation, useWork } from '@/features/shared/store/selectors';
+import { findChapter, useWork } from '@/features/shared/store/selectors';
 import { Link, createFileRoute, useParams } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/works/$workId/write/$sceneId')({
-  beforeLoad: ({ params }) => requireAuth(`/works/${params.workId}/write/${params.sceneId}`),
+export const Route = createFileRoute('/works/$workId/write/$chapterId')({
+  beforeLoad: ({ params }) => requireAuth(`/works/${params.workId}/write/${params.chapterId}`),
   component: WritePage,
 });
 
 function WritePage() {
-  const { workId, sceneId } = useParams({ from: '/works/$workId/write/$sceneId' });
+  const { workId, chapterId } = useParams({ from: '/works/$workId/write/$chapterId' });
   const work = useWork(workId);
   const { isPending, isError } = useWorkChapters(workId);
-  const loc = findSceneLocation(work, sceneId);
+  const chapter = findChapter(work, chapterId);
 
   if (!work) return null;
   if (isPending) {
@@ -41,18 +41,18 @@ function WritePage() {
       </WorkShell>
     );
   }
-  if (!loc) {
+  if (!chapter) {
     return (
       <WorkShell work={work} active="write">
         <div className="grid h-full place-items-center px-6 text-center">
           <div>
-            <div className="mb-2 text-sm text-muted-ink">씬을 찾을 수 없습니다.</div>
+            <div className="mb-2 text-sm text-muted-ink">화를 찾을 수 없습니다.</div>
             <Link
               to="/works/$workId/write"
               params={{ workId }}
               className="text-sm font-medium text-primary"
             >
-              첫 씬으로 이동
+              첫 화로 이동
             </Link>
           </div>
         </div>
@@ -60,5 +60,5 @@ function WritePage() {
     );
   }
 
-  return <EditorScreen work={work} chapter={loc.chapter} scene={loc.scene} />;
+  return <EditorScreen work={work} chapter={chapter} />;
 }

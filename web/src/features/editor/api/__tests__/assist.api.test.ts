@@ -81,7 +81,7 @@ function errorResponse(status: number): Response {
 describe('streamAssist의 401 처리 (단일-비행 refresh 후 1회 재시도)', () => {
   const params = {
     workId: 'work-1',
-    sceneId: 'scene-1',
+    chapterId: 'chapter-1',
     taskType: 'continue' as const,
     payload: { cursorText: '이어쓸 문장' },
   };

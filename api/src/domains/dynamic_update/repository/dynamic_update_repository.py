@@ -18,12 +18,12 @@ class DynamicUpdateRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def list_by_scene(
-        self, work_id: uuid.UUID, scene_id: uuid.UUID
+    async def list_by_chapter(
+        self, work_id: uuid.UUID, chapter_id: uuid.UUID
     ) -> list[UpdateSuggestion]:
         result = await self._session.execute(
             select(UpdateSuggestion)
-            .where(UpdateSuggestion.work_id == work_id, UpdateSuggestion.scene_id == scene_id)
+            .where(UpdateSuggestion.work_id == work_id, UpdateSuggestion.chapter_id == chapter_id)
             .order_by(UpdateSuggestion.created_at)
         )
         return list(result.scalars().all())

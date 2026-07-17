@@ -22,6 +22,7 @@ Test classes
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -44,7 +45,7 @@ from domains.auth.service import AuthService
 # ---------------------------------------------------------------------------
 
 _EMAIL = "alice@example.com"
-_PASSWORD = "Password1!"
+_PASSWORD = "Password1!"  # pragma: allowlist secret
 
 
 def _sign_test_token(payload: dict[str, Any]) -> str:
@@ -98,7 +99,7 @@ class TestSignup:
         auth_service: AuthService,
         fake_repo: Any,
     ) -> None:
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD, "Alice")
+        user, _raw_token = await auth_service.signup(_EMAIL, _PASSWORD, "Alice")
 
         assert user.email == _EMAIL.lower()
         assert user.display_name == "Alice"
@@ -129,7 +130,7 @@ class TestSignup:
         auth_service: AuthService,
         fake_repo: Any,
     ) -> None:
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        user, _raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
         assert user.hashed_password is not None
         assert user.hashed_password != _PASSWORD
         assert verify_password(_PASSWORD, user.hashed_password)
@@ -195,7 +196,7 @@ class TestSignup:
 
         await auth_service.signup("alice@example.com", _PASSWORD, "Alice")
 
-        with pytest.raises(ConflictError, match="alice@example.com"):
+        with pytest.raises(ConflictError, match=re.escape("alice@example.com")):
             await auth_service.signup(
                 "  ALICE@EXAMPLE.COM  ",
                 "AnotherPass2!",
@@ -308,7 +309,7 @@ class TestVerifyEmail:
     ) -> None:
         from core.exceptions import UnauthorizedError
 
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        _user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
         await auth_service.verify_email(raw_token)
 
         with pytest.raises(UnauthorizedError, match="already used"):
@@ -321,7 +322,7 @@ class TestVerifyEmail:
     ) -> None:
         from core.exceptions import UnauthorizedError
 
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        _user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
 
         # Expire the token manually
         ev = await fake_repo.get_email_verification_by_token(raw_token)
@@ -439,7 +440,7 @@ class TestRefresh:
     """refresh() — token rotation + reuse detection."""
 
     async def _get_tokens(self, auth_service: AuthService, fake_repo: Any) -> dict[str, Any]:
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        _user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
         await auth_service.verify_email(raw_token)
         return await auth_service.login(_EMAIL, _PASSWORD)
 
@@ -773,7 +774,7 @@ class TestLogout:
     """logout() — refresh token revocation + access token blacklisting."""
 
     async def _get_tokens(self, auth_service: AuthService, fake_repo: Any) -> dict[str, Any]:
-        user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
+        _user, raw_token = await auth_service.signup(_EMAIL, _PASSWORD)
         await auth_service.verify_email(raw_token)
         return await auth_service.login(_EMAIL, _PASSWORD)
 
@@ -946,7 +947,7 @@ class TestPasswordReset:
         assert len(mail_service.password_reset_emails) == 1
         raw_token = mail_service.password_reset_emails[0][1]
 
-        new_password = "NewPassword2!"
+        new_password = "NewPassword2!"  # pragma: allowlist secret
         await service.confirm_password_reset(raw_token, new_password)
 
         # Old password should no longer work

@@ -1,8 +1,8 @@
 """타임라인 상태 HTTP 라우트 — 실 DB + 실 라우터 경로.
 
 worldbible/manuscript 도메인의 실 DB e2e 패턴(서비스 fake override 없이 `get_current_user`만
-override)을 따른다. 핵심 시나리오는 시점(global_seq) 기반 스포일러 방지 필터 — 미래 씬에서
-기록된 상태가 `up_to_scene_id`로 과거 씬을 지정한 조회에 새지 않아야 한다(data-model.md 4장/
+override)을 따른다. 핵심 시나리오는 시점(global_seq) 기반 스포일러 방지 필터 — 미래 화에서
+기록된 상태가 `up_to_chapter_id`로 과거 화를 지정한 조회에 새지 않아야 한다(data-model.md 4장/
 ai-pipeline.md 2.1). 그 외 필터 없는 생성/조회, 교차 테넌트 404를 확인한다.
 """
 
@@ -72,8 +72,8 @@ def _client_as(app: FastAPI, user: User) -> AsyncClient:
     return AsyncClient(transport=transport, base_url="http://test")
 
 
-async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
-    """부→챕터를 만들고 그 아래 씬 하나를 생성해 반환(global_seq는 작품 내 자동 증가)."""
+async def _create_chapter(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
+    """부→챕터를 만들어 반환(global_seq는 작품 내 자동 증가)."""
     async with _client_as(app, owner) as client:
         episode = await client.post(
             f"/api/v1/works/{work_id}/episodes", json={"title": "1부", "orderIndex": 0}
@@ -81,15 +81,10 @@ async def _create_scene_chain(app: FastAPI, owner: User, work_id: uuid.UUID) -> 
         assert episode.status_code == 201
         chapter = await client.post(
             f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters",
-            json={"title": "1장", "orderIndex": 0},
+            json={"title": "1장", "orderIndex": 0, "body": "본문"},
         )
         assert chapter.status_code == 201
-        scene = await client.post(
-            f"/api/v1/works/{work_id}/episodes/{episode.json()['id']}/chapters/{chapter.json()['id']}/scenes",
-            json={"orderIndex": 0, "body": "본문"},
-        )
-        assert scene.status_code == 201
-        return scene.json()
+        return chapter.json()
 
 
 async def _create_entity(app: FastAPI, owner: User, work_id: uuid.UUID) -> dict[str, Any]:
@@ -107,14 +102,14 @@ async def _create_timeline_state(
     owner: User,
     work_id: uuid.UUID,
     entity_id: str,
-    scene_id: str,
+    chapter_id: str,
     state_key: str = "life_status",
     state_value: str = "alive",
 ) -> dict[str, Any]:
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{work_id}/entities/{entity_id}/timeline-states",
-            json={"sceneId": scene_id, "stateKey": state_key, "stateValue": state_value},
+            json={"chapterId": chapter_id, "stateKey": state_key, "stateValue": state_value},
         )
     assert resp.status_code == 201
     return resp.json()
@@ -125,46 +120,46 @@ async def _create_timeline_state(
 # ---------------------------------------------------------------------------
 
 
-async def test_future_state_not_returned_when_queried_up_to_earlier_scene(
+async def test_future_state_not_returned_when_queried_up_to_earlier_chapter(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
-    """씬1(과거)·씬2·씬3(최신) 순으로 만들고, 씬3에서 기록한 상태를
-    ``up_to_scene_id=씬1``로 조회하면 새지 않아야 한다(핵심 시나리오)."""
+    """화1(과거)·화2·화3(최신) 순으로 만들고, 화3에서 기록한 상태를
+    ``up_to_chapter_id=화1``로 조회하면 새지 않아야 한다(핵심 시나리오)."""
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
-    scene3 = await _create_scene_chain(app, owner, owner_work.id)
-    assert scene1["globalSeq"] < scene2["globalSeq"] < scene3["globalSeq"]
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
+    chapter3 = await _create_chapter(app, owner, owner_work.id)
+    assert chapter1["globalSeq"] < chapter2["globalSeq"] < chapter3["globalSeq"]
 
     entity = await _create_entity(app, owner, owner_work.id)
     await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene3["id"], state_value="dead"
+        app, owner, owner_work.id, entity["id"], chapter3["id"], state_value="dead"
     )
 
     async with _client_as(app, owner) as client:
         resp = await client.get(
             f"/api/v1/works/{owner_work.id}/entities/{entity['id']}/timeline-states",
-            params={"up_to_scene_id": scene1["id"]},
+            params={"up_to_chapter_id": chapter1["id"]},
         )
     assert resp.status_code == 200
-    assert resp.json() == []  # 씬3(미래)에서 기록된 상태가 새지 않음
+    assert resp.json() == []  # 화3(미래)에서 기록된 상태가 새지 않음
 
 
-async def test_state_returned_when_queried_up_to_its_own_or_later_scene(
+async def test_state_returned_when_queried_up_to_its_own_or_later_chapter(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
     state = await _create_timeline_state(
-        app, owner, owner_work.id, entity["id"], scene1["id"], state_value="dead"
+        app, owner, owner_work.id, entity["id"], chapter1["id"], state_value="dead"
     )
 
     async with _client_as(app, owner) as client:
         resp = await client.get(
             f"/api/v1/works/{owner_work.id}/entities/{entity['id']}/timeline-states",
-            params={"up_to_scene_id": scene2["id"]},
+            params={"up_to_chapter_id": chapter2["id"]},
         )
     assert resp.status_code == 200
     assert [s["id"] for s in resp.json()] == [state["id"]]
@@ -179,7 +174,7 @@ async def test_create_timeline_state(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene = await _create_scene_chain(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     body = await _create_timeline_state(
@@ -187,12 +182,12 @@ async def test_create_timeline_state(
         owner,
         owner_work.id,
         entity["id"],
-        scene["id"],
+        chapter["id"],
         state_key="location",
         state_value="북부 설원",
     )
     assert body["entityId"] == entity["id"]
-    assert body["sceneId"] == scene["id"]
+    assert body["chapterId"] == chapter["id"]
     assert body["stateKey"] == "location"
     assert body["stateValue"] == "북부 설원"
     assert body["source"] == "author"
@@ -203,11 +198,11 @@ async def test_list_timeline_states_without_filter_returns_all(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, _ = two_users
-    scene1 = await _create_scene_chain(app, owner, owner_work.id)
-    scene2 = await _create_scene_chain(app, owner, owner_work.id)
+    chapter1 = await _create_chapter(app, owner, owner_work.id)
+    chapter2 = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
-    await _create_timeline_state(app, owner, owner_work.id, entity["id"], scene1["id"])
-    await _create_timeline_state(app, owner, owner_work.id, entity["id"], scene2["id"])
+    await _create_timeline_state(app, owner, owner_work.id, entity["id"], chapter1["id"])
+    await _create_timeline_state(app, owner, owner_work.id, entity["id"], chapter2["id"])
 
     async with _client_as(app, owner) as client:
         resp = await client.get(
@@ -226,13 +221,13 @@ async def test_create_timeline_state_other_tenant_returns_404(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
     owner, intruder = two_users
-    scene = await _create_scene_chain(app, owner, owner_work.id)
+    chapter = await _create_chapter(app, owner, owner_work.id)
     entity = await _create_entity(app, owner, owner_work.id)
 
     async with _client_as(app, intruder) as client:
         resp = await client.post(
             f"/api/v1/works/{owner_work.id}/entities/{entity['id']}/timeline-states",
-            json={"sceneId": scene["id"], "stateKey": "life_status", "stateValue": "dead"},
+            json={"chapterId": chapter["id"], "stateKey": "life_status", "stateValue": "dead"},
         )
     assert resp.status_code == 404
 

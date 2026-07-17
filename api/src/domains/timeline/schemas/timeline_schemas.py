@@ -32,7 +32,7 @@ class SceneEntityLinkResponse(_CamelModel):
 
     id: uuid.UUID
     work_id: uuid.UUID
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
     entity_id: uuid.UUID
     source: SceneEntityLinkSource
     created_at: datetime
@@ -41,7 +41,7 @@ class SceneEntityLinkResponse(_CamelModel):
 class TimelineStateCreate(_CamelModel):
     """타임라인 상태 생성 입력. ``source``는 서비스에서 ``author``로 고정된다."""
 
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
     state_key: str = Field(min_length=1, max_length=255)
     state_value: str = Field(min_length=1, max_length=255)
     note: str | None = None
@@ -53,7 +53,7 @@ class TimelineStateResponse(_CamelModel):
     id: uuid.UUID
     work_id: uuid.UUID
     entity_id: uuid.UUID
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
     state_key: str
     state_value: str
     note: str | None

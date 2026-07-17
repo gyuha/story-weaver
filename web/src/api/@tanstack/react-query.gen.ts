@@ -4,8 +4,8 @@ import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanst
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { deleteApiV1WorksByWorkId, deleteApiV1WorksByWorkIdEntitiesByEntityId, deleteApiV1WorksByWorkIdEpisodesByEpisodeId, deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId, deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityId, getApiV1AuthMe, getApiV1AuthOauthByProviderCallback, getApiV1AuthOauthByProviderLogin, getApiV1ChatConversations, getApiV1ChatConversationsByConversationId, getApiV1ChatConversationsByConversationIdMessages, getApiV1ChatProvider, getApiV1Works, getApiV1WorksByWorkId, getApiV1WorksByWorkIdChatConversation, getApiV1WorksByWorkIdChatConversationMessages, getApiV1WorksByWorkIdConflicts, getApiV1WorksByWorkIdEntities, getApiV1WorksByWorkIdEntitiesByEntityId, getApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates, getApiV1WorksByWorkIdEpisodes, getApiV1WorksByWorkIdEpisodesByEpisodeId, getApiV1WorksByWorkIdEpisodesByEpisodeIdChapters, getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes, getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId, getApiV1WorksByWorkIdExport, getApiV1WorksByWorkIdRelationships, getApiV1WorksByWorkIdScenesBySceneIdLinks, getApiV1WorksByWorkIdScenesBySceneIdMemory, getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestions, getApiV1WorksByWorkIdSynopsis, getHealth, getReady, type Options, patchApiV1AuthMe, patchApiV1WorksByWorkId, patchApiV1WorksByWorkIdEntitiesByEntityId, patchApiV1WorksByWorkIdEpisodesByEpisodeId, patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId, patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorder, patchApiV1WorksByWorkIdEpisodesReorder, postApiV1AuthChangePassword, postApiV1AuthLogin, postApiV1AuthLogout, postApiV1AuthPasswordReset, postApiV1AuthPasswordResetConfirm, postApiV1AuthRefresh, postApiV1AuthSignup, postApiV1AuthVerifyEmailByToken, postApiV1ChatComplete, postApiV1ChatConversations, postApiV1ChatConversationsByConversationIdMessages, postApiV1ChatStream, postApiV1Works, postApiV1WorksByWorkIdBeatSheet, postApiV1WorksByWorkIdChatConversations, postApiV1WorksByWorkIdChatMessages, postApiV1WorksByWorkIdEntities, postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates, postApiV1WorksByWorkIdEpisodes, postApiV1WorksByWorkIdEpisodesByEpisodeIdChapters, postApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes, postApiV1WorksByWorkIdScenesBySceneIdAssistContinue, postApiV1WorksByWorkIdScenesBySceneIdAssistCorrect, postApiV1WorksByWorkIdScenesBySceneIdAssistDialogue, postApiV1WorksByWorkIdScenesBySceneIdAssistInfill, postApiV1WorksByWorkIdScenesBySceneIdAssistStyle, postApiV1WorksByWorkIdScenesBySceneIdExtractUpdates, postApiV1WorksByWorkIdScenesBySceneIdLinks, postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApprove, postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdReject, postApiV1WorksByWorkIdSynopsisContinue, putApiV1WorksByWorkIdSynopsis } from '../sdk.gen';
-import type { DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdError, DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponse, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdError, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, DeleteApiV1WorksByWorkIdError, DeleteApiV1WorksByWorkIdResponse, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdError, DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponse, GetApiV1AuthMeData, GetApiV1AuthMeResponse, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackError, GetApiV1AuthOauthByProviderCallbackResponse, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginError, GetApiV1AuthOauthByProviderLoginResponse, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdError, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesError, GetApiV1ChatConversationsByConversationIdMessagesResponse, GetApiV1ChatConversationsByConversationIdResponse, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponse, GetApiV1ChatProviderData, GetApiV1ChatProviderResponse, GetApiV1WorksByWorkIdChatConversationData, GetApiV1WorksByWorkIdChatConversationError, GetApiV1WorksByWorkIdChatConversationMessagesData, GetApiV1WorksByWorkIdChatConversationMessagesError, GetApiV1WorksByWorkIdChatConversationMessagesResponse, GetApiV1WorksByWorkIdChatConversationResponse, GetApiV1WorksByWorkIdConflictsData, GetApiV1WorksByWorkIdConflictsError, GetApiV1WorksByWorkIdConflictsResponse, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdError, GetApiV1WorksByWorkIdEntitiesByEntityIdResponse, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse, GetApiV1WorksByWorkIdEntitiesData, GetApiV1WorksByWorkIdEntitiesError, GetApiV1WorksByWorkIdEntitiesResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, GetApiV1WorksByWorkIdEpisodesData, GetApiV1WorksByWorkIdEpisodesError, GetApiV1WorksByWorkIdEpisodesResponse, GetApiV1WorksByWorkIdError, GetApiV1WorksByWorkIdExportData, GetApiV1WorksByWorkIdExportError, GetApiV1WorksByWorkIdRelationshipsData, GetApiV1WorksByWorkIdRelationshipsError, GetApiV1WorksByWorkIdRelationshipsResponse, GetApiV1WorksByWorkIdResponse, GetApiV1WorksByWorkIdScenesBySceneIdLinksData, GetApiV1WorksByWorkIdScenesBySceneIdLinksError, GetApiV1WorksByWorkIdScenesBySceneIdLinksResponse, GetApiV1WorksByWorkIdScenesBySceneIdMemoryData, GetApiV1WorksByWorkIdScenesBySceneIdMemoryError, GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponse, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsError, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponse, GetApiV1WorksByWorkIdSynopsisData, GetApiV1WorksByWorkIdSynopsisError, GetApiV1WorksByWorkIdSynopsisResponse, GetApiV1WorksData, GetApiV1WorksResponse, GetHealthData, GetHealthResponse, GetReadyData, GetReadyResponse, PatchApiV1AuthMeData, PatchApiV1AuthMeError, PatchApiV1AuthMeResponse, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdError, PatchApiV1WorksByWorkIdEntitiesByEntityIdResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, PatchApiV1WorksByWorkIdEpisodesReorderData, PatchApiV1WorksByWorkIdEpisodesReorderError, PatchApiV1WorksByWorkIdEpisodesReorderResponse, PatchApiV1WorksByWorkIdError, PatchApiV1WorksByWorkIdResponse, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordError, PostApiV1AuthChangePasswordResponse, PostApiV1AuthLoginData, PostApiV1AuthLoginError, PostApiV1AuthLoginResponse, PostApiV1AuthLogoutData, PostApiV1AuthLogoutError, PostApiV1AuthLogoutResponse, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmError, PostApiV1AuthPasswordResetConfirmResponse, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetError, PostApiV1AuthPasswordResetResponse, PostApiV1AuthRefreshData, PostApiV1AuthRefreshError, PostApiV1AuthRefreshResponse, PostApiV1AuthSignupData, PostApiV1AuthSignupError, PostApiV1AuthSignupResponse, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenError, PostApiV1AuthVerifyEmailByTokenResponse, PostApiV1ChatCompleteData, PostApiV1ChatCompleteError, PostApiV1ChatCompleteResponse, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesError, PostApiV1ChatConversationsData, PostApiV1ChatConversationsError, PostApiV1ChatConversationsResponse, PostApiV1ChatStreamData, PostApiV1ChatStreamError, PostApiV1WorksByWorkIdBeatSheetData, PostApiV1WorksByWorkIdBeatSheetError, PostApiV1WorksByWorkIdBeatSheetResponse, PostApiV1WorksByWorkIdChatConversationsData, PostApiV1WorksByWorkIdChatConversationsError, PostApiV1WorksByWorkIdChatConversationsResponse, PostApiV1WorksByWorkIdChatMessagesData, PostApiV1WorksByWorkIdChatMessagesError, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse, PostApiV1WorksByWorkIdEntitiesData, PostApiV1WorksByWorkIdEntitiesError, PostApiV1WorksByWorkIdEntitiesResponse, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse, PostApiV1WorksByWorkIdEpisodesData, PostApiV1WorksByWorkIdEpisodesError, PostApiV1WorksByWorkIdEpisodesResponse, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData, PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueError, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData, PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData, PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueError, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData, PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillError, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData, PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleError, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesError, PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponse, PostApiV1WorksByWorkIdScenesBySceneIdLinksData, PostApiV1WorksByWorkIdScenesBySceneIdLinksError, PostApiV1WorksByWorkIdScenesBySceneIdLinksResponse, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveError, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponse, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectError, PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponse, PostApiV1WorksByWorkIdSynopsisContinueData, PostApiV1WorksByWorkIdSynopsisContinueError, PostApiV1WorksData, PostApiV1WorksError, PostApiV1WorksResponse, PutApiV1WorksByWorkIdSynopsisData, PutApiV1WorksByWorkIdSynopsisError, PutApiV1WorksByWorkIdSynopsisResponse } from '../types.gen';
+import { deleteApiV1WorksByWorkId, deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityId, deleteApiV1WorksByWorkIdEntitiesByEntityId, deleteApiV1WorksByWorkIdEpisodesByEpisodeId, deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, getApiV1AuthMe, getApiV1AuthOauthByProviderCallback, getApiV1AuthOauthByProviderLogin, getApiV1ChatConversations, getApiV1ChatConversationsByConversationId, getApiV1ChatConversationsByConversationIdMessages, getApiV1ChatProvider, getApiV1Works, getApiV1WorksByWorkId, getApiV1WorksByWorkIdChaptersByChapterIdLinks, getApiV1WorksByWorkIdChaptersByChapterIdMemory, getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestions, getApiV1WorksByWorkIdChatConversation, getApiV1WorksByWorkIdChatConversationMessages, getApiV1WorksByWorkIdConflicts, getApiV1WorksByWorkIdEntities, getApiV1WorksByWorkIdEntitiesByEntityId, getApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates, getApiV1WorksByWorkIdEpisodes, getApiV1WorksByWorkIdEpisodesByEpisodeId, getApiV1WorksByWorkIdEpisodesByEpisodeIdChapters, getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, getApiV1WorksByWorkIdExport, getApiV1WorksByWorkIdRelationships, getApiV1WorksByWorkIdSynopsis, getHealth, getReady, type Options, patchApiV1AuthMe, patchApiV1WorksByWorkId, patchApiV1WorksByWorkIdEntitiesByEntityId, patchApiV1WorksByWorkIdEpisodesByEpisodeId, patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId, patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorder, patchApiV1WorksByWorkIdEpisodesReorder, postApiV1AuthChangePassword, postApiV1AuthLogin, postApiV1AuthLogout, postApiV1AuthPasswordReset, postApiV1AuthPasswordResetConfirm, postApiV1AuthRefresh, postApiV1AuthSignup, postApiV1AuthVerifyEmailByToken, postApiV1ChatComplete, postApiV1ChatConversations, postApiV1ChatConversationsByConversationIdMessages, postApiV1ChatStream, postApiV1Works, postApiV1WorksByWorkIdBeatSheet, postApiV1WorksByWorkIdChaptersByChapterIdAssistContinue, postApiV1WorksByWorkIdChaptersByChapterIdAssistCorrect, postApiV1WorksByWorkIdChaptersByChapterIdAssistDialogue, postApiV1WorksByWorkIdChaptersByChapterIdAssistInfill, postApiV1WorksByWorkIdChaptersByChapterIdAssistStyle, postApiV1WorksByWorkIdChaptersByChapterIdExtractUpdates, postApiV1WorksByWorkIdChaptersByChapterIdLinks, postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApprove, postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdReject, postApiV1WorksByWorkIdChatConversations, postApiV1WorksByWorkIdChatMessages, postApiV1WorksByWorkIdEntities, postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStates, postApiV1WorksByWorkIdEpisodes, postApiV1WorksByWorkIdEpisodesByEpisodeIdChapters, postApiV1WorksByWorkIdSynopsisContinue, putApiV1WorksByWorkIdSynopsis } from '../sdk.gen';
+import type { DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdError, DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponse, DeleteApiV1WorksByWorkIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdData, DeleteApiV1WorksByWorkIdEntitiesByEntityIdError, DeleteApiV1WorksByWorkIdEntitiesByEntityIdResponse, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdError, DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, DeleteApiV1WorksByWorkIdError, DeleteApiV1WorksByWorkIdResponse, GetApiV1AuthMeData, GetApiV1AuthMeResponse, GetApiV1AuthOauthByProviderCallbackData, GetApiV1AuthOauthByProviderCallbackError, GetApiV1AuthOauthByProviderCallbackResponse, GetApiV1AuthOauthByProviderLoginData, GetApiV1AuthOauthByProviderLoginError, GetApiV1AuthOauthByProviderLoginResponse, GetApiV1ChatConversationsByConversationIdData, GetApiV1ChatConversationsByConversationIdError, GetApiV1ChatConversationsByConversationIdMessagesData, GetApiV1ChatConversationsByConversationIdMessagesError, GetApiV1ChatConversationsByConversationIdMessagesResponse, GetApiV1ChatConversationsByConversationIdResponse, GetApiV1ChatConversationsData, GetApiV1ChatConversationsResponse, GetApiV1ChatProviderData, GetApiV1ChatProviderResponse, GetApiV1WorksByWorkIdChaptersByChapterIdLinksData, GetApiV1WorksByWorkIdChaptersByChapterIdLinksError, GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryError, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponse, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsError, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponse, GetApiV1WorksByWorkIdChatConversationData, GetApiV1WorksByWorkIdChatConversationError, GetApiV1WorksByWorkIdChatConversationMessagesData, GetApiV1WorksByWorkIdChatConversationMessagesError, GetApiV1WorksByWorkIdChatConversationMessagesResponse, GetApiV1WorksByWorkIdChatConversationResponse, GetApiV1WorksByWorkIdConflictsData, GetApiV1WorksByWorkIdConflictsError, GetApiV1WorksByWorkIdConflictsResponse, GetApiV1WorksByWorkIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdData, GetApiV1WorksByWorkIdEntitiesByEntityIdError, GetApiV1WorksByWorkIdEntitiesByEntityIdResponse, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError, GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse, GetApiV1WorksByWorkIdEntitiesData, GetApiV1WorksByWorkIdEntitiesError, GetApiV1WorksByWorkIdEntitiesResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse, GetApiV1WorksByWorkIdEpisodesByEpisodeIdData, GetApiV1WorksByWorkIdEpisodesByEpisodeIdError, GetApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, GetApiV1WorksByWorkIdEpisodesData, GetApiV1WorksByWorkIdEpisodesError, GetApiV1WorksByWorkIdEpisodesResponse, GetApiV1WorksByWorkIdError, GetApiV1WorksByWorkIdExportData, GetApiV1WorksByWorkIdExportError, GetApiV1WorksByWorkIdRelationshipsData, GetApiV1WorksByWorkIdRelationshipsError, GetApiV1WorksByWorkIdRelationshipsResponse, GetApiV1WorksByWorkIdResponse, GetApiV1WorksByWorkIdSynopsisData, GetApiV1WorksByWorkIdSynopsisError, GetApiV1WorksByWorkIdSynopsisResponse, GetApiV1WorksData, GetApiV1WorksResponse, GetHealthData, GetHealthResponse, GetReadyData, GetReadyResponse, PatchApiV1AuthMeData, PatchApiV1AuthMeError, PatchApiV1AuthMeResponse, PatchApiV1WorksByWorkIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdData, PatchApiV1WorksByWorkIdEntitiesByEntityIdError, PatchApiV1WorksByWorkIdEntitiesByEntityIdResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersReorderResponse, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdData, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdError, PatchApiV1WorksByWorkIdEpisodesByEpisodeIdResponse, PatchApiV1WorksByWorkIdEpisodesReorderData, PatchApiV1WorksByWorkIdEpisodesReorderError, PatchApiV1WorksByWorkIdEpisodesReorderResponse, PatchApiV1WorksByWorkIdError, PatchApiV1WorksByWorkIdResponse, PostApiV1AuthChangePasswordData, PostApiV1AuthChangePasswordError, PostApiV1AuthChangePasswordResponse, PostApiV1AuthLoginData, PostApiV1AuthLoginError, PostApiV1AuthLoginResponse, PostApiV1AuthLogoutData, PostApiV1AuthLogoutError, PostApiV1AuthLogoutResponse, PostApiV1AuthPasswordResetConfirmData, PostApiV1AuthPasswordResetConfirmError, PostApiV1AuthPasswordResetConfirmResponse, PostApiV1AuthPasswordResetData, PostApiV1AuthPasswordResetError, PostApiV1AuthPasswordResetResponse, PostApiV1AuthRefreshData, PostApiV1AuthRefreshError, PostApiV1AuthRefreshResponse, PostApiV1AuthSignupData, PostApiV1AuthSignupError, PostApiV1AuthSignupResponse, PostApiV1AuthVerifyEmailByTokenData, PostApiV1AuthVerifyEmailByTokenError, PostApiV1AuthVerifyEmailByTokenResponse, PostApiV1ChatCompleteData, PostApiV1ChatCompleteError, PostApiV1ChatCompleteResponse, PostApiV1ChatConversationsByConversationIdMessagesData, PostApiV1ChatConversationsByConversationIdMessagesError, PostApiV1ChatConversationsData, PostApiV1ChatConversationsError, PostApiV1ChatConversationsResponse, PostApiV1ChatStreamData, PostApiV1ChatStreamError, PostApiV1WorksByWorkIdBeatSheetData, PostApiV1WorksByWorkIdBeatSheetError, PostApiV1WorksByWorkIdBeatSheetResponse, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueError, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectError, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueError, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillError, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData, PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleError, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesError, PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponse, PostApiV1WorksByWorkIdChaptersByChapterIdLinksData, PostApiV1WorksByWorkIdChaptersByChapterIdLinksError, PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveError, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponse, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectError, PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponse, PostApiV1WorksByWorkIdChatConversationsData, PostApiV1WorksByWorkIdChatConversationsError, PostApiV1WorksByWorkIdChatConversationsResponse, PostApiV1WorksByWorkIdChatMessagesData, PostApiV1WorksByWorkIdChatMessagesError, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesError, PostApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesResponse, PostApiV1WorksByWorkIdEntitiesData, PostApiV1WorksByWorkIdEntitiesError, PostApiV1WorksByWorkIdEntitiesResponse, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersError, PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersResponse, PostApiV1WorksByWorkIdEpisodesData, PostApiV1WorksByWorkIdEpisodesError, PostApiV1WorksByWorkIdEpisodesResponse, PostApiV1WorksByWorkIdSynopsisContinueData, PostApiV1WorksByWorkIdSynopsisContinueError, PostApiV1WorksData, PostApiV1WorksError, PostApiV1WorksResponse, PutApiV1WorksByWorkIdSynopsisData, PutApiV1WorksByWorkIdSynopsisError, PutApiV1WorksByWorkIdSynopsisResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseURL' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -596,9 +596,9 @@ export const postApiV1WorksByWorkIdChatConversationsMutation = (options?: Partia
 /**
  * 작품 채팅 메시지 전송 — 현재 화 원고+메모리 프레시 컨텍스트로 SSE 스트리밍
  *
- * 대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시
+ * 대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) chapter_id 검증 겸 프레시
  * 컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지
- * 저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가
+ * 저장 순으로 진행한다. chapter_id 검증을 메시지 저장보다 먼저 해 잘못된 chapter_id가
  * 고아 user 메시지를 남기지 않도록 한다.
  */
 export const postApiV1WorksByWorkIdChatMessagesMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChatMessagesData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChatMessagesError>, Options<PostApiV1WorksByWorkIdChatMessagesData>> => {
@@ -979,93 +979,6 @@ export const patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdMutati
     return mutationOptions;
 };
 
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesQueryKey = (options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData>) => createQueryKey('getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes', options);
-
-/**
- * 씬 목록
- */
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesOptions = (options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData>) => queryOptions<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, AxiosError<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError>, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, ReturnType<typeof getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesQueryKey(options)
-});
-
-/**
- * 씬 생성
- */
-export const postApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData>>): UseMutationOptions<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, AxiosError<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError>, Options<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData>> => {
-    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesResponse, AxiosError<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesError>, Options<PostApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenes({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-/**
- * 씬 삭제
- */
-export const deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdMutation = (options?: Partial<Options<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>>): UseMutationOptions<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, AxiosError<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError>, Options<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>> => {
-    const mutationOptions: UseMutationOptions<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, AxiosError<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError>, Options<DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdQueryKey = (options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>) => createQueryKey('getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId', options);
-
-/**
- * 씬 단건 조회
- */
-export const getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdOptions = (options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>) => queryOptions<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, AxiosError<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError>, GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, ReturnType<typeof getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdQueryKey(options)
-});
-
-/**
- * 씬 수정
- */
-export const patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdMutation = (options?: Partial<Options<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>>): UseMutationOptions<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, AxiosError<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError>, Options<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>> => {
-    const mutationOptions: UseMutationOptions<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdResponse, AxiosError<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdError>, Options<PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneIdData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdScenesBySceneId({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
 export const getApiV1WorksByWorkIdExportQueryKey = (options: Options<GetApiV1WorksByWorkIdExportData>) => createQueryKey('getApiV1WorksByWorkIdExport', options);
 
 /**
@@ -1206,14 +1119,14 @@ export const postApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesMutation = (o
     return mutationOptions;
 };
 
-export const getApiV1WorksByWorkIdScenesBySceneIdLinksQueryKey = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdLinksData>) => createQueryKey('getApiV1WorksByWorkIdScenesBySceneIdLinks', options);
+export const getApiV1WorksByWorkIdChaptersByChapterIdLinksQueryKey = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdLinksData>) => createQueryKey('getApiV1WorksByWorkIdChaptersByChapterIdLinks', options);
 
 /**
  * 씬-엔티티 링크 목록
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdLinksOptions = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdLinksData>) => queryOptions<GetApiV1WorksByWorkIdScenesBySceneIdLinksResponse, AxiosError<GetApiV1WorksByWorkIdScenesBySceneIdLinksError>, GetApiV1WorksByWorkIdScenesBySceneIdLinksResponse, ReturnType<typeof getApiV1WorksByWorkIdScenesBySceneIdLinksQueryKey>>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdLinksOptions = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdLinksData>) => queryOptions<GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, AxiosError<GetApiV1WorksByWorkIdChaptersByChapterIdLinksError>, GetApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, ReturnType<typeof getApiV1WorksByWorkIdChaptersByChapterIdLinksQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getApiV1WorksByWorkIdScenesBySceneIdLinks({
+        const { data } = await getApiV1WorksByWorkIdChaptersByChapterIdLinks({
             ...options,
             ...queryKey[0],
             signal,
@@ -1221,16 +1134,16 @@ export const getApiV1WorksByWorkIdScenesBySceneIdLinksOptions = (options: Option
         });
         return data;
     },
-    queryKey: getApiV1WorksByWorkIdScenesBySceneIdLinksQueryKey(options)
+    queryKey: getApiV1WorksByWorkIdChaptersByChapterIdLinksQueryKey(options)
 });
 
 /**
  * 씬-엔티티 링크 생성(중복 시 기존 링크 반환)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdLinksMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdLinksData>>): UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdLinksResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdLinksError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdLinksData>> => {
-    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdLinksResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdLinksError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdLinksData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdLinksMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdLinksData>>): UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdLinksError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdLinksData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdLinksResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdLinksError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdLinksData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdLinks({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdLinks({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1244,10 +1157,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdLinksMutation = (options?: Par
 /**
  * 씬-엔티티 링크 삭제
  */
-export const deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdMutation = (options?: Partial<Options<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData>>): UseMutationOptions<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponse, AxiosError<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdError>, Options<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData>> => {
-    const mutationOptions: UseMutationOptions<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdResponse, AxiosError<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdError>, Options<DeleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdData>> = {
+export const deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdMutation = (options?: Partial<Options<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData>>): UseMutationOptions<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponse, AxiosError<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdError>, Options<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData>> => {
+    const mutationOptions: UseMutationOptions<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdResponse, AxiosError<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdError>, Options<DeleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityIdData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityId({
+            const { data } = await deleteApiV1WorksByWorkIdChaptersByChapterIdLinksByEntityId({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1258,14 +1171,14 @@ export const deleteApiV1WorksByWorkIdScenesBySceneIdLinksByEntityIdMutation = (o
     return mutationOptions;
 };
 
-export const getApiV1WorksByWorkIdScenesBySceneIdMemoryQueryKey = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdMemoryData>) => createQueryKey('getApiV1WorksByWorkIdScenesBySceneIdMemory', options);
+export const getApiV1WorksByWorkIdChaptersByChapterIdMemoryQueryKey = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData>) => createQueryKey('getApiV1WorksByWorkIdChaptersByChapterIdMemory', options);
 
 /**
- * 현재 씬의 메모리 검색
+ * 현재 화의 메모리 검색
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdMemoryOptions = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdMemoryData>) => queryOptions<GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponse, AxiosError<GetApiV1WorksByWorkIdScenesBySceneIdMemoryError>, GetApiV1WorksByWorkIdScenesBySceneIdMemoryResponse, ReturnType<typeof getApiV1WorksByWorkIdScenesBySceneIdMemoryQueryKey>>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdMemoryOptions = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryData>) => queryOptions<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponse, AxiosError<GetApiV1WorksByWorkIdChaptersByChapterIdMemoryError>, GetApiV1WorksByWorkIdChaptersByChapterIdMemoryResponse, ReturnType<typeof getApiV1WorksByWorkIdChaptersByChapterIdMemoryQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getApiV1WorksByWorkIdScenesBySceneIdMemory({
+        const { data } = await getApiV1WorksByWorkIdChaptersByChapterIdMemory({
             ...options,
             ...queryKey[0],
             signal,
@@ -1273,16 +1186,16 @@ export const getApiV1WorksByWorkIdScenesBySceneIdMemoryOptions = (options: Optio
         });
         return data;
     },
-    queryKey: getApiV1WorksByWorkIdScenesBySceneIdMemoryQueryKey(options)
+    queryKey: getApiV1WorksByWorkIdChaptersByChapterIdMemoryQueryKey(options)
 });
 
 /**
  * 이어쓰기 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistContinueMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistContinueData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistContinueMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistContinueData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdAssistContinue({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdAssistContinue({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1296,10 +1209,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistContinueMutation = (opti
 /**
  * 인필링 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistInfillMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistInfillData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistInfillMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistInfillData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdAssistInfill({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdAssistInfill({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1313,10 +1226,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistInfillMutation = (option
 /**
  * 지문/대사 변환 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistDialogueMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistDialogueData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistDialogueData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdAssistDialogue({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdAssistDialogue({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1330,10 +1243,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistDialogueMutation = (opti
 /**
  * 문체 변환 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistStyleMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistStyleData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistStyleMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistStyleData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdAssistStyle({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdAssistStyle({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1347,10 +1260,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistStyleMutation = (options
 /**
  * 교정 (SSE)
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdAssistCorrectMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData>> => {
-    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdAssistCorrectData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData>>): UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdAssistCorrectData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdAssistCorrect({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdAssistCorrect({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1362,12 +1275,12 @@ export const postApiV1WorksByWorkIdScenesBySceneIdAssistCorrectMutation = (optio
 };
 
 /**
- * 씬 본문에서 신규 설정 후보 추출 + 제안 저장
+ * 화 본문에서 신규 설정 후보 추출 + 제안 저장
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData>>): UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData>> => {
-    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData>>): UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdExtractUpdatesData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdExtractUpdates({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdExtractUpdates({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1378,14 +1291,14 @@ export const postApiV1WorksByWorkIdScenesBySceneIdExtractUpdatesMutation = (opti
     return mutationOptions;
 };
 
-export const getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsQueryKey = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData>) => createQueryKey('getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestions', options);
+export const getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsQueryKey = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData>) => createQueryKey('getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestions', options);
 
 /**
  * 업데이트 제안 목록
  */
-export const getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsOptions = (options: Options<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsData>) => queryOptions<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponse, AxiosError<GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsError>, GetApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsResponse, ReturnType<typeof getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsQueryKey>>({
+export const getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsOptions = (options: Options<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsData>) => queryOptions<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponse, AxiosError<GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsError>, GetApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsResponse, ReturnType<typeof getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestions({
+        const { data } = await getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestions({
             ...options,
             ...queryKey[0],
             signal,
@@ -1393,16 +1306,16 @@ export const getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsOptions = (opt
         });
         return data;
     },
-    queryKey: getApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsQueryKey(options)
+    queryKey: getApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsQueryKey(options)
 });
 
 /**
  * 업데이트 제안 승인 — 엔티티/타임라인 상태에 반영
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData>>): UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData>> => {
-    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApproveData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData>>): UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApproveData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdApprove({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdApprove({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -1416,10 +1329,10 @@ export const postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionI
 /**
  * 업데이트 제안 거절 — 데이터 변경 없음
  */
-export const postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData>>): UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData>> => {
-    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectResponse, AxiosError<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectError>, Options<PostApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdRejectData>> = {
+export const postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectMutation = (options?: Partial<Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData>>): UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData>> => {
+    const mutationOptions: UseMutationOptions<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectResponse, AxiosError<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectError>, Options<PostApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdRejectData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await postApiV1WorksByWorkIdScenesBySceneIdUpdateSuggestionsBySuggestionIdReject({
+            const { data } = await postApiV1WorksByWorkIdChaptersByChapterIdUpdateSuggestionsBySuggestionIdReject({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -37,16 +37,10 @@ const WORK: Work = {
       partLabel: '제1부',
       index: 1,
       title: '1화',
-      scenes: [
-        {
-          id: 'sc1',
-          title: '씬1',
-          status: 'done',
-          paragraphs: [],
-          linkedEntityIds: [],
-          vectorMemory: [],
-        },
-      ],
+      status: 'done',
+      paragraphs: [],
+      linkedEntityIds: [],
+      vectorMemory: [],
     },
     {
       id: 'ch2',
@@ -54,16 +48,10 @@ const WORK: Work = {
       partLabel: '제1부',
       index: 2,
       title: '2화',
-      scenes: [
-        {
-          id: 'sc2',
-          title: '씬2',
-          status: 'done',
-          paragraphs: [],
-          linkedEntityIds: [],
-          vectorMemory: [],
-        },
-      ],
+      status: 'done',
+      paragraphs: [],
+      linkedEntityIds: [],
+      vectorMemory: [],
     },
   ],
   entities: [],
@@ -130,9 +118,9 @@ describe('RelationshipGraphScreen', () => {
     expect(screen.queryByText('이 시점까지의 관계 요약')).not.toBeInTheDocument();
   });
 
-  it('시점을 선택하면 up_to_scene_id로 다시 조회하고 요약을 보여준다', async () => {
-    mockGraph.mockImplementation((options: { query?: { up_to_scene_id?: string } }) => {
-      if (options?.query?.up_to_scene_id) {
+  it('시점을 선택하면 up_to_chapter_id로 다시 조회하고 요약을 보여준다', async () => {
+    mockGraph.mockImplementation((options: { query?: { up_to_chapter_id?: string } }) => {
+      if (options?.query?.up_to_chapter_id) {
         return Promise.resolve({
           edges: [
             {
@@ -167,7 +155,7 @@ describe('RelationshipGraphScreen', () => {
       expect(screen.getByText('사제')).toBeInTheDocument();
     });
 
-    await userEvent.selectOptions(screen.getByLabelText('시점 선택'), 'sc2');
+    await userEvent.selectOptions(screen.getByLabelText('시점 선택'), 'ch2');
 
     await waitFor(() => {
       expect(screen.getByText('2화 시점까지 두 사람은 원수가 되었다.')).toBeInTheDocument();
@@ -175,7 +163,7 @@ describe('RelationshipGraphScreen', () => {
     expect(screen.getByText('원수')).toBeInTheDocument();
     expect(mockGraph).toHaveBeenLastCalledWith({
       path: { work_id: WORK_ID },
-      query: { up_to_scene_id: 'sc2' },
+      query: { up_to_chapter_id: 'ch2' },
     });
   });
 });

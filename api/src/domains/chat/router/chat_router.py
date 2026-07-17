@@ -633,7 +633,7 @@ class _CamelModel(BaseModel):
 
 class SendWorkChatMessageRequest(_CamelModel):
     content: str = Field(min_length=1, max_length=32_000)
-    scene_id: uuid.UUID
+    chapter_id: uuid.UUID
 
     @field_validator("content")
     @classmethod
@@ -820,9 +820,9 @@ async def send_work_chat_message(
     llm: AbstractLLMPort = Depends(_work_chat_llm_client),
     session: AsyncSession = Depends(get_async_session),
 ) -> EventSourceResponse:
-    """대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) scene_id 검증 겸 프레시
+    """대화가 없으면 지연 생성 후, 수위 검열 → (수위 통과 시) chapter_id 검증 겸 프레시
     컨텍스트 조립 → 사용자 메시지 저장 → SSE 스트리밍 → 응답 종료 후 assistant 메시지
-    저장 순으로 진행한다. scene_id 검증을 메시지 저장보다 먼저 해 잘못된 scene_id가
+    저장 순으로 진행한다. chapter_id 검증을 메시지 저장보다 먼저 해 잘못된 chapter_id가
     고아 user 메시지를 남기지 않도록 한다."""
     bind_llm_call_context(user_id=current_user.id, task="chat")
     try:
@@ -840,11 +840,11 @@ async def send_work_chat_message(
         await session.commit()
         return EventSourceResponse(_work_chat_precheck_declined_stream(repo, conv.id, session))
 
-    # scene_id 검증을 사용자 메시지 커밋보다 먼저 수행 — 잘못된 scene_id로 인한
+    # chapter_id 검증을 사용자 메시지 커밋보다 먼저 수행 — 잘못된 chapter_id로 인한
     # 404가 답변 없는 고아 user 메시지를 남기지 않도록 한다.
     try:
         system_text = await context_service.build_context(
-            work_id, current_user.id, payload.scene_id
+            work_id, current_user.id, payload.chapter_id
         )
     except AppError as exc:
         _raise_http(exc)

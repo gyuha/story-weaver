@@ -1,5 +1,5 @@
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
-import { findSceneLocation, groupChaptersByPart } from '@/features/shared/store/selectors';
+import { findChapter, groupChaptersByPart } from '@/features/shared/store/selectors';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
@@ -18,13 +18,12 @@ import { toast } from 'sonner';
 
 interface WorkTreeProps {
   work: Work;
-  activeSceneId?: string;
+  activeChapterId?: string;
 }
 
-export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
+export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
   const parts = groupChaptersByPart(work);
-  const activeLoc = findSceneLocation(work, activeSceneId);
-  const activeChapterId = activeLoc?.chapter.id;
+  const activeChapter = findChapter(work, activeChapterId);
   const addChapter = useWorksStore((s) => s.addChapter);
   const addPart = useWorksStore((s) => s.addPart);
   const renamePart = useWorksStore((s) => s.renamePart);
@@ -41,10 +40,10 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
   const [draggedPart, setDraggedPart] = useState<string | null>(null);
   const [draggedChapterId, setDraggedChapterId] = useState<string | null>(null);
 
-  // 활성 씬을 포함한 부는 펼친 상태로 시작. 활성 씬이 없으면 마지막 부를 펼친다.
+  // 활성 화를 포함한 부는 펼친 상태로 시작. 활성 화가 없으면 마지막 부를 펼친다.
   const [openParts, setOpenParts] = useState<Set<string>>(() => {
     const set = new Set<string>();
-    if (activeLoc) set.add(activeLoc.chapter.partLabel);
+    if (activeChapter) set.add(activeChapter.partLabel);
     else if (parts.length) set.add(parts[parts.length - 1].part);
     return set;
   });
@@ -110,7 +109,7 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
     openModal({
       size: 'sm',
       title: '화 삭제',
-      alert: `'${chapter.index}화 ${chapter.title}'와 그 씬이 삭제됩니다. 복구할 수 없습니다.`,
+      alert: `'${chapter.index}화 ${chapter.title}'가 삭제됩니다. 복구할 수 없습니다.`,
       txtCancel: '취소',
       handleOk: () => {
         closeModal();
@@ -124,7 +123,7 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
     openModal({
       size: 'sm',
       title: '부 삭제',
-      alert: `'${part}'과(와) 거기 속한 모든 화·씬이 삭제됩니다. 복구할 수 없습니다.`,
+      alert: `'${part}'과(와) 거기 속한 모든 화가 삭제됩니다. 복구할 수 없습니다.`,
       txtCancel: '취소',
       handleOk: () => {
         closeModal();
@@ -261,7 +260,7 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
                       />
                     </div>
                   ) : (
-                    // 회차 클릭 = 첫 씬 편집으로 바로 이동(씬 노드는 트리에 두지 않음). 더블클릭은 제목 편집.
+                    // 회차 클릭 = 화 편집으로 바로 이동. 더블클릭은 제목 편집.
                     <div
                       key={chapter.id}
                       draggable
@@ -277,8 +276,8 @@ export function WorkTree({ work, activeSceneId }: WorkTreeProps) {
                       )}
                     >
                       <Link
-                        to="/works/$workId/write/$sceneId"
-                        params={{ workId: work.id, sceneId: chapter.scenes[0]?.id ?? '' }}
+                        to="/works/$workId/write/$chapterId"
+                        params={{ workId: work.id, chapterId: chapter.id }}
                         onDoubleClick={(e) => {
                           e.preventDefault();
                           setEditingChapterId(chapter.id);

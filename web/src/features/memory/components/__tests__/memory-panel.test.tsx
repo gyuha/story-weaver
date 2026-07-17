@@ -1,4 +1,4 @@
-import type { Chapter, Scene, Work } from '@/features/shared/types';
+import type { Chapter, Work } from '@/features/shared/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -51,22 +51,22 @@ vi.mock('@/features/memory/api/chat.api', () => ({
 
 const mockAcceptSuggestion = vi.fn();
 const mockDismissSuggestion = vi.fn();
-const mockRemoveSceneEntityLink = vi.fn();
-const mockAddSceneEntityLinks = vi.fn();
+const mockRemoveChapterEntityLink = vi.fn();
+const mockAddChapterEntityLinks = vi.fn();
 vi.mock('@/features/shared/store/works.store', () => ({
   useWorksStore: (
     selector: (s: {
       acceptSuggestion: typeof mockAcceptSuggestion;
       dismissSuggestion: typeof mockDismissSuggestion;
-      removeSceneEntityLink: typeof mockRemoveSceneEntityLink;
-      addSceneEntityLinks: typeof mockAddSceneEntityLinks;
+      removeChapterEntityLink: typeof mockRemoveChapterEntityLink;
+      addChapterEntityLinks: typeof mockAddChapterEntityLinks;
     }) => unknown
   ) =>
     selector({
       acceptSuggestion: mockAcceptSuggestion,
       dismissSuggestion: mockDismissSuggestion,
-      removeSceneEntityLink: mockRemoveSceneEntityLink,
-      addSceneEntityLinks: mockAddSceneEntityLinks,
+      removeChapterEntityLink: mockRemoveChapterEntityLink,
+      addChapterEntityLinks: mockAddChapterEntityLinks,
     }),
 }));
 
@@ -119,12 +119,6 @@ const CHAPTER: Chapter = {
   partLabel: '제1부',
   index: 1,
   title: '1화',
-  scenes: [],
-};
-
-const SCENE: Scene = {
-  id: 'sc1',
-  title: '새 씬',
   status: 'draft',
   paragraphs: [{ text: '본문' }],
   linkedEntityIds: [],
@@ -138,8 +132,8 @@ beforeEach(() => {
 
 describe('MemoryPanel · AI 동적 업데이트 제안', () => {
   it('kind별로 대기중 제안을 카드로 보여준다', () => {
-    const scene: Scene = {
-      ...SCENE,
+    const chapter: Chapter = {
+      ...CHAPTER,
       pendingSuggestions: [
         { id: 's1', kind: 'new_entity', payload: { name: '떠돌이 검객', summary: '신비한 인물' } },
         {
@@ -155,7 +149,7 @@ describe('MemoryPanel · AI 동적 업데이트 제안', () => {
       ],
     };
 
-    render(<MemoryPanel work={WORK} chapter={CHAPTER} scene={scene} />);
+    render(<MemoryPanel work={WORK} chapter={chapter} />);
 
     expect(screen.getByText(/떠돌이 검객/)).toBeInTheDocument();
     expect(screen.getByText(/신비한 인물/)).toBeInTheDocument();
@@ -169,15 +163,15 @@ describe('MemoryPanel · AI 동적 업데이트 제안', () => {
 
   it('반영 클릭 시 실 API(acceptSuggestion)를 제안 id와 함께 호출하고 성공 토스트를 보여준다', async () => {
     mockAcceptSuggestion.mockResolvedValue(undefined);
-    const scene: Scene = {
-      ...SCENE,
+    const chapter: Chapter = {
+      ...CHAPTER,
       pendingSuggestions: [{ id: 's1', kind: 'new_entity', payload: { name: '떠돌이 검객' } }],
     };
 
-    render(<MemoryPanel work={WORK} chapter={CHAPTER} scene={scene} />);
+    render(<MemoryPanel work={WORK} chapter={chapter} />);
     await userEvent.click(screen.getByRole('button', { name: '반영' }));
 
-    expect(mockAcceptSuggestion).toHaveBeenCalledWith('w1', 'sc1', 's1');
+    expect(mockAcceptSuggestion).toHaveBeenCalledWith('w1', 'ch1', 's1');
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalled();
     });
@@ -185,12 +179,12 @@ describe('MemoryPanel · AI 동적 업데이트 제안', () => {
 
   it('반영이 실패하면 에러 토스트를 보여준다', async () => {
     mockAcceptSuggestion.mockRejectedValue(new Error('conflict'));
-    const scene: Scene = {
-      ...SCENE,
+    const chapter: Chapter = {
+      ...CHAPTER,
       pendingSuggestions: [{ id: 's1', kind: 'new_entity', payload: { name: '떠돌이 검객' } }],
     };
 
-    render(<MemoryPanel work={WORK} chapter={CHAPTER} scene={scene} />);
+    render(<MemoryPanel work={WORK} chapter={chapter} />);
     await userEvent.click(screen.getByRole('button', { name: '반영' }));
 
     await waitFor(() => {
@@ -200,20 +194,20 @@ describe('MemoryPanel · AI 동적 업데이트 제안', () => {
 
   it('무시 클릭 시 실 API(dismissSuggestion)를 제안 id와 함께 호출한다', async () => {
     mockDismissSuggestion.mockResolvedValue(undefined);
-    const scene: Scene = {
-      ...SCENE,
+    const chapter: Chapter = {
+      ...CHAPTER,
       pendingSuggestions: [{ id: 's1', kind: 'new_entity', payload: { name: '떠돌이 검객' } }],
     };
 
-    render(<MemoryPanel work={WORK} chapter={CHAPTER} scene={scene} />);
+    render(<MemoryPanel work={WORK} chapter={chapter} />);
     await userEvent.click(screen.getByRole('button', { name: '무시' }));
 
-    expect(mockDismissSuggestion).toHaveBeenCalledWith('w1', 'sc1', 's1');
+    expect(mockDismissSuggestion).toHaveBeenCalledWith('w1', 'ch1', 's1');
   });
 });
 
 async function openRecommend() {
-  render(<MemoryPanel work={WORK} chapter={CHAPTER} scene={SCENE} />);
+  render(<MemoryPanel work={WORK} chapter={CHAPTER} />);
   await userEvent.click(screen.getByRole('button', { name: 'AI 추천 받기' }));
 }
 
@@ -273,7 +267,7 @@ describe('MemoryPanel · AI 추천 받기', () => {
     const vectorCard = screen.getByText('숨은 인물').closest('button') as HTMLElement;
     expect(within(vectorCard).getByText('추천')).toBeInTheDocument();
 
-    expect(mockSearch).toHaveBeenCalledWith({ path: { work_id: 'w1', scene_id: 'sc1' } });
+    expect(mockSearch).toHaveBeenCalledWith({ path: { work_id: 'w1', chapter_id: 'ch1' } });
     expect(toast.success).toHaveBeenCalled();
   });
 
@@ -292,7 +286,7 @@ async function renderChatTab() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryPanel work={WORK} chapter={CHAPTER} scene={SCENE} />
+      <MemoryPanel work={WORK} chapter={CHAPTER} />
     </QueryClientProvider>
   );
   await userEvent.click(screen.getByRole('button', { name: '채팅' }));
@@ -333,7 +327,7 @@ describe('MemoryPanel · ChatTab', () => {
 
     expect(chatStartSpy).toHaveBeenCalledWith({
       workId: 'w1',
-      payload: { content: '주인공 이름이 뭐야?', sceneId: 'sc1' },
+      payload: { content: '주인공 이름이 뭐야?', chapterId: 'ch1' },
     });
 
     act(() => setMockChatStreamState({ isStreaming: true, text: '이름은' }));
