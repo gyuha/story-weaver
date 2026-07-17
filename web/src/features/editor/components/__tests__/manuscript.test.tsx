@@ -167,6 +167,7 @@ beforeEach(() => {
   mockGetText.mockReturnValue('원래 문단');
   mockTextBetween.mockReturnValue('원래 문단');
   mockExtractChapterUpdates.mockResolvedValue(undefined);
+  mockRenameChapter.mockResolvedValue(undefined);
   setMockAssistState = () => {};
 });
 
@@ -357,6 +358,18 @@ describe('ManuscriptEditor AI 제목 생성', () => {
 
     const input = screen.getByRole('textbox', { name: '챕터 제목' });
     expect((input as HTMLInputElement).value).toBe('빗속의 검');
+  });
+
+  it('생성 완료 시 별도 blur 없이 화 제목을 저장한다', async () => {
+    mockGetText.mockReturnValue('비 오는 골목, 그는 우산도 없이 서 있었다.');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
+
+    act(() => setMockAssistState({ isStreaming: true }));
+    act(() => setMockAssistState({ isStreaming: false, text: '"빗속의 검"\n(부제는 무시)' }));
+
+    await waitFor(() => expect(mockRenameChapter).toHaveBeenCalledWith('w1', 'ch1', '빗속의 검'));
   });
 
   it('생성 중에는 버튼이 비활성화된다', async () => {

@@ -146,8 +146,24 @@ export function ManuscriptEditor({
     const cleaned = assist.text
       .split('\n')[0]
       .replace(/^["'“”‘’「」『』\s]+|["'“”‘’「」『』\s]+$/g, '');
-    if (cleaned) setTitleDraft(cleaned);
-  }, [assist.isStreaming, assist.text, assist.error, generatingTitle]);
+    if (!cleaned) return;
+    setTitleDraft(cleaned);
+    // 생성 결과는 입력창 표시에 그치지 않고 곧바로 저장한다(blur를 기다리지 않음).
+    if (cleaned !== chapter.title) {
+      renameChapter(work.id, chapter.id, cleaned).catch((err) => {
+        toast.error(apiErrorMessage(err, '화 제목을 저장하지 못했습니다'));
+      });
+    }
+  }, [
+    assist.isStreaming,
+    assist.text,
+    assist.error,
+    generatingTitle,
+    chapter.title,
+    chapter.id,
+    work.id,
+    renameChapter,
+  ]);
 
   // 패널이 나타날 때 화면에 보이도록 스크롤 — 긴 본문에서 반응 없음으로 오인되는 것 방지.
   useEffect(() => {
