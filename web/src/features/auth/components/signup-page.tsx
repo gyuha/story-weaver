@@ -1,7 +1,7 @@
 import { authApi } from '@/features/auth/api/auth.api';
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { Link } from '@tanstack/react-router';
-import { Check, Eye, Mail } from 'lucide-react';
+import { Check, Eye, EyeOff, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { OrDivider, SocialRow } from './auth-form-parts';
 import { AuthLayout } from './auth-layout';
@@ -16,6 +16,7 @@ export function SignupPage() {
   const [penName, setPenName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,12 +103,23 @@ export function SignupPage() {
           <span className="mb-[7px] block text-[12.5px] font-medium text-ink-soft">비밀번호</span>
           <div className="flex h-11 items-center gap-2 rounded-md border border-line-strong px-[13px] focus-within:border-primary">
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="flex-1 bg-transparent text-base text-ink focus:outline-none"
             />
-            <Eye className="size-[17px] text-faint" strokeWidth={2} />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+              className="text-faint transition-colors hover:text-ink-soft"
+            >
+              {showPassword ? (
+                <EyeOff className="size-[17px]" strokeWidth={2} />
+              ) : (
+                <Eye className="size-[17px]" strokeWidth={2} />
+              )}
+            </button>
           </div>
           <div className="mt-[9px] flex items-center gap-2">
             <div className="flex flex-1 gap-1">

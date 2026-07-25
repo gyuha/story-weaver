@@ -72,7 +72,7 @@ describe('SignupPage', () => {
       expect(authApi.signup).toHaveBeenCalledWith({
         body: {
           email: 'test@example.com',
-          password: 'password123',
+          password: 'password123', // pragma: allowlist secret
           display_name: '테스터',
         },
       });
@@ -85,6 +85,20 @@ describe('SignupPage', () => {
     });
 
     expect(mockNavigate).not.toHaveBeenCalledWith({ to: '/works' });
+  });
+
+  it('눈 버튼으로 비밀번호 표시/숨김을 토글한다', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<SignupPage />);
+
+    const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
+    expect(passwordInput.type).toBe('password');
+
+    await user.click(screen.getByRole('button', { name: '비밀번호 표시' }));
+    expect(passwordInput.type).toBe('text');
+
+    await user.click(screen.getByRole('button', { name: '비밀번호 숨기기' }));
+    expect(passwordInput.type).toBe('password');
   });
 
   it('shows inline error when authApi.signup rejects', async () => {

@@ -3,7 +3,7 @@ import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { applyTheme } from '@/hooks/use-theme';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Eye } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { OrDivider, SocialRow } from './auth-form-parts';
 import { AuthLayout } from './auth-layout';
@@ -23,6 +23,7 @@ export function LoginPage({ redirect }: { redirect?: string }) {
   const setUser = useAuthStore((s) => s.setUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -104,12 +105,23 @@ export function LoginPage({ redirect }: { redirect?: string }) {
           </span>
           <div className="flex h-11 items-center gap-2 rounded-md border border-line-strong px-[13px] focus-within:border-primary">
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="flex-1 bg-transparent text-base text-ink focus:outline-none"
             />
-            <Eye className="size-[17px] text-faint" strokeWidth={2} />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+              className="text-faint transition-colors hover:text-ink-soft"
+            >
+              {showPassword ? (
+                <EyeOff className="size-[17px]" strokeWidth={2} />
+              ) : (
+                <Eye className="size-[17px]" strokeWidth={2} />
+              )}
+            </button>
           </div>
         </label>
 

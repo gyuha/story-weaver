@@ -59,7 +59,7 @@ const USER = {
 
 async function fillAndSubmit(email: string, password: string) {
   await userEvent.type(screen.getByLabelText(/이메일/), email);
-  await userEvent.type(screen.getByLabelText(/비밀번호/), password);
+  await userEvent.type(screen.getByLabelText(/비밀번호/, { selector: 'input' }), password);
   await userEvent.click(screen.getByRole('button', { name: /로그인/ }));
 }
 
@@ -90,7 +90,7 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
-        body: { email: 'writer@example.com', password: 'pass1234' },
+        body: { email: 'writer@example.com', password: 'pass1234' }, // pragma: allowlist secret
       });
     });
 
@@ -194,7 +194,7 @@ describe('LoginPage', () => {
     render(<LoginPage />);
 
     await userEvent.type(screen.getByLabelText(/이메일/), 'writer@example.com');
-    await userEvent.type(screen.getByLabelText(/비밀번호/), 'pass1234');
+    await userEvent.type(screen.getByLabelText(/비밀번호/, { selector: 'input' }), 'pass1234');
     await userEvent.click(screen.getByRole('button', { name: /로그인/ }));
 
     expect(screen.getByRole('button', { name: /로그인 중/ })).toBeDisabled();
