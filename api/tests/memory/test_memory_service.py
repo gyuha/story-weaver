@@ -97,11 +97,11 @@ async def test_index_source_skips_reembedding_when_content_unchanged(
     source_id = uuid.uuid4()
     calls: list[str] = []
 
-    def _fake_embed_text(text: str) -> list[float]:
+    async def _fake_aembed_text(text: str) -> list[float]:
         calls.append(text)
         return [0.0] * EMBEDDING_DIM
 
-    monkeypatch.setattr(memory_service_module, "embed_text", _fake_embed_text)
+    monkeypatch.setattr(memory_service_module, "aembed_text", _fake_aembed_text)
 
     async with AsyncSessionFactory() as session:
         service = MemoryService(MemoryRepository(session))
@@ -126,11 +126,11 @@ async def test_index_source_reembeds_when_content_changed(
     source_id = uuid.uuid4()
     calls: list[str] = []
 
-    def _fake_embed_text(text: str) -> list[float]:
+    async def _fake_aembed_text(text: str) -> list[float]:
         calls.append(text)
         return [0.0] * EMBEDDING_DIM
 
-    monkeypatch.setattr(memory_service_module, "embed_text", _fake_embed_text)
+    monkeypatch.setattr(memory_service_module, "aembed_text", _fake_aembed_text)
 
     async with AsyncSessionFactory() as session:
         service = MemoryService(MemoryRepository(session))
@@ -193,6 +193,47 @@ async def test_index_chapter_short_body_indexes_single_chunk(fixture: _Fixture) 
     assert len(rows) == 1
     assert rows[0].chunk_index == 0
     assert rows[0].content == body
+
+
+def test_chunk_paragraphs_returns_empty_list_for_blank_body() -> None:
+    """빈 본문(공백만 포함)은 청크 0개 — 빈 문자열 임베딩 저장을 막는다."""
+    assert memory_service_module._chunk_paragraphs("") == []
+    assert memory_service_module._chunk_paragraphs("  \n\n ") == []
+
+
+async def test_index_chapter_empty_body_skips_embedding_and_clears_existing_chunks(
+    fixture: _Fixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """빈 본문으로 재인덱싱하면 embed_text를 호출하지 않고 기존 청크를 모두 지운다."""
+    chapter_id = uuid.uuid4()
+    paragraph = "다" * 300
+    long_body = "\n\n".join([paragraph, paragraph, paragraph])  # 청크 2개
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, long_body)
+        await session.commit()
+
+    calls: list[str] = []
+
+    async def _fake_aembed_text(text: str) -> list[float]:
+        calls.append(text)
+        return [0.0] * EMBEDDING_DIM
+
+    monkeypatch.setattr(memory_service_module, "aembed_text", _fake_aembed_text)
+
+    async with AsyncSessionFactory() as session:
+        service = MemoryService(MemoryRepository(session))
+        await service.index_chapter(fixture.work.id, chapter_id, "")
+        await session.commit()
+
+    assert calls == []  # 빈 본문은 임베딩하지 않는다
+
+    async with AsyncSessionFactory() as session:
+        result = await session.execute(select(Embedding).where(Embedding.source_id == chapter_id))
+        rows = list(result.scalars().all())
+
+    assert rows == []  # 기존 청크가 모두 정리된다
 
 
 async def test_index_chapter_reindex_trims_orphan_chunks_when_shrinking(

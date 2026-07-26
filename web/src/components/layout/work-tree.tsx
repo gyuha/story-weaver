@@ -10,6 +10,7 @@ import {
   ChevronRight,
   FilePlus,
   FolderPlus,
+  Loader2,
   MoreHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -39,6 +40,9 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
   // 드래그 중인 부 라벨 / 화 id (같은 부 안에서만 화 재배치를 허용)
   const [draggedPart, setDraggedPart] = useState<string | null>(null);
   const [draggedChapterId, setDraggedChapterId] = useState<string | null>(null);
+  // 새 부/새 화 추가 진행 상태 — 중복 클릭 방지용. 화는 부 라벨로 식별해 그 부의 버튼만 비활성화한다.
+  const [isAddingPart, setIsAddingPart] = useState(false);
+  const [addingChapterPart, setAddingChapterPart] = useState<string | null>(null);
 
   // 활성 화를 포함한 부는 펼친 상태로 시작. 활성 화가 없으면 마지막 부를 펼친다.
   const [openParts, setOpenParts] = useState<Set<string>>(() => {
@@ -60,22 +64,28 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
   };
 
   const handleAddChapter = async (part: string) => {
+    setAddingChapterPart(part);
     try {
       const id = await addChapter(work.id, part);
       setOpenParts((s) => new Set(s).add(part));
       setEditingChapterId(id);
     } catch (err) {
       toast.error(apiErrorMessage(err, '화 추가에 실패했습니다'));
+    } finally {
+      setAddingChapterPart(null);
     }
   };
 
   const handleAddPart = async () => {
+    setIsAddingPart(true);
     try {
       const label = await addPart(work.id);
       setOpenParts((s) => new Set(s).add(label));
       setEditingPart(label);
     } catch (err) {
       toast.error(apiErrorMessage(err, '부 추가에 실패했습니다'));
+    } finally {
+      setIsAddingPart(false);
     }
   };
 
@@ -307,9 +317,14 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
                 <button
                   type="button"
                   onClick={() => confirmAddChapter(part)}
-                  className="mt-0.5 mb-1 ml-6 flex h-[26px] w-[calc(100%-30px)] items-center justify-center gap-1.5 rounded-md border border-dashed border-line-strong text-[12px] font-medium text-muted-ink transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-primary"
+                  disabled={addingChapterPart === part}
+                  className="mt-0.5 mb-1 ml-6 flex h-[26px] w-[calc(100%-30px)] items-center justify-center gap-1.5 rounded-md border border-dashed border-line-strong text-[12px] font-medium text-muted-ink transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <FilePlus className="size-3.5" strokeWidth={2} />
+                  {addingChapterPart === part ? (
+                    <Loader2 className="size-3.5 animate-spin" strokeWidth={2} />
+                  ) : (
+                    <FilePlus className="size-3.5" strokeWidth={2} />
+                  )}
                   <span>새 화</span>
                 </button>
               </>
@@ -323,9 +338,14 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
         <button
           type="button"
           onClick={confirmAddPart}
-          className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-line-strong bg-surface text-[13px] font-semibold text-ink-soft transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+          disabled={isAddingPart}
+          className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-line-strong bg-surface text-[13px] font-semibold text-ink-soft transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <FolderPlus className="size-4" strokeWidth={2} />
+          {isAddingPart ? (
+            <Loader2 className="size-4 animate-spin" strokeWidth={2} />
+          ) : (
+            <FolderPlus className="size-4" strokeWidth={2} />
+          )}
           <span>새 부</span>
         </button>
       </div>

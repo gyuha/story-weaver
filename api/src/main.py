@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import threading
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -74,6 +75,28 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
     _redis = await get_redis_client()
     await _await_if_needed(_redis.ping())
     logger.info("redis_connected", url=settings.redis_dsn.split("@")[-1])
+
+    # Warm the local embedding model in the background — first load is ~6s and
+    # must not block boot (dev's ``uvicorn --reload`` reloads on every save).
+    #
+    # This must be a plain daemon thread, NOT asyncio.to_thread/create_task:
+    # asyncio.to_thread submits to the event loop's *default* ThreadPoolExecutor,
+    # and uvicorn's asyncio.Runner.close() calls loop.shutdown_default_executor(),
+    # which blocks until that executor's in-flight work finishes — cancelling the
+    # wrapping Task does not stop an already-running thread, so a reload/shutdown
+    # would hang for the remainder of the model load. A daemon thread is never
+    # tracked by the loop's executor, so it can't block shutdown.
+    from domains.memory.embedding_client import _get_model
+
+    def _warm_embedding_model() -> None:
+        logger.info("embedding_model_warmup_started")
+        try:
+            _get_model()
+            logger.info("embedding_model_warmup_completed")
+        except Exception:
+            logger.exception("embedding_model_warmup_failed")
+
+    threading.Thread(target=_warm_embedding_model, daemon=True).start()
 
     yield
 

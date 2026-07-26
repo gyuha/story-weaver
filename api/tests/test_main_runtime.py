@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 import pytest
@@ -151,6 +153,60 @@ async def test_lifespan_warms_and_closes_redis(monkeypatch: pytest.MonkeyPatch) 
         assert closed is False
 
     assert closed is True
+
+
+@pytest.mark.asyncio
+async def test_lifespan_shutdown_does_not_block_default_executor_teardown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Embedding warmup must never leave work running in the loop's default executor.
+
+    uvicorn's asyncio.Runner.close() calls ``loop.shutdown_default_executor()`` on
+    process exit, which blocks until every default-executor work item finishes. If
+    warmup is submitted via ``asyncio.to_thread`` (-> the loop's default
+    ThreadPoolExecutor), cancelling the wrapping Task returns immediately but does
+    NOT stop the already-running thread — so ``shutdown_default_executor()`` still
+    blocks for the remainder of the model load, freezing dev's ``uvicorn --reload``
+    restart (or Ctrl+C shutdown) even though the lifespan's own shutdown code
+    "returned" quickly.
+    """
+    import domains.memory.embedding_client as embedding_client_module
+
+    def _slow_get_model() -> object:
+        time.sleep(0.5)
+        return object()
+
+    monkeypatch.setattr(embedding_client_module, "_get_model", _slow_get_model)
+
+    async def fake_get_redis_client() -> FakeRedis:
+        return FakeRedis()
+
+    async def fake_close_redis_client() -> None:
+        return None
+
+    monkeypatch.setattr(main, "configure_logging", lambda **kwargs: None)
+    monkeypatch.setattr("core.redis.get_redis_client", fake_get_redis_client)
+    monkeypatch.setattr("core.redis.close_redis_client", fake_close_redis_client)
+
+    cm = main.lifespan(main.create_app())
+    await cm.__aenter__()
+    # Give the warmup work an actual chance to reach the executor thread and
+    # start running _slow_get_model (i.e. past the point where cancel() could
+    # still prevent it from ever starting) before we shut down.
+    await asyncio.sleep(0.1)
+    await cm.__aexit__(None, None, None)
+
+    loop = asyncio.get_running_loop()
+    started = time.monotonic()
+    await asyncio.wait_for(loop.shutdown_default_executor(), timeout=2)
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 0.2, (
+        "lifespan shutdown left warmup work running in the loop's default "
+        "executor; loop.shutdown_default_executor() (what asyncio.Runner.close() "
+        f"calls on process exit) took {elapsed:.2f}s instead of returning "
+        "immediately, which would block uvicorn --reload / process shutdown."
+    )
 
 
 @pytest.mark.asyncio

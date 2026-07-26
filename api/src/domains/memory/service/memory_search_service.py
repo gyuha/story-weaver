@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 
 from domains.manuscript.service import ManuscriptService
-from domains.memory.embedding_client import embed_text
+from domains.memory.embedding_client import aembed_text
 from domains.memory.models import EmbeddingSourceType
 from domains.memory.repository import MemoryRepository
 from domains.memory.schemas import MemoryItemResponse, MemoryItemType
@@ -77,7 +77,7 @@ class MemorySearchService:
                     )
                 )
 
-        query_vector = embed_text(chapter.body)
+        query_vector = await aembed_text(chapter.body)
         matches = await self._repo.search_similar(
             work_id,
             query_vector,

@@ -39,6 +39,20 @@ vi.mock('@/features/editor/api/manuscript.api', () => ({
   },
 }));
 
+// 확인 모달을 실제로 렌더링하지 않고 openModal 호출 즉시 OK를 누른 것처럼 동작시킨다.
+vi.mock('@/stores/modal-store', () => ({
+  default: (
+    selector: (state: {
+      openModal: (props: { handleOk?: () => void }) => void;
+      closeModal: () => void;
+    }) => unknown
+  ) =>
+    selector({
+      openModal: (props) => props.handleOk?.(),
+      closeModal: vi.fn(),
+    }),
+}));
+
 import { toast } from 'sonner';
 import { WorkTree } from '../work-tree';
 
@@ -146,5 +160,90 @@ describe('WorkTree 드래그 앤 드롭', () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalled();
     });
+  });
+});
+
+describe('WorkTree 새 부/새 화 추가 진행 상태', () => {
+  it('새 부 추가 진행 중에는 버튼이 비활성화·스피너로 바뀌고, 재클릭해도 addPart는 1회만 호출된다', async () => {
+    let resolveAddPart: (label: string) => void = () => {};
+    const addPartPromise = new Promise<string>((resolve) => {
+      resolveAddPart = resolve;
+    });
+    const mockAddPart = vi.fn().mockReturnValue(addPartPromise);
+    useWorksStore.setState({ addPart: mockAddPart });
+    render(<Harness />);
+
+    const button = screen.getByRole('button', { name: '새 부' });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toBeDisabled();
+    });
+    expect(button.querySelector('.animate-spin')).toBeTruthy();
+
+    fireEvent.click(button);
+    expect(mockAddPart).toHaveBeenCalledTimes(1);
+
+    resolveAddPart('제2부');
+    await waitFor(() => {
+      expect(button).not.toBeDisabled();
+    });
+  });
+
+  it('새 부 추가가 실패하면 버튼이 다시 활성화되고 에러 토스트가 표시된다', async () => {
+    const mockAddPart = vi.fn().mockRejectedValue(new Error('network error'));
+    useWorksStore.setState({ addPart: mockAddPart });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: '새 부' }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
+    expect(screen.getByRole('button', { name: '새 부' })).not.toBeDisabled();
+  });
+
+  it('새 화 추가 중에는 그 부의 버튼만 비활성화되고 다른 부의 버튼은 활성 상태로 남는다', async () => {
+    let resolveAddChapter: (id: string) => void = () => {};
+    const addChapterPromise = new Promise<string>((resolve) => {
+      resolveAddChapter = resolve;
+    });
+    const mockAddChapter = vi.fn().mockReturnValue(addChapterPromise);
+    useWorksStore.setState({ addChapter: mockAddChapter });
+    render(<Harness />);
+
+    // 제2부를 펼쳐 두 부의 '새 화' 버튼을 모두 노출시킨다
+    fireEvent.click(screen.getByText('제2부'));
+
+    const [firstPartButton, secondPartButton] = screen.getAllByRole('button', { name: '새 화' });
+    fireEvent.click(firstPartButton);
+
+    await waitFor(() => {
+      expect(firstPartButton).toBeDisabled();
+    });
+    expect(firstPartButton.querySelector('.animate-spin')).toBeTruthy();
+    expect(secondPartButton).not.toBeDisabled();
+
+    fireEvent.click(firstPartButton);
+    expect(mockAddChapter).toHaveBeenCalledTimes(1);
+
+    resolveAddChapter('new-ch-id');
+    await waitFor(() => {
+      expect(firstPartButton).not.toBeDisabled();
+    });
+  });
+
+  it('새 화 추가가 실패하면 버튼이 다시 활성화되고 에러 토스트가 표시된다', async () => {
+    const mockAddChapter = vi.fn().mockRejectedValue(new Error('network error'));
+    useWorksStore.setState({ addChapter: mockAddChapter });
+    render(<Harness />);
+
+    const button = screen.getAllByRole('button', { name: '새 화' })[0];
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
+    expect(button).not.toBeDisabled();
   });
 });
