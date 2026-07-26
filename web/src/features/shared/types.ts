@@ -1,8 +1,6 @@
 // StoryWeaver 도메인 공통 타입 (docs/data-model.md 기반, MVP 범위)
 import type { AttributeChange, CandidateEntity, TimelineChange } from '@/api';
 
-export type Genre = '무협' | '로맨스 판타지' | '정통 판타지' | '현대 판타지' | 'SF' | '미스터리';
-
 export type WritingStyle = '간결체' | '만연체' | '서정체';
 
 export type ChapterStatus = 'done' | 'draft' | 'empty';
@@ -120,7 +118,7 @@ export interface Work {
   title: string;
   /** 표지/사이드바용 한 글자 약자 */
   shortLabel: string;
-  genre: Genre;
+  genre: string;
   subGenre: string; // '회귀' 등 라벨
   keywords: string[];
   style: WritingStyle;
