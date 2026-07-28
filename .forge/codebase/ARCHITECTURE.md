@@ -1,118 +1,116 @@
 ---
-last_mapped_commit: 1331c286f88b0298e21191c6b40df3d50b3e2820
-mapped: 2026-06-27
+last_mapped_commit: 7f35fc5860ac13864ac0c1ca8638c27066e8361f
+mapped: 2026-07-28
 ---
 
-# StoryWeaver 아키텍처
+# ARCHITECTURE
 
-monorepo 두 축: `web/`(React 프론트엔드)와 `api/`(FastAPI 백엔드). 제품 설계 문서는 `docs/`, 도메인 용어·결정 기록은 `.forge/`에 있다. 현 단계는 web이 mock 데이터로 화면을 구동하는 UI 우선 단계이며, 실 API 클라이언트는 배선만 되어 있고 기능 연결은 진행 중이다.
+## 1. 전체 패턴
 
----
+모노레포 = `api/`(FastAPI, Python) + `web/`(React 19 SPA). 루트 `Taskfile.yml`이 두 앱을 `api:`/`web:` 네임스페이스로 오케스트레이션하며, 계약 동기화 태스크(`task contract`)로 둘을 잇는다.
 
-## web — 전체 패턴
+- **api**: 라이트 모듈러 모놀리스(DDD 경량). `api/src/domains/<bc>/` 아래 최대 5계층(`router/service/repository/models/schemas`)으로 자기 완결. 일부 경량 도메인(2절 참고)은 이 중 일부만 가진다.
+- **web**: TanStack Router 파일 기반 라우팅 + 기능 단위(`web/src/features/<도메인>/`) 구조. 서버 상태는 생성된 TanStack Query 훅, 클라이언트 상태는 Zustand.
+- 두 앱은 OpenAPI 스펙 파일(`docs/openapi.json`)로만 연결된다 — 코드 레벨 공유 없음(6절).
 
-React 19 + Vite 6 + TypeScript(strict). 기능 단위(feature-based) 구조로, 화면 로직은 `web/src/features/<도메인>/` 아래에 자기 완결적으로 모여 있고, 라우트 파일(`web/src/routes/`)은 얇은 어댑터로서 feature 컴포넌트를 마운트한다.
+## 2. 백엔드 계층 구조와 책임
 
-### 레이어
+`works` 도메인(`api/src/domains/works/`)을 기준으로 실제 코드에서 확인한 계층 책임:
 
-1. **라우트 레이어** — `web/src/routes/`. TanStack Router 파일 기반. 각 라우트는 URL 파라미터/검색값을 읽어 feature 화면 컴포넌트에 props로 넘긴다. 인증/권한 게이트는 라우트의 `beforeLoad`에서 `requireAuth`·`requireAdmin`으로 건다.
-2. **feature 레이어** — `web/src/features/<도메인>/`. 화면 컴포넌트, 클라이언트 상태(store), 타입, 스키마, 헬퍼(lib), mock 시드를 담는다.
-3. **공유 UI/레이아웃 레이어** — `web/src/components/`. `ui/`(디자인 시스템 원자 컴포넌트, shadcn/Radix/Base UI 기반 — `components.json` 설정), `layout/`(app-shell·top-bar·user-menu·work-shell·work-tree 등 셸), `dev/`(개발 도구).
-4. **인프라/플러밍 레이어** — `web/src/lib/`(router·api-client·api-interceptors·utils), `web/src/providers/`(app-providers), `web/src/stores/`(modal-store), `web/src/hooks/`, `web/src/styles/`.
-5. **생성물 레이어** — `web/src/api/`(OpenAPI에서 생성한 SDK·타입·Query 훅), `web/src/routeTree.gen.ts`(라우터 플러그인 생성). 둘 다 직접 편집 금지.
+- **router** (`router/works_router.py`) — HTTP 경계. `Depends(get_current_user)`로 인증, `Depends`로 서비스·리포지토리를 조립(`_get_service`), `AppError`를 `HTTPException`으로 변환(`_raise_http`), ORM 모델을 프론트 목업 계약(camelCase) `WorkResponse`로 매핑. LLM을 호출하는 엔드포인트(`generate_beat_sheet`)는 여기서 rate-limit·budget·moderation 게이트를 조립한다(3절).
+- **service** (`service/works_service.py`) — 비즈니스 로직. `user_id: uuid.UUID`만 받고 `domains.auth`의 `User` 모델을 들이지 않는다(파일 상단 주석: "auth User 모델을 도메인 경계 안으로 들이지 않는다"). 소유권 위반은 `NotFoundError`(404)로만 표현 — 교차 테넌트 존재 여부를 노출하지 않는다.
+- **repository** (`repository/works_repository.py`) — SQLAlchemy 쿼리. 모든 조회가 `user_id`로 스코프(`get_owned`, `list_by_user`). `add`는 `session.add`+`flush`만 하고 커밋은 하지 않는다 — 커밋은 `core/database.py`의 `get_async_session` 의존성이 요청 단위로 수행.
+- **models** (`models/works_models.py`) — `core.database.Base`를 상속하는 SQLAlchemy 모델. `Work`는 소유 루트(`user_id` FK)이고 하위 도메인 테이블은 `work_id` FK로 격리 뿌리를 삼는다.
+- **schemas** (`schemas/works_schemas.py`) — Pydantic 요청/응답, 프론트 `web/src/features/shared/types.ts` 계약에 맞춘 필드명.
 
-### 진입점
+마이그레이션(`api/alembic/env.py`)은 도메인이 서로를 import하지 않는 대신, `env.py` 자신이 각 도메인의 `models` 모듈을 `# noqa: F401`로 명시적으로 import해 `core.database.Base.metadata`에 테이블을 등록시킨 뒤 `alembic revision --autogenerate`를 돌린다 — 도메인 간 결합 없이 스키마 전체를 한 곳(`env.py`)에서만 알게 하는 지점.
 
-- `web/index.html` → `web/src/main.tsx`. `main.tsx`는 `globals.css`를 로드하고 `RouterProvider`(라우터는 `web/src/lib/router.ts`)를 `#root`에 마운트한다(StrictMode).
-- 라우트 트리 루트는 `web/src/routes/__root.tsx` — `RootComponent`가 `AppProviders`로 감싸고 `<Outlet/>` + 모달 매니저(`Modals`) + 토스트(`Toaster`) + DEV 전용 라우터 devtools를 렌더한다.
-- `web/src/providers/app-providers.tsx` — `QueryClientProvider`(TanStack Query)를 제공하고, side-effect import로 `@/lib/api-interceptors`를 적재한다. mutation `retry: false`.
-- URL `/` 자체는 현재 `LandingScreen`을 렌더한다(`web/src/routes/index.tsx`). CLAUDE.md가 언급한 "index가 인증 판단해 redirect"와는 현재 코드가 다르다 — 인증 게이트는 개별 라우트의 `beforeLoad`에 분산돼 있다.
+**원고 계층 — 문서와의 실제 차이** — `api/src/domains/manuscript/models/manuscript_models.py`가 확인해 주는 실제 테이블 구조는 `Work` → `Synopsis`(1:1) / `Episode`(부, `episodes` 테이블) → `Chapter`(화, `chapters` 테이블, `body`·`global_seq` 보유)이다. `scenes` 테이블은 없다 — 모델 파일 주석이 "scenes 테이블은 폐지 — 챕터가 집필·AI 생성의 최소 단위로 흡수"라고 명시하며, 이는 `.forge/adr/260716-17a-remove-scene-collapse-into-chapter.md`로 결정된 사항이다. 다만 타임라인 링크 테이블명은 이 통합 이전 이름인 `scene_entity_links`(컬럼은 `chapter_id`)로 남아 있다(`timeline/models/timeline_models.py`) — 테이블명과 현재 도메인 어휘가 어긋나는 지점이므로 마이그레이션/쿼리 작성 시 주의.
 
-### 상태 레이어 (이중 구조)
+**경량 도메인** — `budget/`, `moderation/`, `image_generation/`은 `service/`만(테이블 없음), `conflicts/`·`relationships/`는 `router/schemas/service/`만 갖고 자체 모델·리포지토리가 없다(다른 도메인의 서비스 데이터를 읽어 파생 결과를 계산). `chat/`은 5계층에 더해 `ports.py`(포트 인터페이스)·`container.py`·`llm_client.py`·`llm_factory.py`를 추가로 가진 가장 두꺼운 도메인이다(4절).
 
-- **서버 상태 = TanStack Query** (`@tanstack/react-query`). 클라이언트는 `web/src/providers/app-providers.tsx`에서 1개 `QueryClient`로 제공. Query 훅은 `web/src/api/@tanstack/`에 생성된다. 현재 화면들은 아직 이 훅 대신 mock-store를 쓴다.
-- **클라이언트 상태 = Zustand + immer** (`zustand`, `zustand/middleware/immer`). feature별 store가 핵심 클라이언트 상태를 보유한다.
+**리소스 중첩 깊이** — `api/src/main.py`의 `_register_routers()`가 등록하는 프리픽스로 실제 URL 트리를 확인할 수 있다:
+- `/api/v1/works` — works 도메인 루트(작품 CRUD, 비트 시트)
+- `/api/v1/works/{work_id}/synopsis` — manuscript(시놉시스)
+- `/api/v1/works/{work_id}/entities`, `.../entities/{entity_id}/timeline-states` — worldbible, timeline
+- `/api/v1/works/{work_id}/chapters/{chapter_id}/links`, `.../memory`, `.../assist`, `.../extract-updates` — timeline 링크, memory 검색, assist(집필 보조), dynamic_update(설정 후보 추출)이 모두 챕터 하위 리소스로 중첩
+- `/api/v1/works/{work_id}/conflicts`, `.../relationships` — 경량 도메인
+- `/api/v1/works/{work_id}/chat` — 작품 단위 채팅(ADR-0010), `/api/v1/chat`(전역 채팅)과 별도 라우터(`chat_router.work_router`)
 
-주요 store:
-- `web/src/features/shared/store/works.store.ts` — `useWorksStore`. 작품·엔티티·챕터·씬·타임라인·충돌 등 거의 모든 작품 도메인 상태를 immer로 보유. mutation 액션이 풍부하다(addWork·addEntity·updateEntity·addChapter/addPart·renamePart·deleteChapter/deletePart·addSceneEntityLinks·restoreSceneVersion·accept/dismissSuggestion 등). 초기값은 `web/src/features/shared/mock/works.ts`의 시드(`seedWorks`·`seedUsage`·`workspaceName`·`authorInitial`).
-- `web/src/features/auth/store/auth.store.ts` — `useAuthStore`. `persist` 미들웨어로 localStorage 키 **`sw-auth-v2`**에 영속(`zustand/middleware`의 `persist`). 현재 목업 인증으로 `isAuthenticated: true` 기본, 시드 유저는 `{ email: 'baekya@storyweaver.kr', role: 'ADMIN' }`. 키를 `sw-auth` → `sw-auth-v2`로 버전업한 이유는 시드 role(`ADMIN`) 변경이 기존 localStorage에 막히지 않게 하기 위함(주석). 유저 타입 `AuthUser`(`web/src/features/auth/types/auth.ts`)의 `role`은 `'USER' | 'ADMIN'`.
-- `web/src/features/admin/store/admin.store.ts` — `useAdminStore`. immer. 회원 목록(`members: Member[]`)을 `web/src/features/admin/mock/members.ts`의 `seedMembers`로 초기화하고 `approveMember`·`rejectMember` 액션으로 상태(`pending|approved|rejected`)를 메모리상 갱신.
-- `web/src/features/settings/store/settings.store.ts` — 설정 화면 상태.
-- `web/src/stores/modal-store.ts` (`web/src/stores/modal.types.ts`) — 전역 모달 매니저 상태.
+즉 works가 사실상 모든 하위 도메인의 URL 네임스페이스 루트이며, 이는 2절의 "work_id로 격리 뿌리를 삼는다"는 모델 레벨 규칙이 라우팅 레벨에도 그대로 반영된 것이다.
 
-store에서 파생값을 뽑는 selector 모음은 `web/src/features/shared/store/selectors.ts`: `useWorks`·`useWork`·`useEntity`·`useUsage`·`useWorkspaceMeta`(useShallow), 그리고 순수 헬퍼 `flattenScenes`·`findSceneLocation`·`findChapterNav`·`defaultSceneId`·`groupChaptersByPart`·`entitiesByType`.
+## 3. 요청 처리 흐름 — LLM 게이트 체인 예시
 
-### 라우팅
+`POST /api/v1/works/{work_id}/beat-sheet`(`works_router.py:generate_beat_sheet`)는 분기가 많은 대표 사례다(동일 게이트 구성이 `assist_router.py`, `dynamic_update_router.py`에도 재사용됨, 코드 주석 확인). 순서: 인증 → 예산 확인(`require_budget_available`) → 레이트리밋 사용자 바인딩 → `@limiter.limit` 데코레이터 적용 → 작품 조회 → 1차 선제 검열(`is_explicit_content`) → LLM 호출(거절 시 완화 프롬프트로 1회 재시도, `invoke_with_retry`) → 사용량 기록(`record_usage`) → 응답. 두 지점(선제 검열, 재시도 후 거절)에서 400으로 조기 종료하는 분기가 있어 Mermaid로 표현한다.
 
-- TanStack Router 파일 기반. `@tanstack/router-plugin`이 빌드 시 `web/src/routes/`를 스캔해 `web/src/routeTree.gen.ts`를 생성(`autoCodeSplitting: true`). 설정은 `web/vite.config.ts`의 `tanstackRouter` 플러그인.
-- 라우터 인스턴스는 `web/src/lib/router.ts`: `createRouter({ routeTree, defaultPreload: 'intent', scrollRestoration: true })` + 타입 등록(`Register`).
-- 라우트 정의 관용구: 각 파일이 `createFileRoute('<path>')({...})`로 `Route`를 export. 레이아웃 라우트(`component: AdminShell`·`bible.tsx`의 `Outlet`)가 하위 중첩 자식(`admin/index.tsx`·`admin/stats.tsx`, `bible.index.tsx`·`bible.new.tsx`·`bible.edit.tsx`)을 `<Outlet/>`에 렌더한다. URL 검색 파라미터는 `validateSearch`로 타입 검증(예: `bible.index.tsx`·`bible.edit.tsx`의 `entity` 검색값 → `{ entity?: string }`).
+```mermaid
+flowchart TD
+    A[요청 수신] --> B[get_current_user 인증]
+    B --> C[require_budget_available 예산 게이트]
+    C --> D[rate limiter 사용자 바인딩 + limiter.limit]
+    D --> E[WorksService.get_work 소유권 조회]
+    E -->|없음| E1[404 NotFoundError]
+    E --> F[is_explicit_content 선제 검열]
+    F -->|위반| F1[400 PRECHECK_DECLINE]
+    F --> G[invoke_with_retry LLM 호출]
+    G -->|거절 유지| G1[400 RETRY_DECLINE]
+    G --> H[record_usage 사용량 기록]
+    H --> I[BeatSheetResponse 반환]
 
-### 라우트 레벨 인증/권한 게이팅
-
-- 가드 모듈: `web/src/features/auth/lib/guard.ts`.
-  - `requireAuth(redirectTo)` — `useAuthStore.getState().isAuthenticated`가 false면 `throw redirect({ to: '/auth/login', search: { redirect: redirectTo } })`.
-  - `requireAdmin(redirectTo)` — 먼저 `requireAuth(redirectTo)`를 호출한 뒤 `useAuthStore.getState().user?.role !== 'ADMIN'`이면 `throw redirect({ to: '/works' })`. (비관리자는 로그인은 됐어도 `/works`로 튕긴다.)
-- 사용처: `web/src/routes/admin.tsx`의 `beforeLoad: () => requireAdmin('/admin')`. 작품 하위 라우트(`bible.tsx`·`bible.new.tsx`·`bible.edit.tsx` 등)는 `beforeLoad: ({ params }) => requireAuth(...)`.
-- UI 측 권한 분기: 상단 사용자 메뉴 `web/src/components/layout/user-menu.tsx`는 `user?.role === 'ADMIN'`일 때만 "관리자"(`/admin`) 링크를 노출한다. 라우트 가드와 별개의 표시 제어로, 가드가 실제 접근 차단을 담당한다.
-
-### API 레이어
-
-- 백엔드 호출 코드는 전부 생성물. `pnpm generate`(`openapi-ts.config.ts`)가 `docs/openapi.json`을 입력으로 `web/src/api/`에 SDK·타입·클라이언트·TanStack Query 훅을 생성한다. 플러그인: `@hey-api/client-axios`·`@hey-api/typescript`·`@hey-api/sdk`·`@tanstack/react-query`. `web/src/api/`는 직접 편집 금지(tsc/biome 제외 대상).
-- 런타임 클라이언트 설정: `web/src/lib/api-client.ts`의 `createClientConfig` — `baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api'`. openapi-ts가 이 파일을 `runtimeConfigPath`로 끌어 쓴다.
-- 인터셉터: `web/src/lib/api-interceptors.ts` — 현재는 패스스루(`client.instance.interceptors.request.use((config) => config)`). 실제 토큰 주입·401 갱신은 Phase 3로 예정(주석).
-- 로컬 프록시: `web/vite.config.ts`가 `/api` → `http://localhost:8080`으로 보내며 `^/api` 프리픽스를 제거(`rewrite`). (api 기본 dev 포트 `:8000`과 불일치 주의.)
-
-### 현재 단계 — UI 우선 / mock-store
-
-대부분의 화면은 실 API가 아니라 `web/src/features/*/mock/`의 시드 데이터를 Zustand store에 채워 동작한다. 대표적으로 `web/src/features/shared/mock/works.ts` → `web/src/features/shared/store/works.store.ts`, 그리고 신규 `web/src/features/admin/mock/members.ts` → `web/src/features/admin/store/admin.store.ts`. 사용자 액션(작품·엔티티·챕터 추가/수정/삭제, 회원 승인/거부)은 store의 immer 액션으로 메모리상에서만 반영된다. 관리자 통계 화면(`admin-stats-screen.tsx`)도 `useAdminStore`·`useWorksStore`에서 집계한 mock 수치다. 실 API 전환 시 이 자리를 생성된 Query 훅(`web/src/api/@tanstack/`)으로 교체하는 것이 의도된 경로다.
-
-데이터 흐름(현재): 라우트가 URL 파라미터 파싱 → selector(`useWork` 등) 또는 store 훅으로 상태를 읽음 → feature 화면 컴포넌트에 props 전달 → 사용자 액션은 store 액션 호출 → immer가 상태 갱신 → 구독 컴포넌트 리렌더.
-
-```
-URL → routes/*.tsx (params/search) → selectors → features/*/components 화면
-                                          ↑                  ↓ 사용자 액션
-                                    Zustand store ←──── store 액션(immer)
-                                          ↑
-                                    features/*/mock 시드
+    style A fill:#4c6ef5,color:#fff
+    style I fill:#2f9e44,color:#fff
+    style E1 fill:#e03131,color:#fff
+    style F1 fill:#e03131,color:#fff
+    style G1 fill:#e03131,color:#fff
 ```
 
-실 API 전환 후 흐름(의도): `features 화면 → web/src/api/@tanstack Query 훅 → api-client(axios) → /api 프록시 → FastAPI`.
+일반 CRUD 엔드포인트(`list_works`/`get_work`/`update_work`/`delete_work`)는 이 게이트 없이 `인증 → 서비스 호출(소유권 스코프) → 응답 매핑`의 단순 선형 흐름이다.
 
----
+## 4. 핵심 추상화
 
-## api — 백엔드 아키텍처
+- **LLM 포트/어댑터** (`api/src/domains/chat/ports.py`) — `LLMClientProtocol`(구조적 프로토콜), `LLMClientFactoryProtocol`, `AbstractLLMPort`(명시적 ABC). 챗 서비스는 구현체가 아니라 이 인터페이스에만 의존(헥사고날 아키텍처). 실제 `ChatLiteLLM` 생성은 `api/src/infra/llm/provider_factory.py`의 `make_chat_litellm()` 한 곳뿐 — 프로바이더 전환은 `.env`의 `LLM_PROVIDER`만 바꾸면 된다(`api/src/core/config.py`의 `LLMSettings.as_litellm_kwargs`).
+- **품질 티어 라우팅** (`api/src/domains/assist/tier_routing.py`) — `TaskType`(continue/infill/dialogue/style/correct/title) → `Tier`(low_cost/high_quality) → `get_client_for_tier()`가 `domains.chat.container.get_llm_factory`로 클라이언트를 해석. 현재는 단일 프로바이더라 두 티어가 같은 클라이언트로 수렴(코드 주석에 명시).
+- **공통 예외 계층** (`api/src/core/exceptions.py`) — `AppError` 및 `NotFoundError`/`ConflictError`/`UnauthorizedError`/`ForbiddenError`. 서비스가 던지고 라우터가 `HTTPException`으로 변환(`_raise_http` 패턴, works_router 등 반복).
+- **인증/인가** (`api/src/domains/auth/security.py`) — Bearer-only JWT(액세스 15분·리프레시 7일, `jti` 클레임), 로그아웃 시 `jti`를 Redis 블랙리스트에 저장해 매 요청마다 조회, `passlib[argon2]` 비밀번호 해시. `require_permission(key)` 의존성 팩토리로 RBAC를 적용하고, `get_current_user`가 전 도메인 라우터가 공유하는 인증 진입점이다.
+- **DDD 스캐폴딩 — 정의는 되어 있으나 미사용** (`api/src/domains/shared/base.py`, `events.py`, `types.py`) — `Entity`/`AggregateRoot`/`ValueObject` 데이터클래스, `DomainEventBus`(인프로세스 pub/sub), `NewType` ID 별칭(`UserId` 등)이 정의돼 있지만, `domains/shared/__init__.py`와 각 파일 자신의 예시 외에는 어떤 도메인 모듈에서도 import되지 않는다(grep 확인). 실제 모델은 모두 `core.database.Base`를 직접 상속하고, 실제 도메인 간 통신은 이벤트 버스가 아니라 서비스 객체 직접 의존(9절)으로 이뤄진다.
 
-근거: `api/CLAUDE.md`와 `api/src/` 구조.
+## 5. 엔트리포인트
 
-패턴: **Light Modular Monolith (DDD)**. `api/src/`가 Python path 루트(PYTHONPATH=src). 진입점은 `api/src/main.py`(FastAPI 인스턴스 정의처), 모듈 실행은 `api/src/__main__.py`.
+- **api** — `api/src/main.py`의 `create_app()`이 미들웨어(`CorrelationIdMiddleware`→CORS)·예외 핸들러·레이트리미터 상태를 등록하고 `_register_routers()`가 도메인별 라우터를 `try/except ImportError`로 하나씩 `/api/v1` 프리픽스로 mount한다(도메인이 아직 없어도 앱이 뜨도록 하는 점진 도입 패턴). `lifespan()`이 기동 시 Redis 커넥션을 워밍하고, 임베딩 모델은 `asyncio.to_thread`가 아니라 데몬 스레드로 별도 워밍(리로드 시 셧다운이 블록되지 않게 하려는 명시적 이유가 주석에 있음). `/health`·`/ready`는 인증 없이 노출.
+- **web** — `web/src/main.tsx` → `RouterProvider(router)`(`web/src/lib/router.ts`). 루트 라우트(`web/src/routes/__root.tsx`)가 `AppProviders`(TanStack `QueryClientProvider` + `api-interceptors` 부작용 import)로 전체를 감싸고, `SessionRestore` 컴포넌트가 마운트 시 저장된 accessToken이 있으면 `/me`로 세션을 복구한다. 루트 라우트 자체는 인증 리다이렉트를 하지 않는다 — `/`(`routes/index.tsx`)는 인증 여부와 무관하게 공개 마케팅 랜딩(`LandingScreen`)을 렌더링하고, 보호가 필요한 개별 라우트가 각자 `beforeLoad: () => requireAuth('/works')`(`features/auth/lib/guard.ts`)를 호출한다(예: `routes/works/index.tsx`).
 
-스택: Python ≥ 3.12, FastAPI + Uvicorn, 패키지 매니저 uv. PostgreSQL(asyncpg) + SQLAlchemy(async) + Alembic, Redis. 인증은 JWT(python-jose) + argon2 + OAuth(google/kakao/naver) + RBAC. LLM은 LangChain + langchain-litellm(provider 교체는 `LLM_PROVIDER` 환경변수). 품질: ruff·mypy(strict)·pytest.
+## 6. 백엔드 ↔ 프론트엔드 경계 — API 계약 파이프라인
 
-### 레이어 / 디렉터리
+계약은 코드 우선(code-first, ADR-0006)이다. 5단계 선형 파이프라인:
 
-- `api/src/core/` — 횡단 관심사. `config.py`·`database.py`·`redis.py`·`middleware.py`·`exceptions.py`·`logging.py`.
-- `api/src/domains/<bc>/` — 바운디드 컨텍스트별 자기 완결 모듈. 각 도메인은 `router / service / repository / models / schemas` 5계층 구조.
-  - `api/src/domains/auth/` — 인증·인가(JWT + OAuth + RBAC). `oauth/`(google·kakao·naver), `security.py`, `email.py` 포함.
-  - `api/src/domains/chat/` — LLM 프록시·SSE 스트리밍(집필 LLM의 기반). 표준 5계층 외에 `container.py`·`ports.py`·`llm_client.py`·`llm_factory.py`(헥사고날 포트/팩토리 패턴).
-  - `api/src/domains/shared/` — 도메인 공유 기반. `base.py`·`events.py`·`types.py`.
-- `api/src/infra/` — 외부 시스템 어댑터. `llm/provider_factory.py`.
-- `api/alembic/` — DB 마이그레이션(`versions/0001_initial_schema.py` 등). 설정 `api/alembic.ini`.
+FastAPI 라우터·Pydantic 스키마 정의(`api/src/domains/**`) → `app.openapi()` 호출(`api/scripts/export_openapi.py`, DB/Redis 연결 없이 스키마만 조립) → 루트 `docs/openapi.json`에 저장 → `web`에서 `pnpm generate`(`@hey-api/openapi-ts`, 설정 `web/openapi-ts.config.ts`, input `../docs/openapi.json`) 실행 → `web/src/api/`에 타입(`types.gen.ts`)·SDK(`sdk.gen.ts`)·TanStack Query 훅(`@tanstack/react-query.gen.ts`)이 재생성.
 
-도메인당 5계층 호출 방향: `router(HTTP) → service(유스케이스) → repository(영속화) ↔ models(SQLAlchemy)`, 입출력 직렬화는 `schemas`(Pydantic).
+루트에서는 `task contract`(= `api:openapi` + `web:generate`)와 검증까지 포함한 `task contract-check`로 이 파이프라인을 한 번에 실행한다.
 
-### 규칙 (api)
+소비 측 규약: 기능 도메인은 생성 SDK를 직접 쓰지 않고 `features/<도메인>/api/*.api.ts` 파사드로 감싼다(예: `web/src/features/works/api/works.api.ts` — `throwOnError: true`로 성공 데이터만 반환하는 `worksApi`, 그리고 `worksQueries`/`worksMutations`로 재노출). HTTP 클라이언트 설정은 `web/src/lib/api-client.ts`(dev는 빈 baseURL → Vite 프록시가 `:8000`으로 전달, `web/vite.config.ts`), 인증 헤더 주입과 401 시 single-flight 토큰 갱신·재시도는 `web/src/lib/api-interceptors.ts`(axios 인터셉터, `createRefreshCoordinator`)가 담당한다.
 
-- **도메인 간 직접 DB 모델 import 금지** — 경계를 넘는 참조는 ID 또는 이벤트로(`domains/shared/events.py`).
-- **src layout** 유지(import는 `src` 기준).
-- mypy strict·ruff 통과 기본. Alembic 마이그레이션은 항상 리뷰 후 커밋(autogenerate SQL 검토).
-- 비밀값은 `api/.env`(로컬)·`.env.prod`(운영). 커밋 금지.
+## 7. 프론트엔드 상태 관리 구조
 
----
+- **서버 상태** — TanStack Query. 훅은 생성 코드(`web/src/api/@tanstack/react-query.gen.ts`)에서 나오고, 기능별 파사드(`worksQueries` 등)가 재노출한다.
+- **클라이언트 상태** — Zustand. 두 가지 하위 패턴이 혼재한다:
+  - **영속 스토어**: `persist` 미들웨어. 인증 세션(`web/src/features/auth/store/auth.store.ts`, 키 `sw-auth-v3`), 설정(`web/src/features/settings/store/settings.store.ts`, 키 `sw-settings`).
+  - **불변성 스토어**: `immer` 미들웨어(`web/src/features/admin/store/admin.store.ts`).
+- **서버→클라이언트 하이드레이션 패턴** — `works`/`world-bible`/`timeline` 도메인은 TanStack Query로 실 API를 호출한 뒤 결과를 단일 Zustand 스토어(`web/src/features/shared/store/works.store.ts`)에 밀어 넣는 훅(`useHydrateWorks`, `web/src/features/works/lib/hydrate-works.ts`; `useWorkEntities`, `world-bible/lib/hydrate-entities.ts`)을 라우트 레이아웃(`web/src/routes/works/$workId.tsx`)에서 호출한다 — 이후 화면 트리는 쿼리가 아니라 이 Zustand 스토어를 단일 소스로 읽는다. 단, `works.store.ts`는 아직 `features/shared/mock/works.ts`의 `seedUsage`(사용량 통계 등 미구현 필드)도 함께 사용한다 — 실 API 필드와 목업 필드가 한 스토어 안에 공존.
+  admin 도메인은 아직 완전히 목업(`features/admin/mock/members.ts`의 `seedMembers`를 스토어 초기값으로 사용, 실 API 없음).
+- **UI 오버레이 상태** — `web/src/stores/modal-store.ts`(전역 모달 매니저, 기능 스토어와 분리).
 
-## 빌드/검증 도구
+## 8. 횡단 관심사
 
-- web: 패키지 매니저 pnpm(Node ≥ 22.18). `pnpm dev`(포트 3000)·`pnpm build`(`tsc -b && vite build`)·`pnpm typecheck`·`pnpm lint`(Biome)·`pnpm generate`. 테스트 러너 미설정 — 검증은 typecheck + lint.
-- api: `task dev`·`task test`(pytest)·`task lint`(ruff + mypy)·`task format`·`task migrate`.
-- 경로 별칭: `@/*` → `web/src/*`.
-- 생성 파일 `web/src/routeTree.gen.ts`·`web/src/api/**`는 손대지 않는다.
+- **상관관계 ID·로깅** (`api/src/core/middleware.py`) — `CorrelationIdMiddleware`가 `X-Correlation-ID`를 읽거나 생성해 `structlog.contextvars`에 바인딩하고 응답 헤더에도 되돌려 준다. 이후 요청 처리 중의 모든 `structlog` 로그가 이 ID를 자동으로 포함한다.
+- **사용자별 레이트리밋** (`api/src/core/rate_limit.py`) — `slowapi.Limiter`, 키 함수 `_get_user_key`는 `request.state.user`(각 라우터가 `Depends`로 미리 채움)가 있으면 `user:{id}`로, 없으면 원격 IP로 버킷팅. `key_style="endpoint"`를 명시해 `work_id`/`chapter_id`로 파라미터화된 경로가 URL별로 쪼개지지 않고 (사용자, 액션 종류) 단위로 합산되게 한다. 스토리지는 인메모리(단일 워커 전제, `core/config.py`의 `workers: int = 1`과 일치) — 멀티 워커로 갈 경우 `storage_uri=settings.redis_dsn` 전환이 필요하다고 주석에 명시.
+- **LLM 호출 로그 컨텍스트** (`api/src/core/llm_call_context.py`) — `ContextVar` 기반 `LLMCallContext(user_id, task)`. `assist`·`chat`·`dynamic_update`·`works`·`relationships` 5개 도메인 라우터가 `bind_llm_call_context()`로 채우면, `chat/llm_client.py`의 `LLMClient`가 읽어 `llm_call_logs` 테이블(`chat/models/llm_call_log.py`)에 기록한다. `correlation_id`는 여기서 다루지 않고 위 structlog contextvars에서 별도로 가져간다.
+
+## 9. 도메인 간 의존 규칙
+
+**백엔드** — "도메인 간 직접 DB 모델 import 금지"(`api/CLAUDE.md`)가 실제로 지켜지는 방식을 모델 파일 주석에서 확인:
+- 외래키는 **테이블명 문자열**로만 선언(`ForeignKey("works.id", ...)`)하고 대상 도메인의 ORM 클래스는 import하지 않는다(`manuscript_models.py`, `worldbible_models.py`, `timeline_models.py`에 동일 문구 반복).
+- **다형적 참조**가 필요한 경우(임베딩이 엔티티 또는 챕터를 가리킴) FK 자체를 걸지 않고 `source_type`/`source_id` 판별 컬럼으로 대체한다(`memory/models/memory_models.py`의 `Embedding`) — "애초에 도메인 간 직접 모델 import 금지 컨벤션과도 맞음"이라고 명시.
+- 대신 **서비스 객체 간 의존은 허용되고 실제로 널리 쓰인다**: `MemorySearchService`(`memory/service/memory_search_service.py`)는 생성자에서 `WorldBibleService`·`ManuscriptService`·`TimelineService`를 직접 받는다. 라우터 레벨에서도 타 도메인 인터페이스를 자유롭게 가져온다 — `works_router.py`는 `domains.auth.security.get_current_user`, `domains.budget.dependency/service`, `domains.chat.ports.AbstractLLMPort`, `domains.moderation.service`, `domains.assist.tier_routing`을 직접 import한다. 즉 금지 대상은 "ORM 모델 클래스"이지 서비스/포트/의존성 함수가 아니다.
+- `domains/shared/events.py`의 `DomainEventBus`는 이런 결합을 이벤트로 느슨하게 하려는 의도로 보이지만, 4절에서 확인했듯 실제 구독자가 없어 현재는 사실상 미사용 상태다.
+
+**프론트엔드** — 기능 간 경계는 툴링(Biome)으로 강제되지 않는다(`web/biome.json`의 `linter.rules`는 `recommended: true`뿐, import 제한 규칙 없음). 대신 관례로: 도메인 공통 타입(`web/src/features/shared/types.ts`)과 공유 스토어(`web/src/features/shared/store/works.store.ts`, `selectors.ts`)를 여러 기능(`works`/`world-bible`/`editor`/`timeline`)이 함께 읽고 쓴다 — 즉 `shared`가 사실상의 공유 커널이고, 개별 기능끼리 서로의 `components/`를 직접 참조하는 사례는 관찰되지 않았다.
