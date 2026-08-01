@@ -25,10 +25,8 @@ from domains.chat.ports import AbstractLLMPort
 from domains.dynamic_update.schemas import ExtractUpdatesResponse
 from domains.manuscript.service import ManuscriptService
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
+    PROVIDER_DECLINE_MESSAGE,
     invoke_with_retry,
-    is_explicit_content,
 )
 from domains.timeline.service import TimelineService
 from domains.worldbible.models import Entity
@@ -60,7 +58,7 @@ def _format_entities(entities: list[Entity]) -> str:
     )
 
 
-#: 일부 모델(GLM-4.6 등)은 순수 JSON 대신 마크다운 코드펜스로 감싸 응답한다
+#: 일부 모델은 순수 JSON 대신 마크다운 코드펜스로 감싸 응답한다
 #: (예: ` ```json\n{...}\n``` `) — json.loads 전에 펜스를 벗겨낸다.
 _CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
 
@@ -98,10 +96,6 @@ class DynamicUpdateService:
         llm: AbstractLLMPort,
     ) -> ExtractUpdatesResponse:
         chapter = await self._manuscript_service.get_chapter_by_id(work_id, user_id, chapter_id)
-        # S1 선제 가드(plan.md M4-S1) — 화 본문이 명백히 19금 수위면 LLM 호출 자체를 생략.
-        if is_explicit_content(chapter.body):
-            raise AppError(PRECHECK_DECLINE_MESSAGE, status.HTTP_400_BAD_REQUEST)
-
         links = await self._timeline_service.list_links(work_id, user_id, chapter_id)
         entities = [
             await self._worldbible_service.get_entity(work_id, user_id, link.entity_id)
@@ -116,5 +110,5 @@ class DynamicUpdateService:
         # 재시도하고, 그래도 실패하면 raw 에러 없이 완곡 안내로 대체한다.
         outcome = await invoke_with_retry(llm, messages)
         if outcome.declined:
-            raise AppError(RETRY_DECLINE_MESSAGE, status.HTTP_400_BAD_REQUEST)
+            raise AppError(PROVIDER_DECLINE_MESSAGE, status.HTTP_400_BAD_REQUEST)
         return parse_extraction_result(outcome.chunks[0])

@@ -185,7 +185,8 @@ async def test_continue_streams_fake_chunks_and_assembles_full_memory_prompt(
     human_text = str(fake.received_messages[1].content)
     assert "무협" in system_text
     assert "간결체" in system_text
-    assert "전체이용가" in system_text
+    # ADR `260730-070532` — 연령·수위 지시는 프롬프트에서 제거됐다(부재를 회귀로 고정).
+    assert "전체이용가" not in system_text
     assert "다음 문장 3~5개" in system_text
     assert "[메모리 컨텍스트]" in system_text
     assert human_text == "그는 문을 열었다."

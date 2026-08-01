@@ -467,9 +467,10 @@ class TestLLMProvider:
         assert "openai" in err
 
     def test_temperature_defaults_and_range(self) -> None:
+        # 온도는 .env(LLM_TEMPERATURE)로 조정되는 값이라 특정 수치를 단정하지 않는다 —
+        # gpt-5 계열은 temperature=1만 허용해 실제 배포값이 모델에 따라 달라진다.
         s = LLMSettings(provider=LLMProvider.openai, default_model="gpt-4o")
         assert 0.0 <= s.temperature <= 2.0
-        assert s.temperature == 0.7
 
     def test_max_tokens_default(self) -> None:
         s = LLMSettings(provider=LLMProvider.openai, default_model="gpt-4o")

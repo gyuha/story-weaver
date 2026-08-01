@@ -201,9 +201,10 @@ async def test_continue_blocked_when_usage_exceeds_budget_limit(
 # ---------------------------------------------------------------------------
 
 
-async def test_continue_precheck_declines_explicit_content_without_calling_llm(
+async def test_continue_reaches_llm_for_any_content(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
+    """ADR `260730-070532` — 키워드 선제 가드 제거로 어떤 입력이든 LLM에 도달한다."""
     owner, _ = two_users
     fake = _FakeLLMClient(["응답"])
     app.dependency_overrides[_synopsis_continue_llm_client] = lambda: fake
@@ -211,8 +212,8 @@ async def test_continue_precheck_declines_explicit_content_without_calling_llm(
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{owner_work.id}/synopsis/continue",
-            json={"text": "그는 그녀의 성기를 만졌다."},
+            json={"text": "[수사관: 뒤를 돌아보지 마십시오.]"},
         )
 
     assert resp.status_code == 200
-    assert fake.call_count == 0
+    assert fake.call_count == 1

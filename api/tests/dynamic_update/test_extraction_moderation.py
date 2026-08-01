@@ -22,7 +22,7 @@ from domains.auth.security import get_current_user
 from domains.dynamic_update.router import router as dynamic_update_router
 from domains.dynamic_update.router.dynamic_update_router import _extraction_llm_client
 from domains.manuscript.router import router as manuscript_router
-from domains.moderation.service import PRECHECK_DECLINE_MESSAGE, RETRY_DECLINE_MESSAGE
+from domains.moderation.service import PROVIDER_DECLINE_MESSAGE
 from domains.works.models import Work
 from domains.works.router import router as works_router
 from domains.worldbible.router import router as worldbible_router
@@ -110,14 +110,21 @@ async def _create_chapter(
 
 
 # ---------------------------------------------------------------------------
-# S1 — 선제 가드: 화 본문에 명백한 19금 키워드가 있으면 LLM 호출 자체를 생략
+# 연령·수위 제한 제거(ADR `260730-070532`) — 어떤 본문이든 추출이 LLM에 도달한다.
 # ---------------------------------------------------------------------------
 
 
-async def test_extract_updates_explicit_chapter_body_never_reaches_llm(
-    app: FastAPI, owner_work: Work, owner: User
+@pytest.mark.parametrize(
+    "body",
+    [
+        "[수사관: 지금부터 뒤를 돌아보지 마십시오.]",  # 보지 — 과거 오탐
+        "그는 그녀의 성기를 만졌다.",  # 과거 차단 대상
+    ],
+)
+async def test_extract_updates_reaches_llm_for_any_body(
+    app: FastAPI, owner_work: Work, owner: User, body: str
 ) -> None:
-    chapter = await _create_chapter(app, owner, owner_work.id, body="그는 그녀의 성기를 만졌다.")
+    chapter = await _create_chapter(app, owner, owner_work.id, body=body)
     fake = _FlakyLLMClient(
         ['{"candidateEntities": [], "attributeChanges": [], "timelineChanges": []}']
     )
@@ -128,42 +135,20 @@ async def test_extract_updates_explicit_chapter_body_never_reaches_llm(
             f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
         )
 
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == PRECHECK_DECLINE_MESSAGE
-    assert fake.call_count == 0
-
-
-# ---------------------------------------------------------------------------
-# S2 — 완화 재시도: 거절/빈 응답 → 완화 프롬프트로 1회 재시도
-# ---------------------------------------------------------------------------
-
-
-async def test_extract_updates_retries_once_with_softened_prompt_and_uses_result(
-    app: FastAPI, owner_work: Work, owner: User
-) -> None:
-    chapter = await _create_chapter(app, owner, owner_work.id, body="아무 사건도 없다.")
-    canned = '{"candidateEntities": [{"name": "복면인", "summary": "자객"}], "attributeChanges": [], "timelineChanges": []}'
-    fake = _FlakyLLMClient([RuntimeError("raw provider secret detail"), canned])
-    app.dependency_overrides[_extraction_llm_client] = lambda: fake
-
-    async with _client_as(app, owner) as client:
-        resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/extract-updates"
-        )
-
     assert resp.status_code == 200
-    assert fake.call_count == 2
-    assert resp.json()["candidateEntities"] == [{"name": "복면인", "summary": "자객"}]
-    assert "raw provider secret detail" not in resp.text
+    assert fake.call_count == 1
 
 
-async def test_extract_updates_declines_politely_with_no_raw_error_when_retry_also_fails(
+# ---------------------------------------------------------------------------
+# 제공자 거절 — 완화 재시도 없이 정직하게 안내한다(ADR `260730-070532`).
+# ---------------------------------------------------------------------------
+
+
+async def test_extract_updates_does_not_retry_and_declines_on_provider_refusal(
     app: FastAPI, owner_work: Work, owner: User
 ) -> None:
     chapter = await _create_chapter(app, owner, owner_work.id, body="아무 사건도 없다.")
-    fake = _FlakyLLMClient(
-        [RuntimeError("raw provider secret A"), RuntimeError("raw provider secret B")]
-    )
+    fake = _FlakyLLMClient([RuntimeError("raw provider secret detail")])
     app.dependency_overrides[_extraction_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
@@ -172,6 +157,7 @@ async def test_extract_updates_declines_politely_with_no_raw_error_when_retry_al
         )
 
     assert resp.status_code == 400
-    assert resp.json()["detail"] == RETRY_DECLINE_MESSAGE
-    assert fake.call_count == 2
+    assert resp.json()["detail"] == PROVIDER_DECLINE_MESSAGE
+    assert fake.call_count == 1  # 재시도 없음
     assert "raw provider secret" not in resp.text
+    assert "수위" not in resp.text

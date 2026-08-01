@@ -49,9 +49,11 @@ Inject a stub factory to avoid real LLM calls::
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any, NoReturn
 
+import anyio
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from langchain_core.messages import AIMessage as LCAIMessage
@@ -88,9 +90,7 @@ from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
 from domains.memory.service.memory_search_service import MemorySearchService
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
-    is_explicit_content,
+    PROVIDER_DECLINE_MESSAGE,
     stream_with_retry,
 )
 from domains.timeline.repository import TimelineRepository
@@ -688,21 +688,6 @@ def _raise_http(exc: AppError) -> NoReturn:
     raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
 
-async def _work_chat_precheck_declined_stream(
-    repo: ChatRepository, conversation_id: uuid.UUID, session: AsyncSession
-) -> Any:
-    """S1 선제 가드 — LLM을 호출하지 않고 안내만 스트리밍하되, 대화 이력에는 남긴다."""
-    yield {"data": PRECHECK_DECLINE_MESSAGE}
-    yield {"data": "[DONE]"}
-    try:
-        await repo.add_message(
-            conversation_id, "assistant", PRECHECK_DECLINE_MESSAGE, finish_reason="stop"
-        )
-        await session.commit()
-    except Exception as db_exc:
-        logger.error("work_chat_message_persist_failed", error=str(db_exc), exc_info=True)
-
-
 async def _stream_work_chat_response(
     llm: AbstractLLMPort,
     messages: list[BaseMessage],
@@ -714,26 +699,44 @@ async def _stream_work_chat_response(
     """``send_message``의 SSE+영속화 패턴(스트림 종료 후 ``finally``에서 저장)을 그대로
     따르되, moderation 완화 재시도(``stream_with_retry``, ADR-0003)를 거친다."""
     collected_chunks: list[str] = []
+    cancelled = False
     try:
         async for chunk in stream_with_retry(llm, messages):
             collected_chunks.append(chunk)
             yield {"data": chunk}
         yield {"data": "[DONE]"}
+    except asyncio.CancelledError:
+        # 클라이언트가 중단했다 — 아래 finally가 부분 응답을 저장할 때 이 사실을
+        # finish_reason에 반영해야 한다. 대입은 await이 아니라 취소된 스코프에서도
+        # 실행된다(실측: 실스택 끊김에서 이 경로로 도달해 'cancelled'가 기록됨).
+        cancelled = True
+        raise
     except Exception as exc:
         logger.error("work_chat_stream_error", error=str(exc), exc_info=True)
         yield {"event": "error", "data": str(exc)}
     finally:
         if collected_chunks:
             assistant_content = "".join(collected_chunks)
-            try:
-                await repo.add_message(
-                    conversation_id, "assistant", assistant_content, finish_reason="stop"
-                )
-                await session.commit()
-                if assistant_content != RETRY_DECLINE_MESSAGE:
-                    await record_usage(user_id, estimate_tokens(assistant_content))
-            except Exception as db_exc:
-                logger.error("work_chat_message_persist_failed", error=str(db_exc), exc_info=True)
+            # ``finally``는 취소 시에도 실행되지만, shield가 없으면 **첫 await(add_message)이
+            # 즉시 재취소돼** 뒤의 커밋·예산 반영에 도달하지 못한다 — 감싸는 취소 스코프가
+            # 아직 취소 상태이기 때문이다(근거·실측은 ``assist_router._stream_response``
+            # 주석 참조). 부분 응답을 저장하면서 그 분량을 차감하지 않으면 하드 쿼터를
+            # 우회하게 되므로, 저장과 차감을 같은 shield 안에 둔다.
+            with anyio.CancelScope(shield=True):
+                try:
+                    await repo.add_message(
+                        conversation_id,
+                        "assistant",
+                        assistant_content,
+                        finish_reason="cancelled" if cancelled else "stop",
+                    )
+                    await session.commit()
+                    if assistant_content != PROVIDER_DECLINE_MESSAGE:
+                        await record_usage(user_id, estimate_tokens(assistant_content))
+                except Exception as db_exc:
+                    logger.error(
+                        "work_chat_message_persist_failed", error=str(db_exc), exc_info=True
+                    )
 
 
 @work_router.get(
@@ -834,11 +837,6 @@ async def send_work_chat_message(
     conv = await repo.get_latest_by_work(work_id, current_user.id)
     if conv is None:
         conv = await repo.create_conversation(user_id=current_user.id, work_id=work_id)
-
-    if is_explicit_content(payload.content):
-        await repo.add_message(conv.id, "user", payload.content)
-        await session.commit()
-        return EventSourceResponse(_work_chat_precheck_declined_stream(repo, conv.id, session))
 
     # chapter_id 검증을 사용자 메시지 커밋보다 먼저 수행 — 잘못된 chapter_id로 인한
     # 404가 답변 없는 고아 user 메시지를 남기지 않도록 한다.

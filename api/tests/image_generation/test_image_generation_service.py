@@ -9,11 +9,9 @@ from __future__ import annotations
 import pytest
 
 from domains.image_generation.service import (
-    check_prompt_policy,
     map_character_to_prompt,
     map_location_to_prompt,
 )
-from domains.moderation.service import PRECHECK_DECLINE_MESSAGE
 
 pytestmark = pytest.mark.unit
 
@@ -67,16 +65,3 @@ def test_map_location_to_prompt_skips_empty_slots() -> None:
 
 def test_map_location_to_prompt_missing_fields_is_empty() -> None:
     assert map_location_to_prompt({}) == ""
-
-
-# ---------------------------------------------------------------------------
-# S2 — 콘텐츠 정책 필터 (image-generation.md 4장, task 40 원칙 재사용)
-# ---------------------------------------------------------------------------
-
-
-def test_check_prompt_policy_declines_explicit_prompt() -> None:
-    assert check_prompt_policy("그녀의 젖가슴을 노출한 모습") == PRECHECK_DECLINE_MESSAGE
-
-
-def test_check_prompt_policy_passes_benign_prompt() -> None:
-    assert check_prompt_policy("은발에 붉은 눈동자, 흑색 장포") is None

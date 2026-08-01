@@ -119,7 +119,7 @@ def test_get_client_for_tier_rejects_unknown_tier() -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_fast_writing_client — assist 5작업 전용, thinking 모드 비활성화
+# get_fast_writing_client — 지연에 민감한 assist 태스크를 분리하는 seam
 # ---------------------------------------------------------------------------
 
 
@@ -130,9 +130,13 @@ def test_get_fast_writing_client_returns_protocol_satisfying_client() -> None:
         assert isinstance(client, LLMClientProtocol)
 
 
-def test_get_fast_writing_client_disables_thinking_mode() -> None:
-    """GLM의 확장 추론(thinking)을 꺼서 응답 지연을 줄이는 것이 이 함수의 핵심 목적이다."""
+def test_get_fast_writing_client_sends_no_provider_specific_params() -> None:
+    """z.ai 전용 ``thinking`` 파라미터가 남아 있지 않은지 고정한다(task #63).
+
+    현재 프로바이더는 그 키를 조용히 무시하므로 남겨두면 "동작하는 설정"으로 오독된다.
+    """
     with patch("infra.llm.provider_factory.ChatLiteLLM") as mock_chat_litellm:
         get_fast_writing_client()
         _, kwargs = mock_chat_litellm.call_args
-        assert kwargs["model_kwargs"] == {"extra_body": {"thinking": {"type": "disabled"}}}
+        assert "thinking" not in str(kwargs)
+        assert kwargs.get("model_kwargs") in (None, {})

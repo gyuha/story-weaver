@@ -102,8 +102,9 @@ class Message(Base):
         Number of tokens in *content* (approximate, model-dependent).
         ``None`` if not yet measured.
     finish_reason:
-        The reason the model stopped generating: ``"stop"``, ``"length"``,
-        ``"tool_calls"``, or ``None`` for user messages.
+        The reason generation stopped: ``"stop"``, ``"length"``,
+        ``"tool_calls"``, ``"cancelled"`` (the client aborted the stream — the
+        content is a partial answer; task #66), or ``None`` for user messages.
     """
 
     __tablename__ = "messages"

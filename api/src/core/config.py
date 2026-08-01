@@ -47,8 +47,8 @@ class LLMProvider(StrEnum):
     * ``azure``     — Azure OpenAI (uses deployment name instead of model)
     * ``ollama``    — Local Ollama inference server (no API key required)
     * ``openai_compatible`` — any OpenAI-compatible endpoint (custom base URL),
-      e.g. z.ai/GLM coding plan. Routes via litellm's ``openai/<model>`` with a
-      configured ``api_base`` + ``api_key``.
+      e.g. a self-hosted or third-party gateway. Routes via litellm's
+      ``openai/<model>`` with a configured ``api_base`` + ``api_key``.
     """
 
     openai = "openai"
@@ -161,12 +161,12 @@ class LLMSettings(BaseSettings):
         alias="OLLAMA_BASE_URL",
     )
 
-    # OpenAI-compatible (custom endpoint — e.g. z.ai/GLM coding plan)
+    # OpenAI-compatible (custom endpoint — self-hosted or third-party gateway)
     openai_compatible_base_url: str = Field(
         default="",
         alias="OPENAI_COMPATIBLE_BASE_URL",
-        description="Base URL of an OpenAI-compatible endpoint, e.g. "
-        "https://api.z.ai/api/coding/paas/v4",
+        description="Base URL of an OpenAI-compatible endpoint, including the "
+        "API version path (e.g. https://<host>/v1).",
     )
     openai_compatible_api_key: SecretStr = Field(
         default=SecretStr(""),

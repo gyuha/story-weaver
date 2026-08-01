@@ -27,9 +27,7 @@ from domains.auth.models import User
 from domains.auth.security import get_current_user
 from domains.manuscript.router import router as manuscript_router
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
-    SOFTENED_NOTICE,
+    PROVIDER_DECLINE_MESSAGE,
 )
 from domains.works.models import Work
 from domains.works.router import router as works_router
@@ -126,26 +124,37 @@ async def _create_character(app: FastAPI, owner: User, work_id: uuid.UUID) -> di
 
 
 # ---------------------------------------------------------------------------
-# S1 — 선제 가드 (5개 엔드포인트 모두, LLM 호출 자체를 생략)
+# 연령·수위 제한 제거(ADR `260730-070532`) — 어떤 입력이든 LLM에 도달해야 한다.
+# 과거 S1 키워드 가드는 한국어 부분 문자열 매칭이라 "돌아보지 마십시오"(보지)·
+# "자지 않았다"(자지)·"사정이 있다"(사정) 같은 평범한 원고를 차단했다.
 # ---------------------------------------------------------------------------
 
 
-async def test_continue_explicit_input_never_reaches_llm(
-    app: FastAPI, owner: User, owner_work: Work
+@pytest.mark.parametrize(
+    "cursor_text",
+    [
+        "[수사관: 지금부터 뒤를 돌아보지 마십시오.]",  # 보지 — 실제 사용자 원고
+        "그날 밤 그는 잠을 자지 않았다.",  # 자지
+        "집안 사정이 어려웠다.",  # 사정
+        "그는 그녀의 성기를 만졌다.",  # 과거 차단 대상 — 이제 제공자 판단에 맡긴다
+    ],
+)
+async def test_continue_reaches_llm_for_any_input(
+    app: FastAPI, owner: User, owner_work: Work, cursor_text: str
 ) -> None:
     chapter = await _create_chapter(app, owner, owner_work.id)
-    fake = _FlakyLLMClient([["절대 안 나와야 할 텍스트"]])
+    fake = _FlakyLLMClient([["이어진 문장."]])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
-            json={"cursorText": "그는 그녀의 성기를 만졌다."},
+            json={"cursorText": cursor_text},
         )
 
     assert resp.status_code == 200
-    assert fake.call_count == 0
-    assert _sse_data_lines(resp.text) == [PRECHECK_DECLINE_MESSAGE, "[DONE]"]
+    assert fake.call_count == 1
+    assert _sse_data_lines(resp.text) == ["이어진 문장.", "[DONE]"]
 
 
 @pytest.mark.parametrize(
@@ -154,22 +163,22 @@ async def test_continue_explicit_input_never_reaches_llm(
         (
             "infill",
             _infill_llm_client,
-            lambda char_id: {"beforeText": "성기 삽입", "afterText": ""},
+            lambda char_id: {"beforeText": "뒤를 돌아보지 마십시오.", "afterText": ""},
         ),
         (
             "dialogue",
             _dialogue_llm_client,
-            lambda char_id: {"intent": "강간 장면을 묘사한다.", "targetEntityId": char_id},
+            lambda char_id: {"intent": "잠을 자지 않았다고 말한다.", "targetEntityId": char_id},
         ),
         (
             "style",
             _style_llm_client,
-            lambda char_id: {"text": "성기를 삽입했다.", "targetStyle": "하드보일드"},
+            lambda char_id: {"text": "집안 사정이 어려웠다.", "targetStyle": "하드보일드"},
         ),
-        ("correct", _correct_llm_client, lambda char_id: {"text": "그는 성기를 삽입했다."}),
+        ("correct", _correct_llm_client, lambda char_id: {"text": "그는 보지 못했다."}),
     ],
 )
-async def test_explicit_input_never_reaches_llm_for_other_assist_endpoints(
+async def test_other_assist_endpoints_reach_llm_for_any_input(
     app: FastAPI,
     owner: User,
     owner_work: Work,
@@ -179,7 +188,7 @@ async def test_explicit_input_never_reaches_llm_for_other_assist_endpoints(
 ) -> None:
     chapter = await _create_chapter(app, owner, owner_work.id)
     character = await _create_character(app, owner, owner_work.id)
-    fake = _FlakyLLMClient([["절대 안 나와야 할 텍스트"]])
+    fake = _FlakyLLMClient([["생성 결과."]])
     app.dependency_overrides[override_target] = lambda: fake
 
     async with _client_as(app, owner) as client:
@@ -189,20 +198,21 @@ async def test_explicit_input_never_reaches_llm_for_other_assist_endpoints(
         )
 
     assert resp.status_code == 200
-    assert fake.call_count == 0
-    assert _sse_data_lines(resp.text) == [PRECHECK_DECLINE_MESSAGE, "[DONE]"]
+    assert fake.call_count == 1
+    assert _sse_data_lines(resp.text) == ["생성 결과.", "[DONE]"]
 
 
 # ---------------------------------------------------------------------------
-# S2 — 완화 재시도 (continue) — 거절/빈 응답 → 완화 프롬프트로 1회 재시도
+# 제공자 거절 — 자동 완화 재시도 없이 정직하게 안내한다(ADR `260730-070532`).
 # ---------------------------------------------------------------------------
 
 
-async def test_continue_retries_once_with_softened_prompt_and_returns_notice(
+async def test_continue_does_not_retry_and_declines_on_provider_refusal(
     app: FastAPI, owner: User, owner_work: Work
 ) -> None:
+    """거절 시 완화 프롬프트로 재시도하지 않는다 — 작가가 쓴 수위를 시스템이 낮추지 않는다."""
     chapter = await _create_chapter(app, owner, owner_work.id)
-    fake = _FlakyLLMClient([RuntimeError("raw provider secret detail"), ["완화된 결과 문장."]])
+    fake = _FlakyLLMClient([RuntimeError("raw provider secret detail")])
     app.dependency_overrides[_continue_llm_client] = lambda: fake
 
     async with _client_as(app, owner) as client:
@@ -212,30 +222,7 @@ async def test_continue_retries_once_with_softened_prompt_and_returns_notice(
         )
 
     assert resp.status_code == 200
-    assert fake.call_count == 2
-    data_lines = _sse_data_lines(resp.text)
-    assert "완화된 결과 문장." in data_lines
-    assert SOFTENED_NOTICE in data_lines
-    assert data_lines[-1] == "[DONE]"
+    assert fake.call_count == 1  # 재시도 없음
+    assert _sse_data_lines(resp.text) == [PROVIDER_DECLINE_MESSAGE, "[DONE]"]
     assert "raw provider secret detail" not in resp.text
-
-
-async def test_continue_declines_politely_with_no_raw_error_when_retry_also_fails(
-    app: FastAPI, owner: User, owner_work: Work
-) -> None:
-    chapter = await _create_chapter(app, owner, owner_work.id)
-    fake = _FlakyLLMClient(
-        [RuntimeError("raw provider secret A"), RuntimeError("raw provider secret B")]
-    )
-    app.dependency_overrides[_continue_llm_client] = lambda: fake
-
-    async with _client_as(app, owner) as client:
-        resp = await client.post(
-            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/continue",
-            json={"cursorText": "평범한 문장."},
-        )
-
-    assert resp.status_code == 200
-    assert fake.call_count == 2
-    assert _sse_data_lines(resp.text) == [RETRY_DECLINE_MESSAGE, "[DONE]"]
-    assert "raw provider secret" not in resp.text
+    assert "수위" not in resp.text  # 잘못된 이유로 표시하지 않는다

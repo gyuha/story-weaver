@@ -3555,6 +3555,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "anyio" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
     { name = "email-validator" },
@@ -3585,7 +3586,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "anyio" },
     { name = "detect-secrets" },
     { name = "fakeredis" },
     { name = "httpx" },
@@ -3603,6 +3603,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
+    { name = "anyio", specifier = ">=4.6.0" },
     { name = "argon2-cffi", specifier = ">=23.1.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "email-validator", specifier = ">=2.2.0" },
@@ -3633,7 +3634,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "anyio", specifier = ">=4.6.0" },
     { name = "detect-secrets", specifier = ">=1.5.0" },
     { name = "fakeredis", specifier = ">=2.26.0" },
     { name = "httpx", specifier = ">=0.27.0" },

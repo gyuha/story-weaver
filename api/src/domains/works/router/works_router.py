@@ -25,10 +25,8 @@ from domains.budget.dependency import require_budget_available
 from domains.budget.service import estimate_tokens, record_usage
 from domains.chat.ports import AbstractLLMPort
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
+    PROVIDER_DECLINE_MESSAGE,
     invoke_with_retry,
-    is_explicit_content,
 )
 from domains.works.models import Work
 from domains.works.repository import WorksRepository
@@ -192,17 +190,12 @@ async def generate_beat_sheet(
     except AppError as exc:
         _raise_http(exc)
 
-    # S1 선제 가드 — 장르/키워드/문체는 실무상 19금 수위가 아니지만 일관성 있게 검사한다.
-    precheck_text = f"{work.genre} {' '.join(work.keywords)} {work.style}"
-    if is_explicit_content(precheck_text):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=PRECHECK_DECLINE_MESSAGE
-        )
-
     # S2 완화 재시도 — 거절/빈 응답이면 완화 프롬프트로 1회 재시도(moderation_service).
     outcome = await invoke_with_retry(llm, _build_beat_sheet_messages(work))
     if outcome.declined:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=RETRY_DECLINE_MESSAGE)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=PROVIDER_DECLINE_MESSAGE
+        )
 
     raw_text = outcome.chunks[0]
     await record_usage(current_user.id, estimate_tokens(raw_text))

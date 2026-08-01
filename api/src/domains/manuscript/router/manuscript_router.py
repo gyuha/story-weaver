@@ -6,9 +6,11 @@ works_router.py와 동일 패턴: ``get_current_user``로 인증하고 현재 �
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any, NoReturn
 
+import anyio
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -42,9 +44,7 @@ from domains.manuscript.service import ManuscriptService
 from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
-    is_explicit_content,
+    PROVIDER_DECLINE_MESSAGE,
     stream_with_retry,
 )
 from domains.works.models import Work
@@ -125,8 +125,8 @@ async def upsert_synopsis(
 # ---------------------------------------------------------------------------
 # 기획의도 AI 이어쓰기 (task #53) — 씬이 없는 작품 단위 요청이라 메모리 검색 없이
 # 장르·서브장르·키워드·문체 + 클라이언트가 보낸 현재 텍스트만으로 조립한다.
-# assist_router.py의 이어쓰기와 동일한 게이트 구성(precheck→budget→rate→완화 재시도),
-# thinking 모드 꺼진 빠른 티어(get_fast_writing_client) 재사용.
+# assist_router.py의 이어쓰기와 동일한 게이트 구성(budget→rate), 지연에 민감한 태스크용
+# 빠른 티어(get_fast_writing_client) 재사용.
 # ---------------------------------------------------------------------------
 
 
@@ -155,16 +155,17 @@ def _build_synopsis_continue_messages(work: Work, text: str) -> list[BaseMessage
         "당신은 웹소설 작가의 기획의도(왜 이 작품을 쓰는지, 어떤 메시지를 전달할지) 작성을 "
         f"보조하는 AI입니다. 이 작품의 장르는 '{work.genre}', 서브장르는 '{work.sub_genre}', "
         f"키워드는 [{keywords}], 문체는 '{work.style}'입니다. "
-        "전체이용가(약 15세) 수위를 지키세요. "
         "아래 지금까지 쓰인 기획의도 뒤에 자연스럽게 이어지는 문장을 생성하세요. "
         "기존 문장은 다시 쓰지 말고 이어지는 내용만 출력하세요."
     )
     return [SystemMessage(content=system), HumanMessage(content=text)]
 
 
-async def _precheck_declined_stream() -> Any:
-    yield {"data": PRECHECK_DECLINE_MESSAGE}
-    yield {"data": "[DONE]"}
+async def _charge_sent(user_id: uuid.UUID, sent: list[str]) -> None:
+    """지금까지 보낸 분량을 예산에 반영한다(완주·취소 양쪽에서 같은 조건을 쓴다)."""
+    combined = "".join(sent)
+    if combined and combined != PROVIDER_DECLINE_MESSAGE:
+        await record_usage(user_id, estimate_tokens(combined))
 
 
 async def _stream_synopsis_continue(
@@ -176,9 +177,13 @@ async def _stream_synopsis_continue(
             sent.append(chunk)
             yield {"data": chunk}
         yield {"data": "[DONE]"}
-        combined = "".join(sent)
-        if combined and combined != RETRY_DECLINE_MESSAGE:
-            await record_usage(user_id, estimate_tokens(combined))
+        await _charge_sent(user_id, sent)
+    except asyncio.CancelledError:
+        # 취소 시 부분 차감. ``shield=True``가 없으면 이 await은 즉시 재취소돼 아무 일도
+        # 일어나지 않는다 — 근거와 실측은 ``assist_router._stream_response`` 주석 참조.
+        with anyio.CancelScope(shield=True):
+            await _charge_sent(user_id, sent)
+        raise
     except Exception as exc:
         logger.error("synopsis_continue_stream_error", error=str(exc), exc_info=True)
         yield {"event": "error", "data": str(exc)}
@@ -203,9 +208,6 @@ async def continue_synopsis(
         work = await works_service.get_work(work_id, current_user.id)
     except AppError as exc:
         _raise_http(exc)
-
-    if is_explicit_content(payload.text):
-        return EventSourceResponse(_precheck_declined_stream())
 
     messages = _build_synopsis_continue_messages(work, payload.text)
     return EventSourceResponse(_stream_synopsis_continue(llm, messages, current_user.id))

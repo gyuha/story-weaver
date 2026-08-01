@@ -13,9 +13,11 @@ style|correct}`` — memory_router.py와 동일 패턴: ``get_current_user``로 
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any, NoReturn
 
+import anyio
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -49,9 +51,7 @@ from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
 from domains.memory.service.memory_search_service import MemorySearchService
 from domains.moderation.service import (
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
-    is_explicit_content,
+    PROVIDER_DECLINE_MESSAGE,
     stream_with_retry,
 )
 from domains.timeline.repository import TimelineRepository
@@ -188,13 +188,19 @@ async def _bind_rate_limit_user(
 # ---------------------------------------------------------------------------
 
 
+async def _charge_sent(user_id: uuid.UUID, sent: list[str]) -> None:
+    """지금까지 보낸 분량을 예산에 반영한다(완주·취소 양쪽에서 같은 조건을 쓴다)."""
+    combined = "".join(sent)
+    if combined and combined != PROVIDER_DECLINE_MESSAGE:
+        await record_usage(user_id, estimate_tokens(combined))
+
+
 async def _stream_response(llm: AbstractLLMPort, messages: list[Any], user_id: uuid.UUID) -> Any:
     """LLM 응답을 SSE ``data`` 이벤트로 스트리밍하고, 끝나면 ``[DONE]`` sentinel.
 
-    LLM 호출은 moderation 도메인의 완화 재시도(plan.md M4-S2)를 거친다 — 거절/빈
-    응답이면 완화 프롬프트로 1회 재시도하고, 성공하면 안내(``SOFTENED_NOTICE``)를
-    첫 조각으로 흘려보낸다. 재시도도 실패하면 완곡 안내 문구를 정상 콘텐츠처럼
-    스트리밍한다(raw provider 예외는 이 시점에 이미 moderation 쪽에서 삼켜진다).
+    LLM 호출은 moderation 도메인의 실패 분류(ADR `260730-070532`)를 거친다 — 한 글자도
+    받지 못하면 제공자 거절로 보고 안내 문구를 정상 콘텐츠처럼 스트리밍한다(자동 완화
+    재시도는 하지 않는다). 운영 실패는 그 전에 502로 표면화된다.
     ``stream_with_retry``는 청크를 도착 즉시 yield하므로(진짜 스트리밍 유지) 여기서도
     모아 담지 않고 그대로 중계한다.
 
@@ -209,18 +215,25 @@ async def _stream_response(llm: AbstractLLMPort, messages: list[Any], user_id: u
             sent.append(chunk)
             yield {"data": chunk}
         yield {"data": "[DONE]"}
-        combined = "".join(sent)
-        if combined and combined != RETRY_DECLINE_MESSAGE:
-            await record_usage(user_id, estimate_tokens(combined))
+        await _charge_sent(user_id, sent)
+    except asyncio.CancelledError:
+        # 클라이언트가 스트림을 끊으면(프론트의 AbortController → http.disconnect →
+        # sse-starlette의 anyio 태스크그룹 취소) 여기로 온다. 프로바이더는 그때까지의
+        # 토큰을 이미 과금했으므로 받은 분량만큼 예산에 반영해야 한다 — 안 하면
+        # 시작-취소 반복으로 하드 쿼터(``budget_token_limit``)를 무제한 우회할 수 있다.
+        #
+        # ``shield=True``가 없으면 이 ``await``은 **즉시 재취소돼 아무 일도 일어나지
+        # 않는다** — 감싸는 취소 스코프가 아직 취소 상태이기 때문이다(실측: 핸들러 안의
+        # ``await asyncio.sleep(0)``조차 CancelledError로 실패, shield 스코프 안에서는
+        # 보낸 분량이 정확히 차감됨). 조용히 실패하는 종류의 버그라 shield를 지우면
+        # 테스트가 red가 되도록 통합 테스트를 두었다
+        # (``tests/test_stream_cancel_shield.py``).
+        with anyio.CancelScope(shield=True):
+            await _charge_sent(user_id, sent)
+        raise
     except Exception as exc:
         logger.error("assist_stream_error", error=str(exc), exc_info=True)
         yield {"event": "error", "data": str(exc)}
-
-
-async def _precheck_declined_stream() -> Any:
-    """S1 선제 가드가 걸렸을 때의 SSE 응답 — LLM을 아예 호출하지 않는다."""
-    yield {"data": PRECHECK_DECLINE_MESSAGE}
-    yield {"data": "[DONE]"}
 
 
 async def _stream_cached_chunks(chunks: list[str]) -> Any:
@@ -279,8 +292,6 @@ async def assist_continue(
     llm: AbstractLLMPort = Depends(_continue_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.continue")
-    if is_explicit_content(payload.cursor_text):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         messages = await service.build_messages(
             work_id,
@@ -310,8 +321,6 @@ async def assist_infill(
     llm: AbstractLLMPort = Depends(_infill_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.infill")
-    if is_explicit_content(f"{payload.before_text} {payload.after_text}"):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         messages = await service.build_messages(
             work_id,
@@ -341,8 +350,6 @@ async def assist_dialogue(
     llm: AbstractLLMPort = Depends(_dialogue_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.dialogue")
-    if is_explicit_content(payload.intent):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         character = await service.resolve_character_profile(
             work_id, current_user.id, payload.target_entity_id
@@ -375,8 +382,6 @@ async def assist_style(
     llm: AbstractLLMPort = Depends(_style_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.style")
-    if is_explicit_content(payload.text):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         messages = await service.build_messages(
             work_id,
@@ -406,8 +411,6 @@ async def assist_correct(
     llm: AbstractLLMPort = Depends(_correct_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.correct")
-    if is_explicit_content(payload.text):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         # 소유권/화 존재 확인(ADR-0005)은 캐시 히트 여부와 무관하게 항상 거친다 —
         # LLM은 안 부르더라도 다른 테넌트의 캐시된 결과가 새어나가면 안 된다.
@@ -441,8 +444,6 @@ async def assist_title(
     llm: AbstractLLMPort = Depends(_title_llm_client),
 ) -> EventSourceResponse:
     bind_llm_call_context(user_id=current_user.id, task="assist.title")
-    if is_explicit_content(payload.text):
-        return EventSourceResponse(_precheck_declined_stream())
     try:
         messages = await service.build_messages(
             work_id, current_user.id, chapter_id, TaskType.title_, TitleInput(text=payload.text)

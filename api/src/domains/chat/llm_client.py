@@ -335,6 +335,22 @@ class LLMClient(AbstractLLMPort):
                     chunk_count += 1
                     response_parts.append(str(content))
                     yield str(content)
+        except asyncio.CancelledError:
+            # 클라이언트가 스트림을 끊으면(프론트의 AbortController → http.disconnect →
+            # sse-starlette의 태스크그룹 취소) 여기로 온다. ``CancelledError``는
+            # ``BaseException``이라 아래 ``except Exception``이 잡지 못하고 루프 뒤 기록에도
+            # 도달하지 못해, 처리하지 않으면 이미 토큰을 태운 호출이 로그에 아예 남지 않는다.
+            # ``_record_call``은 sync이고 ``asyncio.create_task``로 fire-and-forget하므로
+            # 취소된 스코프 안에서도 그대로 동작한다 — shield가 필요 없다(예산 차감처럼
+            # ``await``이 필요한 쪽은 상황이 다르다. 라우터 쪽 주석 참조).
+            self._record_call(
+                start_time=start_time,
+                messages=messages,
+                response="".join(response_parts),
+                error="cancelled",
+                usage_metadata=usage_metadata,
+            )
+            raise
         except Exception as exc:
             self._record_call(
                 start_time=start_time,

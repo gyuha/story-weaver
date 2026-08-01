@@ -21,6 +21,7 @@ Covered scenarios
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -721,29 +722,89 @@ class TestAStreamLogging:
         assert kwargs["error"] == "provider exploded"
         assert kwargs["response"] is None
 
+    @pytest.mark.asyncio
+    async def test_astream_logs_cancellation_with_partial_response(self) -> None:
+        """취소되면 그때까지 받은 부분 응답 + ``error="cancelled"``로 한 행 남긴다 (task #65).
 
-class TestModerationRetryLogging:
-    """S3(c) — moderation's mitigation retry must produce 2 logged rows, one per
-    underlying LLMClient.astream call (plan.md: "완화 재시도는 호출마다 1행")."""
+        ``CancelledError``는 ``BaseException``이라 기존 ``except Exception``이 잡지 못하고
+        루프 뒤 기록에도 도달하지 못한다 → 지금은 행이 아예 안 남는다.
+        """
+        first_chunk_sent = asyncio.Event()
+
+        async def _stalling_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            yield AIMessageChunk(content="부분")
+            first_chunk_sent.set()
+            await asyncio.sleep(10)  # 여기 멈춘 사이 소비 태스크가 취소된다
+            yield AIMessageChunk(content="도달하지 않음")
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _stalling_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+        ):
+
+            async def _consume() -> None:
+                async for _ in client.astream([HumanMessage(content="hi")]):
+                    pass
+
+            # loop.create_task로 만들어야 위에서 패치한 asyncio.create_task에 걸리지 않는다.
+            task = asyncio.get_running_loop().create_task(_consume())
+            await first_chunk_sent.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+            assert len(captured) == 1, "취소 시에도 로그 기록이 정확히 한 번 일어나야 한다"
+            await captured[0]
+
+        mock_save.assert_awaited_once()
+        kwargs = mock_save.await_args.kwargs
+        assert kwargs["error"] == "cancelled"
+        assert kwargs["response"] == "부분"
 
     @pytest.mark.asyncio
-    async def test_stream_with_retry_logs_two_rows_on_empty_first_attempt(self) -> None:
-        from domains.moderation.service import stream_with_retry
+    async def test_astream_logs_once_on_normal_completion(self) -> None:
+        """완주 경로가 취소 처리 추가로 이중 기록되지 않는지 고정한다 (task #65)."""
+
+        async def _fake_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            yield AIMessageChunk(content="가")
+            yield AIMessageChunk(content="나")
+
+        mock_chat = MagicMock()
+        mock_chat.astream = _fake_astream
+        client, _ = _make_client(mock_chat=mock_chat)
+
+        captured, fake_create_task = _capture_create_task()
+        with (
+            patch("domains.chat.llm_client.asyncio.create_task", side_effect=fake_create_task),
+            patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
+        ):
+            assert [c async for c in client.astream([HumanMessage(content="hi")])] == ["가", "나"]
+            assert len(captured) == 1
+            await captured[0]
+
+        assert mock_save.await_count == 1
+        assert mock_save.await_args.kwargs["error"] is None
+
+
+class TestModerationDeclineLogging:
+    """ADR `260730-070532` — 완화 재시도를 제거했으므로 빈 응답에서도 LLM 호출은 1회고
+    로그도 1행이다. 과거에는 재시도 때문에 2행이 남았다."""
+
+    @pytest.mark.asyncio
+    async def test_stream_logs_one_row_and_declines_on_empty_response(self) -> None:
+        from domains.moderation.service import PROVIDER_DECLINE_MESSAGE, stream_with_retry
 
         async def _empty_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
             for _item in ():
                 yield AIMessageChunk(content=str(_item))
 
-        async def _softened_astream(messages: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
-            yield AIMessageChunk(content="완화된 결과")
-
-        attempts = iter([_empty_astream, _softened_astream])
-
-        def _dispatch_astream(messages: Any, **kwargs: Any) -> Any:
-            return next(attempts)(messages, **kwargs)
-
         mock_chat = MagicMock()
-        mock_chat.astream = _dispatch_astream
+        mock_chat.astream = _empty_astream
         client, _ = _make_client(mock_chat=mock_chat)
 
         captured, fake_create_task = _capture_create_task()
@@ -752,12 +813,12 @@ class TestModerationRetryLogging:
             patch("domains.chat.llm_client.save_llm_call_log", new=AsyncMock()) as mock_save,
         ):
             chunks = [c async for c in stream_with_retry(client, [HumanMessage(content="hi")])]
-            assert len(captured) == 2
+            assert len(captured) == 1  # 재시도가 없으므로 1행
             for coro in captured:
                 await coro
 
-        assert chunks[-1] == "완화된 결과"
-        assert mock_save.await_count == 2
+        assert chunks == [PROVIDER_DECLINE_MESSAGE]
+        assert mock_save.await_count == 1
 
 
 class TestRecordCallNeverBlocksRealCall:

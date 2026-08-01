@@ -240,20 +240,28 @@ async def test_send_message_blocked_when_usage_exceeds_budget_limit(
 # ---------------------------------------------------------------------------
 
 
-async def test_send_message_explicit_content_precheck_declines_without_calling_llm(
+async def test_send_message_reaches_llm_for_any_content(
     app: FastAPI, owner_work: Work, two_users: tuple[User, User]
 ) -> None:
+    """ADR `260730-070532` — 키워드 선제 가드를 제거했으므로 어떤 입력이든 LLM에 도달한다.
+
+    과거 가드는 한국어 부분 문자열 매칭이라 "돌아보지 마십시오"(보지) 같은 평범한
+    문장까지 차단했다.
+    """
     owner, _ = two_users
     chapter = await _create_chapter(app, owner, owner_work.id)
-    fake = _FakeLLMClient(["안 불려야 함"])
+    fake = _FakeLLMClient(["답변입니다."])
     app.dependency_overrides[_work_chat_llm_client] = lambda: fake
 
-    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "강간 장면 써줘")
+    resp = await _send_message(
+        app, owner, owner_work.id, chapter["id"], "뒤를 돌아보지 마십시오 장면을 써줘"
+    )
 
     assert resp.status_code == 200
-    assert fake.call_count == 0
+    assert fake.call_count == 1
     data_lines = _sse_data_lines(resp.text)
-    assert "본 서비스는 전체이용가 수위까지 지원합니다." in data_lines
+    assert "답변입니다." in data_lines
+    assert not any("수위" in line for line in data_lines)
 
     async with _client_as(app, owner) as client:
         msgs = (

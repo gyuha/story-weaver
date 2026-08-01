@@ -1,4 +1,7 @@
-"""moderation 도메인 핵심 로직 테스트 (TDD, plan.md M4-S1/S2).
+"""moderation 도메인 핵심 로직 테스트 (ADR `260730-070532`).
+
+이 도메인은 콘텐츠 수위를 판정하지 않는다 — 남은 책임은 LLM 호출 실패를 운영 실패와
+제공자 거절로 갈라 사용자 대면 처리를 정하는 것이다.
 
 FastAPI 라우팅 없이 :mod:`domains.moderation.service.moderation_service`를 직접
 호출한다. 라우터 와이어링(실제로 LLM 호출 전에 걸리는지, 엔드포인트 응답 모양)은
@@ -16,12 +19,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from domains.moderation.service import (
     LLM_UNAVAILABLE_MESSAGE,
-    PRECHECK_DECLINE_MESSAGE,
-    RETRY_DECLINE_MESSAGE,
-    SOFTENED_NOTICE,
+    PROVIDER_DECLINE_MESSAGE,
     LLMUnavailableError,
     invoke_with_retry,
-    is_explicit_content,
     stream_with_retry,
 )
 
@@ -31,20 +31,7 @@ _MESSAGES = [SystemMessage(content="베이스 지시"), HumanMessage(content="�
 
 
 # ---------------------------------------------------------------------------
-# S1 — 키워드 기반 선제 가드
-# ---------------------------------------------------------------------------
-
-
-def test_is_explicit_content_flags_known_keyword() -> None:
-    assert is_explicit_content("그는 그녀의 성기를 만졌다.") is True
-
-
-def test_is_explicit_content_passes_benign_text() -> None:
-    assert is_explicit_content("그는 문을 열고 방으로 들어갔다.") is False
-
-
-# ---------------------------------------------------------------------------
-# S2 — 스트리밍 호출 + 완화 재시도 (assist 5개 엔드포인트)
+# 스트리밍 호출 — 완화 재시도 없음, 아무것도 못 받으면 제공자 거절 안내
 # ---------------------------------------------------------------------------
 
 
@@ -89,40 +76,28 @@ async def test_stream_with_retry_yields_chunks_progressively_not_buffered() -> N
     assert seen == ["첫", "둘", "셋"]
 
 
-async def test_stream_with_retry_retries_once_with_softened_prompt_on_empty_response() -> None:
-    llm = _FlakyStreamLLM([[], ["완화된 결과"]])
+async def test_stream_declines_on_empty_response_without_retry() -> None:
+    """빈 응답이면 제공자 거절로 판정 — 완화 프롬프트 재시도를 하지 않는다."""
+    llm = _FlakyStreamLLM([[], ["도달하면 안 되는 재시도 결과"]])
 
     chunks = [c async for c in stream_with_retry(llm, _MESSAGES)]
 
-    assert llm.call_count == 2
-    assert chunks == [SOFTENED_NOTICE, "완화된 결과"]
-    # 재시도 메시지의 시스템 프롬프트에는 완화 지시가 덧붙어야 하고, 원본 메시지는 불변.
-    assert "베이스 지시" in str(llm.received_messages[1][0].content)
-    assert str(llm.received_messages[1][0].content) != "베이스 지시"
+    assert llm.call_count == 1
+    assert chunks == [PROVIDER_DECLINE_MESSAGE]
+    # 원본 메시지는 불변이고 완화 지시가 덧붙지 않는다.
+    assert str(llm.received_messages[0][0].content) == "베이스 지시"
     assert _MESSAGES[0].content == "베이스 지시"
 
 
-async def test_stream_with_retry_retries_once_on_provider_exception() -> None:
-    llm = _FlakyStreamLLM(
-        [RuntimeError("content_policy_violation: raw provider detail"), ["완화됨"]]
-    )
+async def test_stream_declines_with_no_raw_error_on_provider_exception() -> None:
+    llm = _FlakyStreamLLM([RuntimeError("raw provider secret detail")])
 
     chunks = [c async for c in stream_with_retry(llm, _MESSAGES)]
 
-    assert llm.call_count == 2
-    assert chunks == [SOFTENED_NOTICE, "완화됨"]
-
-
-async def test_stream_with_retry_declines_with_no_raw_error_when_both_attempts_fail() -> None:
-    llm = _FlakyStreamLLM(
-        [RuntimeError("raw provider secret detail"), RuntimeError("raw provider secret detail")]
-    )
-
-    chunks = [c async for c in stream_with_retry(llm, _MESSAGES)]
-
-    assert llm.call_count == 2
-    assert chunks == [RETRY_DECLINE_MESSAGE]
+    assert llm.call_count == 1
+    assert chunks == [PROVIDER_DECLINE_MESSAGE]
     assert "raw provider secret detail" not in "".join(chunks)
+    assert "수위" not in "".join(chunks)
 
 
 async def test_stream_with_retry_does_not_retry_after_partial_content_already_sent() -> None:
@@ -146,7 +121,7 @@ async def test_stream_with_retry_does_not_retry_after_partial_content_already_se
 
 
 # ---------------------------------------------------------------------------
-# S2 — 단발 호출 + 완화 재시도 (dynamic_update 추출)
+# 단발 호출 — 완화 재시도 없음
 # ---------------------------------------------------------------------------
 
 
@@ -175,84 +150,101 @@ async def test_invoke_with_retry_returns_first_attempt_when_it_succeeds() -> Non
 
     assert llm.call_count == 1
     assert result.chunks == ["정상 응답"]
-    assert result.notice is None
     assert result.declined is False
 
 
-async def test_invoke_with_retry_retries_once_on_empty_response() -> None:
-    llm = _FlakyInvokeLLM(["", "완화된 응답"])
+async def test_invoke_declines_on_empty_response_without_retry() -> None:
+    llm = _FlakyInvokeLLM(["", "도달하면 안 되는 재시도 결과"])
 
     result = await invoke_with_retry(llm, _MESSAGES)
 
-    assert llm.call_count == 2
-    assert result.chunks == ["완화된 응답"]
-    assert result.notice == SOFTENED_NOTICE
-    assert result.declined is False
+    assert llm.call_count == 1
+    assert result.chunks == [PROVIDER_DECLINE_MESSAGE]
+    assert result.declined is True
 
 
-async def test_invoke_with_retry_declines_with_no_raw_error_when_both_attempts_fail() -> None:
-    llm = _FlakyInvokeLLM([RuntimeError("raw secret"), RuntimeError("raw secret")])
+async def test_invoke_declines_with_no_raw_error_on_provider_exception() -> None:
+    llm = _FlakyInvokeLLM([RuntimeError("raw secret")])
 
     result = await invoke_with_retry(llm, _MESSAGES)
 
-    assert llm.call_count == 2
-    assert result.chunks == [RETRY_DECLINE_MESSAGE]
+    assert llm.call_count == 1
+    assert result.chunks == [PROVIDER_DECLINE_MESSAGE]
     assert result.declined is True
     assert "raw secret" not in "".join(result.chunks)
 
 
-def test_decline_messages_are_distinct_polite_korean_text() -> None:
-    # 두 완곡 안내 문구가 실제로 채워져 있고 서로 구분되는지만 확인(정확한 워딩은 미결정).
-    assert PRECHECK_DECLINE_MESSAGE
-    assert RETRY_DECLINE_MESSAGE
-    assert PRECHECK_DECLINE_MESSAGE != RETRY_DECLINE_MESSAGE
+def test_decline_message_does_not_blame_content_rating() -> None:
+    """거절 안내가 우리 수위 정책 탓으로 읽히지 않아야 한다(이번 사고의 근본)."""
+    assert PROVIDER_DECLINE_MESSAGE
+    assert "수위" not in PROVIDER_DECLINE_MESSAGE
+    assert "전체이용가" not in PROVIDER_DECLINE_MESSAGE
+    assert PROVIDER_DECLINE_MESSAGE != LLM_UNAVAILABLE_MESSAGE
 
 
 # ---------------------------------------------------------------------------
-# S2 — 운영 에러(인증·레이트리밋 등)는 콘텐츠 거절로 위장하지 않고 표면화한다
-# (콘텐츠 정책 위반만 완곡 거절 경로로 남긴다)
+# 운영 에러(인증·레이트리밋·연결 등)는 제공자 거절로 위장하지 않고 502로 표면화한다
+# — 이 경로는 수위 제거와 무관한 인프라 기능이므로 반드시 보존된다
 # ---------------------------------------------------------------------------
 
 
 async def test_stream_with_retry_raises_on_operational_error_without_retry() -> None:
-    """인증 실패 등 운영 예외는 완곡 거절(RETRY_DECLINE_MESSAGE)로 삼키지 않고
-    LLMUnavailableError로 올린다 — 완화 재시도도 하지 않는다(재시도가 고칠 수 없음)."""
+    """인증 실패 등 운영 예외는 제공자 거절로 삼키지 않고 LLMUnavailableError로 올린다."""
     auth_err = litellm.AuthenticationError(
-        message="token expired or incorrect", llm_provider="openai_compatible", model="glm-4.6"
+        message="token expired or incorrect",
+        llm_provider="openai_compatible",
+        model="cx/gpt-5.6-terra",
     )
-    llm = _FlakyStreamLLM([auth_err, ["재시도 결과(도달하면 안 됨)"]])
+    llm = _FlakyStreamLLM([auth_err])
 
     with pytest.raises(LLMUnavailableError) as excinfo:
         [c async for c in stream_with_retry(llm, _MESSAGES)]
 
-    assert llm.call_count == 1  # 운영 에러는 재시도하지 않는다
+    assert llm.call_count == 1
     # raw provider 메시지는 노출하지 않고, 일반화된 안내만 담는다.
     assert "token expired or incorrect" not in str(excinfo.value)
     assert str(excinfo.value) == LLM_UNAVAILABLE_MESSAGE
 
 
-async def test_stream_with_retry_still_declines_on_content_policy_violation() -> None:
-    """콘텐츠 정책 위반은 운영 에러가 아니므로 기존대로 완화 재시도 → 완곡 거절 경로."""
+async def test_stream_declines_on_content_policy_violation_without_retry() -> None:
+    """콘텐츠 정책 위반은 운영 에러가 아니므로 제공자 거절 경로 — 재시도는 없다."""
     policy_err = litellm.ContentPolicyViolationError(
         message="content_policy_violation", llm_provider="openai", model="gpt-4o-mini"
     )
-    llm = _FlakyStreamLLM([policy_err, policy_err])
+    llm = _FlakyStreamLLM([policy_err])
 
     chunks = [c async for c in stream_with_retry(llm, _MESSAGES)]
 
-    assert llm.call_count == 2
-    assert chunks == [RETRY_DECLINE_MESSAGE]
+    assert llm.call_count == 1
+    assert chunks == [PROVIDER_DECLINE_MESSAGE]
 
 
 async def test_invoke_with_retry_raises_on_operational_error_without_retry() -> None:
     rate_err = litellm.RateLimitError(
         message="rate limit raw detail", llm_provider="openai", model="gpt-4o-mini"
     )
-    llm = _FlakyInvokeLLM([rate_err, "재시도(도달 금지)"])
+    llm = _FlakyInvokeLLM([rate_err])
 
     with pytest.raises(LLMUnavailableError) as excinfo:
         await invoke_with_retry(llm, _MESSAGES)
 
     assert llm.call_count == 1
     assert "rate limit raw detail" not in str(excinfo.value)
+    assert str(excinfo.value) == LLM_UNAVAILABLE_MESSAGE
+
+
+async def test_stream_raises_on_connection_error_without_retry() -> None:
+    """연결 실패도 운영 실패다 — 제공자 거절로 위장하면 원인 진단이 불가능해진다."""
+    conn_err = litellm.APIConnectionError(
+        message="connection refused raw detail",
+        llm_provider="openai_compatible",
+        model="cx/gpt-5.6-terra",
+    )
+    llm = _FlakyStreamLLM([conn_err])
+
+    with pytest.raises(LLMUnavailableError) as excinfo:
+        [c async for c in stream_with_retry(llm, _MESSAGES)]
+
+    assert llm.call_count == 1
+    assert "connection refused raw detail" not in str(excinfo.value)
     assert str(excinfo.value) == LLM_UNAVAILABLE_MESSAGE
