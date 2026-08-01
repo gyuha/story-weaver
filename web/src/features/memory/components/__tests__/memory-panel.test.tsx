@@ -15,6 +15,7 @@ vi.mock('@/features/memory/api/memory.api', () => ({
 const mockGetMessages = vi.fn();
 const mockStartNewConversationMutationFn = vi.fn();
 const chatStartSpy = vi.fn();
+const chatStopSpy = vi.fn();
 interface MockChatStreamState {
   text: string;
   isStreaming: boolean;
@@ -45,7 +46,7 @@ vi.mock('@/features/memory/api/chat.api', () => ({
       error: null,
     });
     setMockChatStreamState = (patch) => setState((s) => ({ ...s, ...patch }));
-    return { start: chatStartSpy, ...state };
+    return { start: chatStartSpy, stop: chatStopSpy, ...state };
   },
 }));
 
@@ -339,14 +340,51 @@ describe('MemoryPanel · ChatTab', () => {
     });
   });
 
-  it('스트리밍 중에는 입력·전송이 비활성화된다', async () => {
+  it('스트리밍 중에는 입력이 비활성화되고 전송 버튼이 중단 버튼으로 바뀐다 (task #66)', async () => {
     mockGetMessages.mockResolvedValue([]);
     await renderChatTab();
+
+    expect(screen.getByRole('button', { name: '전송' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '생성 중단' })).not.toBeInTheDocument();
 
     act(() => setMockChatStreamState({ isStreaming: true, text: '' }));
 
     expect(screen.getByPlaceholderText('메시지를 입력하세요…')).toBeDisabled();
-    expect(screen.getByRole('button', { name: '전송' })).toBeDisabled();
+    // 같은 자리에서 전환된다 — 전송은 사라지고 중단이 나타난다.
+    expect(screen.queryByRole('button', { name: '전송' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '생성 중단' })).toBeInTheDocument();
+  });
+
+  it('중단 버튼은 스트리밍 중 눌릴 수 있어야 하고 stop을 호출한다 (task #66)', async () => {
+    // 가장 그럴듯한 사고: disabled 조건(disabled || !input.trim())을 그대로 두면
+    // disabled가 곧 isStreaming이라 중단 버튼이 항상 비활성이 된다.
+    mockGetMessages.mockResolvedValue([]);
+    await renderChatTab();
+
+    act(() => setMockChatStreamState({ isStreaming: true, text: '부분 답변' }));
+
+    const stopButton = screen.getByRole('button', { name: '생성 중단' });
+    expect(stopButton).not.toBeDisabled();
+    await userEvent.click(stopButton);
+    expect(chatStopSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('중단 후 부분 답변이 말풍선으로 남고 입력이 다시 활성화된다 (task #66)', async () => {
+    mockGetMessages.mockResolvedValue([]);
+    await renderChatTab();
+
+    // 실제 흐름을 거쳐야 한다 — 커밋 게이트(committedRef)가 send()에서 열린다.
+    await userEvent.type(screen.getByPlaceholderText('메시지를 입력하세요…'), '질문');
+    await userEvent.click(screen.getByRole('button', { name: '전송' }));
+
+    act(() => setMockChatStreamState({ isStreaming: true, text: '여기까지만 나온 답변' }));
+    await userEvent.click(screen.getByRole('button', { name: '생성 중단' }));
+    // stop()을 부르면 훅의 isStreaming이 false로 떨어진다(목업에서는 직접 반영).
+    act(() => setMockChatStreamState({ isStreaming: false }));
+
+    expect(screen.getByText('여기까지만 나온 답변')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('메시지를 입력하세요…')).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: '전송' })).toBeInTheDocument();
   });
 
   it("'새 대화' 클릭 시 생성 API를 호출하고 말풍선을 초기화한다", async () => {

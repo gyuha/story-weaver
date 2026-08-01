@@ -24,6 +24,8 @@ const SHORTEN_STYLE = '같은 의미를 유지하며 더 간결하고 축약된 
 const TONE_STYLE = '더 정중하고 격식 있는 문어체로 바꿔줘';
 
 interface Preview {
+  /** 팝오버 헤더 — 누른 액션을 가리킨다("AI 다시쓰기" 등). */
+  title: string;
   prefix: string;
   from: number;
   to: number;
@@ -52,6 +54,7 @@ export function SelectionAiMenu({
     if (!text) return;
     const coords = editor.view.coordsAtPos(to);
     setPreview({
+      title: `AI ${action.label}`,
       prefix: action.key === 'expand' ? `${text} ` : '',
       from,
       to,
@@ -89,10 +92,13 @@ export function SelectionAiMenu({
       {preview && (
         <div className="fixed z-50 w-[300px]" style={{ top: preview.top, left: preview.left }}>
           <SuggestionPicker
+            title={preview.title}
             rawText={assist.text}
             isStreaming={assist.isStreaming}
             error={assist.error}
             onApply={(text) => {
+              // 적용 시점에도 스트리밍 중일 수 있다 — 남은 후보 생성을 끊는다.
+              assist.stop();
               editor
                 .chain()
                 .focus()
@@ -100,7 +106,10 @@ export function SelectionAiMenu({
                 .run();
               setPreview(null);
             }}
-            onCancel={() => setPreview(null)}
+            onCancel={() => {
+              assist.stop();
+              setPreview(null);
+            }}
           />
         </div>
       )}

@@ -3,6 +3,8 @@ import type { Work } from '@/features/shared/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockNavigate = vi.fn();
+
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>();
   return {
@@ -16,6 +18,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
         {children}
       </a>
     ),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -231,6 +234,32 @@ describe('WorkTree 새 부/새 화 추가 진행 상태', () => {
     await waitFor(() => {
       expect(firstPartButton).not.toBeDisabled();
     });
+  });
+
+  it('새 화를 추가하면 그 화로 이동한다', async () => {
+    // 지금은 편집 중이던 화(ch1)가 선택된 채로 남아, 방금 만든 화가 보이지 않았다.
+    const mockAddChapter = vi.fn().mockResolvedValue('new-ch-id');
+    useWorksStore.setState({ addChapter: mockAddChapter });
+    render(<Harness />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: '새 화' })[0]);
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: '/works/$workId/write/$chapterId',
+        params: { workId: 'w1', chapterId: 'new-ch-id' },
+      })
+    );
+  });
+
+  it('새 화 추가가 실패하면 이동하지 않는다', async () => {
+    useWorksStore.setState({ addChapter: vi.fn().mockRejectedValue(new Error('network error')) });
+    render(<Harness />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: '새 화' })[0]);
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('새 화 추가가 실패하면 버튼이 다시 활성화되고 에러 토스트가 표시된다', async () => {

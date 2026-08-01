@@ -4,7 +4,7 @@ import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import useModal from '@/stores/modal-store';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import {
   ChevronDown,
   ChevronRight,
@@ -55,6 +55,8 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
   const [editingPart, setEditingPart] = useState<string | null>(null);
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+
   const togglePart = (part: string) => {
     setOpenParts((s) => {
       const next = new Set(s);
@@ -69,6 +71,13 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
       const id = await addChapter(work.id, part);
       setOpenParts((s) => new Set(s).add(part));
       setEditingChapterId(id);
+      // 방금 만든 화로 이동한다 — 그러지 않으면 편집 중이던 화가 선택된 채로 남아
+      // 추가한 화가 보이지 않는다. 이탈하는 화의 편집분은 ManuscriptEditor의
+      // 언마운트 자동 저장이 챙긴다.
+      navigate({
+        to: '/works/$workId/write/$chapterId',
+        params: { workId: work.id, chapterId: id },
+      });
     } catch (err) {
       toast.error(apiErrorMessage(err, '화 추가에 실패했습니다'));
     } finally {

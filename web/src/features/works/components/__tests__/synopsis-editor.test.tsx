@@ -29,6 +29,7 @@ vi.mock('@/features/works/api/works.api', () => ({
 }));
 
 const continueStartSpy = vi.fn();
+const continueStopSpy = vi.fn();
 interface MockContinueState {
   text: string;
   isStreaming: boolean;
@@ -44,7 +45,7 @@ vi.mock('@/features/works/api/synopsis-continue.api', () => ({
       error: null,
     });
     setMockContinueState = (patch) => setState((s) => ({ ...s, ...patch }));
-    return { start: continueStartSpy, ...state };
+    return { start: continueStartSpy, stop: continueStopSpy, ...state };
   },
 }));
 
@@ -173,7 +174,8 @@ describe('SynopsisEditor', () => {
     expect(continueStartSpy).not.toHaveBeenCalled();
   });
 
-  it('기획의도가 있으면 "AI 이어쓰기" 클릭 시 스트림을 시작하고 점진적으로 렌더한다', async () => {
+  // 팝오버가 SuggestionPicker를 공유하므로 연출 통일(원문 blob 제거 + 스켈레톤)을 함께 물려받는다.
+  it('기획의도가 있으면 "AI 이어쓰기" 클릭 시 스트림을 시작하고, 생성 중엔 원문 대신 스켈레톤을 보여준다', async () => {
     mockGetSynopsis.mockResolvedValue({ id: 's1', workId: 'w1', body: '이 작품은' });
 
     renderEditor();
@@ -186,6 +188,13 @@ describe('SynopsisEditor', () => {
     });
 
     act(() => setMockContinueState({ isStreaming: true, text: '회귀한 무사의 이야기' }));
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1);
+    });
+    expect(screen.queryByText('회귀한 무사의 이야기')).not.toBeInTheDocument();
+
+    // 완료되면 후보 카드로 나타난다(마커 없는 응답은 후보 1개).
+    act(() => setMockContinueState({ isStreaming: false }));
     await waitFor(() => {
       expect(screen.getByText('회귀한 무사의 이야기')).toBeInTheDocument();
     });
@@ -224,5 +233,23 @@ describe('SynopsisEditor', () => {
     expect(screen.getByLabelText('기획의도')).toHaveValue('이 작품은');
     // 패널이 닫혀 저장/취소 버튼 행이 다시 보인다.
     expect(screen.getByRole('button', { name: '저장' })).toBeInTheDocument();
+  });
+
+  it('AI 제안 패널의 "취소"는 진행 중인 스트림도 중단한다 (task #65)', async () => {
+    // 패널만 닫으면 SSE 생성이 끝까지 돌아 토큰이 계속 탄다. 편집기 이어쓰기
+    // (manuscript.tsx의 dismissDraft)와 같은 순서로 stop()을 먼저 부른다.
+    mockGetSynopsis.mockResolvedValue({ id: 's1', workId: 'w1', body: '이 작품은' });
+
+    renderEditor();
+    await waitFor(() => expect(screen.getByLabelText('기획의도')).toHaveValue('이 작품은'));
+    await userEvent.click(screen.getByRole('button', { name: 'AI 이어쓰기' }));
+    act(() => setMockContinueState({ isStreaming: true, text: '' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '취소' })).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    expect(continueStopSpy).toHaveBeenCalledTimes(1);
   });
 });

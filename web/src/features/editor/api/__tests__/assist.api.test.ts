@@ -1,7 +1,8 @@
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { refreshAccessToken } from '@/lib/api-interceptors';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseSseTextStream, streamAssist } from '../assist.api';
+import { parseSseTextStream, streamAssist, useAssistStream } from '../assist.api';
 
 // eco: assist.api.ts는 refreshAccessToken(단일-비행 coordinator)에 위임할 뿐이므로
 // 여기서는 그 결과(성공/실패)만 모킹해 401 처리 분기를 검증한다.
@@ -176,5 +177,82 @@ describe('streamAssist title 태스크', () => {
     expect(url).toBe('/api/v1/works/work-1/chapters/chapter-1/assist/title');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({ text: '비 오는 골목, 그는 우산도 없이 서 있었다.' });
+  });
+});
+
+// eco: AbortController가 abort()되면 실 fetch는 res.body 스트림의 대기 중인 read()를
+// AbortError로 reject한다(스펙 동작) — 여기서는 그 동작을 우리가 쥔 컨트롤러로 재현한다.
+function controlledSseStream() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({
+    start(c) {
+      controller = c;
+    },
+  });
+  return {
+    stream,
+    push: (text: string) => controller.enqueue(new TextEncoder().encode(text)),
+    errorWithAbort: () =>
+      controller.error(new DOMException('The operation was aborted.', 'AbortError')),
+  };
+}
+
+describe('useAssistStream의 stop()', () => {
+  function stubAbortAwareFetch(stream: ReadableStream<Uint8Array>, onAbort: () => void) {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      init.signal?.addEventListener('abort', onAbort);
+      return Promise.resolve({ ok: true, status: 200, body: stream } as Response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('stop() 호출 후 isStreaming이 false가 되고, 이후 청크가 text에 누적되지 않는다', async () => {
+    const { stream, push, errorWithAbort } = controlledSseStream();
+    stubAbortAwareFetch(stream, errorWithAbort);
+
+    const { result } = renderHook(() => useAssistStream());
+
+    act(() => {
+      void result.current.start('continue', {
+        workId: 'work-1',
+        chapterId: 'chapter-1',
+        payload: { cursorText: '이어쓸 문장' },
+      });
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+
+    push('data: 첫 청크\n\n');
+    await waitFor(() => expect(result.current.text).toBe('첫 청크'));
+
+    act(() => {
+      result.current.stop();
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.text).toBe('첫 청크');
+  });
+
+  it('stop()으로 인한 AbortError는 error 상태에 반영되지 않는다(null 유지)', async () => {
+    const { stream, errorWithAbort } = controlledSseStream();
+    stubAbortAwareFetch(stream, errorWithAbort);
+
+    const { result } = renderHook(() => useAssistStream());
+
+    act(() => {
+      void result.current.start('continue', {
+        workId: 'work-1',
+        chapterId: 'chapter-1',
+        payload: { cursorText: '이어쓸 문장' },
+      });
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+
+    act(() => {
+      result.current.stop();
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.error).toBeNull();
   });
 });

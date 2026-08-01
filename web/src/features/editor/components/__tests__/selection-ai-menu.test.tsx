@@ -15,6 +15,7 @@ vi.mock('@tiptap/react/menus', () => ({
 }));
 
 const startSpy = vi.fn();
+const stopSpy = vi.fn();
 interface MockAssistState {
   text: string;
   isStreaming: boolean;
@@ -30,7 +31,7 @@ vi.mock('@/features/editor/api/assist.api', () => ({
       error: null,
     });
     setMockAssistState = (patch) => setState((s) => ({ ...s, ...patch }));
-    return { start: startSpy, ...state };
+    return { start: startSpy, stop: stopSpy, ...state };
   },
 }));
 
@@ -105,16 +106,24 @@ describe('SelectionAiMenu 액션 → 태스크 매핑', () => {
 });
 
 describe('SelectionAiMenu 스트리밍 미리보기', () => {
-  it('스트림 청크가 도착하는 대로 미리보기에 점진적으로 반영된다', async () => {
+  // 구 동작(원문 blob을 그대로 흘리기)을 대체 — 이어쓰기 모달과 연출을 통일했다.
+  // 스트리밍 중엔 원문이 보이지 않고 스켈레톤만 있어야 한다.
+  it('스트리밍 중에는 원문을 노출하지 않고 스켈레톤만 보여준다', async () => {
     render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
     await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
 
     act(() => setMockAssistState({ isStreaming: true, text: '그가' }));
-    expect(screen.getByText('그가')).toBeInTheDocument();
+    expect(screen.queryByText('그가')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1);
 
     act(() => setMockAssistState({ text: '그가 말했다' }));
+    expect(screen.queryByText('그가 말했다')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1);
+
+    // 완료되면 후보 카드로 나타난다(style은 마커가 없어 후보 1개).
+    act(() => setMockAssistState({ isStreaming: false }));
     expect(screen.getByText('그가 말했다')).toBeInTheDocument();
-    expect(screen.queryByText('그가')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
   });
 
   it('스트리밍 중에는 적용 버튼이 없고, 완료되면 나타나 적용할 수 있다', async () => {
@@ -139,5 +148,45 @@ describe('SelectionAiMenu 스트리밍 미리보기', () => {
 
     expect(screen.getByText('LLM provider error')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '적용' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SelectionAiMenu 닫기 시 스트림 중단', () => {
+  it('취소를 누르면 스트림을 중단하고 팝오버를 닫는다', async () => {
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
+    await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
+    act(() => setMockAssistState({ isStreaming: true, text: '그가' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    expect(stopSpy).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: '취소' })).not.toBeInTheDocument();
+  });
+
+  it('적용을 누르면 스트림을 중단하고 선택 영역을 교체한다', async () => {
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
+    await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
+    act(() => setMockAssistState({ isStreaming: false, text: '그가 낮게 말했다' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '적용' }));
+
+    expect(stopSpy).toHaveBeenCalled();
+    expect(insertContentAtSpy).toHaveBeenCalledWith({ from: 3, to: 8 }, '그가 낮게 말했다');
+  });
+});
+
+describe('SelectionAiMenu 팝오버 헤더', () => {
+  // 네 액션 모두 "AI 이어쓰기"가 뜨던 문제 — 헤더는 누른 액션을 가리켜야 한다.
+  it.each([
+    ['다시쓰기', 'AI 다시쓰기'],
+    ['늘리기', 'AI 늘리기'],
+    ['줄이기', 'AI 줄이기'],
+    ['톤 변경', 'AI 톤 변경'],
+  ])('%s를 누르면 헤더가 "%s"로 뜬다', async (action, header) => {
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
+    await userEvent.click(screen.getByRole('button', { name: action }));
+
+    expect(screen.getByText(header, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText('AI 이어쓰기', { exact: false })).not.toBeInTheDocument();
   });
 });

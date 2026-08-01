@@ -33,7 +33,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { SelectionAiMenu } from './selection-ai-menu';
-import { SuggestionPicker } from './suggestion-picker';
+import { ContinueSuggestionModal } from './suggestion-picker';
 import { VersionHistoryModal } from './version-history-modal';
 
 /** 품질 티어 — ADR-0004. 사용자는 모델명이 아닌 이 티어만 고른다. */
@@ -55,7 +55,6 @@ export function ManuscriptEditor({
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
   const [generatingTitle, setGeneratingTitle] = useState(false);
-  const draftRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
@@ -67,9 +66,25 @@ export function ManuscriptEditor({
     ? chapter.paragraphs.map((p) => `<p>${escapeHtml(p.text)}</p>`).join('')
     : '';
 
+  // 화를 떠날 때 자동 저장하기 위한 최신 본문. 언마운트 정리 시점에는 TipTap 에디터가
+  // 이미 파괴됐을 수 있어(useEditor의 정리가 먼저 돈다) editor를 읽지 않고 이 ref를 쓴다.
+  // 한 번도 편집하지 않으면 null로 남아 "변경 없음"을 뜻한다.
+  const latestBodyRef = useRef<string | null>(null);
+  const initialBody = chapter.paragraphs.map((p) => p.text).join('\n');
+
+  // 자동 저장 토스트가 가리킬 화 이름. 제목은 편집 중 바뀔 수 있는데 언마운트 정리
+  // 클로저는 마운트 시점 값을 붙잡으므로, 매 렌더마다 갱신하는 ref로 최신값을 읽는다.
+  const chapterLabelRef = useRef('');
+  useEffect(() => {
+    chapterLabelRef.current = `${chapter.index}화 ${titleDraft || chapter.title}`;
+  });
+
   const editor = useEditor({
     extensions: [StarterKit],
     content: initialContent,
+    onUpdate: ({ editor: e }) => {
+      latestBodyRef.current = e.getText({ blockSeparator: '\n' });
+    },
     editorProps: {
       attributes: {
         class: 'sw-editor font-serif text-[18.5px] leading-[1.95] text-ink min-h-[420px]',
@@ -117,7 +132,10 @@ export function ManuscriptEditor({
     assist.start('continue', { workId: work.id, chapterId: chapter.id, payload: { cursorText } });
   };
 
-  const dismissDraft = () => setShowDraft(false);
+  const dismissDraft = () => {
+    assist.stop();
+    setShowDraft(false);
+  };
 
   // 현재 화 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
   const generateTitle = () => {
@@ -165,10 +183,40 @@ export function ManuscriptEditor({
     renameChapter,
   ]);
 
-  // 패널이 나타날 때 화면에 보이도록 스크롤 — 긴 본문에서 반응 없음으로 오인되는 것 방지.
+  // 화를 떠날 때 편집분을 잃지 않도록 자동 저장한다. editor-screen이 `key={chapter.id}`로
+  // 화마다 새로 마운트하므로, 이 정리 함수가 트리에서 다른 화 클릭·새 화 추가·읽기 모드
+  // 전환·뒤로가기까지 모든 이탈 경로를 덮는다.
+  //
+  // 수동 저장(`saveChapter`)과 둘이 다르다: ① 변경이 없으면 아무것도 하지 않는다
+  // ② 설정 추출(`extractChapterUpdates`)을 부르지 않는다 — LLM 호출이라 화를 옮길 때마다
+  // 사용량 한도를 먹는다. 설정 추출은 작가가 명시적으로 저장할 때만 돈다.
+  // 성공 토스트는 띄우되 어느 화가 저장됐는지 밝힌다 — 이미 다른 화로 넘어간 뒤라
+  // "저장했습니다"만으로는 무엇이 저장됐는지 알 수 없다. 변경이 있을 때만 뜨므로
+  // 화를 둘러보기만 할 때는 조용하다.
+  //
+  // 이미 화면을 떠난 뒤라 await할 수 없다(fire-and-forget). 실패하면 토스트로 알린다 —
+  // 그 경우 편집분은 복구되지 않으므로, 확실히 남겨야 할 때는 수동 저장을 쓴다.
   useEffect(() => {
-    if (showDraft) draftRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [showDraft]);
+    return () => {
+      const body = latestBodyRef.current;
+      if (body === null || body === initialBody) return;
+      const label = chapterLabelRef.current;
+      manuscriptApi
+        .updateChapter({
+          path: { work_id: work.id, episode_id: chapter.episodeId, chapter_id: chapter.id },
+          body: { body },
+        })
+        .then(() => {
+          setChapterParagraphs(work.id, chapter.id, toParagraphs(body));
+          toast.success(`'${label}' 저장했습니다`);
+        })
+        .catch((err) => {
+          toast.error(apiErrorMessage(err, `'${label}'을(를) 자동 저장하지 못했습니다`));
+        });
+    };
+    // 화가 바뀌면 컴포넌트 자체가 새로 마운트되므로 의존성은 마운트 시점 값으로 충분하다.
+    // 제목은 편집 중 바뀔 수 있어 의존성이 아니라 ref로 최신값을 읽는다(위 참조).
+  }, [work.id, chapter.id, chapter.episodeId, initialBody, setChapterParagraphs]);
 
   const saveChapter = async () => {
     if (!editor) return;
@@ -387,23 +435,21 @@ export function ManuscriptEditor({
             <EditorContent editor={editor} />
             <SelectionAiMenu editor={editor} workId={work.id} chapterId={chapter.id} />
           </div>
-
-          {showDraft && (
-            <div ref={draftRef} className="mt-4">
-              <SuggestionPicker
-                rawText={assist.text}
-                isStreaming={assist.isStreaming}
-                error={assist.error}
-                onApply={(text) => {
-                  editor?.chain().focus().insertContent(text).run();
-                  setShowDraft(false);
-                }}
-                onCancel={dismissDraft}
-              />
-            </div>
-          )}
         </div>
       </div>
+
+      <ContinueSuggestionModal
+        open={showDraft}
+        rawText={assist.text}
+        isStreaming={assist.isStreaming}
+        error={assist.error}
+        onApply={(text) => {
+          assist.stop();
+          editor?.chain().focus().insertContent(text).run();
+          setShowDraft(false);
+        }}
+        onCancel={dismissDraft}
+      />
 
       {/* 하단 상태바 */}
       <div className="flex h-11 shrink-0 items-center gap-3 border-t border-line px-5 text-[12.5px] text-faint">

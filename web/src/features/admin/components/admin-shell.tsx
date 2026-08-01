@@ -1,6 +1,7 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Link, Outlet } from '@tanstack/react-router';
-import { ArrowLeft, BarChart3, UserCheck } from 'lucide-react';
+import { ArrowLeft, BarChart3, CircleAlert, UserCheck } from 'lucide-react';
 
 const NAV = [
   { to: '/admin', label: '계정 승인', icon: UserCheck, exact: true },
@@ -37,6 +38,18 @@ export function AdminShell() {
       </aside>
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-paper">
+        {/* 승인 게이트는 백엔드 미구현 — 승인·거부가 효력 없이 눌리는 오해를 막는다(CONTEXT.md 계정 승인 [미구현]) */}
+        <div className="px-[38px] pt-[26px]">
+          <Alert variant="destructive">
+            <CircleAlert className="size-4" strokeWidth={2} />
+            <AlertTitle>백엔드 미연결 — 목업 화면</AlertTitle>
+            <AlertDescription>
+              계정 승인은 아직 서버에 구현되어 있지 않습니다. 이 화면의 목록·통계는 목업 데이터이고
+              승인·거부는 새로고침하면 사라집니다. 현재 이메일 인증을 마친 계정은 승인 없이 서비스를
+              쓸 수 있습니다.
+            </AlertDescription>
+          </Alert>
+        </div>
         <Outlet />
       </div>
     </div>

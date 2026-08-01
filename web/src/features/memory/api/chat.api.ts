@@ -172,8 +172,13 @@ export async function* streamChatMessage(
 
 /**
  * 작품 채팅 SSE 스트림을 소비하는 공용 훅 — assist.api.ts의 useAssistStream과 동일 모양
- * ({ start, text, isStreaming, error })이다. `start`로 메시지를 보내면 `text`가 토큰
- * 도착마다 점진적으로 채워진다.
+ * ({ start, stop, text, isStreaming, error })이다. `start`로 메시지를 보내면 `text`가
+ * 토큰 도착마다 점진적으로 채워진다.
+ *
+ * `stop`은 중단 시 **반드시** 호출해야 한다. 부르지 않으면 SSE 생성이 끝까지 돌아
+ * 토큰이 계속 탄다(내부 AbortController는 다음 `start()` 때야 abort된다). 서버는 중단을
+ * 감지해 부분 응답을 `finish_reason='cancelled'`로 저장하고 받은 분량을 사용량 한도에
+ * 반영한다(ADR `260801-014029`).
  */
 export function useChatStream() {
   const [text, setText] = useState('');
@@ -203,5 +208,9 @@ export function useChatStream() {
     }
   }, []);
 
-  return { start, text, isStreaming, error };
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  return { start, stop, text, isStreaming, error };
 }

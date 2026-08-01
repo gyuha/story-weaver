@@ -21,6 +21,7 @@ import {
   Search,
   Send,
   Sparkles,
+  Square,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -655,15 +656,28 @@ function ChatTab({ work, chapterId }: { work: Work; chapterId: string }) {
             placeholder="메시지를 입력하세요…"
             className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent text-[13px] leading-[1.5] text-ink outline-none placeholder:text-faintest disabled:opacity-60"
           />
-          <button
-            type="button"
-            onClick={send}
-            disabled={disabled || !input.trim()}
-            aria-label="전송"
-            className="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-30"
-          >
-            <Send className="size-3.5" strokeWidth={2} />
-          </button>
+          {/* 생성 중에는 같은 자리가 중단 버튼이 된다 — 전송은 어차피 쓸 수 없고,
+              중단하지 않으면 SSE 생성이 끝까지 돌아 토큰이 계속 탄다. */}
+          {chatStream.isStreaming ? (
+            <button
+              type="button"
+              onClick={chatStream.stop}
+              aria-label="생성 중단"
+              className="grid size-7 shrink-0 place-items-center rounded-md bg-ink-soft text-white transition-opacity hover:opacity-90"
+            >
+              <Square className="size-3" strokeWidth={2.5} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={send}
+              disabled={!input.trim()}
+              aria-label="전송"
+              className="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-30"
+            >
+              <Send className="size-3.5" strokeWidth={2} />
+            </button>
+          )}
         </div>
       </div>
     </div>

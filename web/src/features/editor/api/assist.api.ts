@@ -187,5 +187,9 @@ export function useAssistStream() {
     []
   );
 
-  return { start, text, isStreaming, error };
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  return { start, stop, text, isStreaming, error };
 }

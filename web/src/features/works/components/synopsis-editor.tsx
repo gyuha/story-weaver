@@ -121,6 +121,7 @@ export function SynopsisEditor({ work }: { work: Work }) {
         {showDraft ? (
           <div className="mt-2">
             <SuggestionPicker
+              title="AI 이어쓰기"
               rawText={continueStream.text}
               isStreaming={continueStream.isStreaming}
               error={continueStream.error}
@@ -133,7 +134,12 @@ export function SynopsisEditor({ work }: { work: Work }) {
                 });
                 setShowDraft(false);
               }}
-              onCancel={() => setShowDraft(false)}
+              onCancel={() => {
+                // 스트림을 먼저 끊는다 — 패널만 닫으면 SSE 생성이 끝까지 돌아 토큰이
+                // 계속 탄다(편집기 이어쓰기의 dismissDraft와 같은 순서).
+                continueStream.stop();
+                setShowDraft(false);
+              }}
             />
           </div>
         ) : (

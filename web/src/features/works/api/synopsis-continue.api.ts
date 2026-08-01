@@ -116,8 +116,11 @@ export async function* streamSynopsisContinue(
 }
 
 /**
- * 기획의도 AI 이어쓰기 SSE 스트림을 소비하는 훅 — useAssistStream/useChatStream과 동일
- * 모양({ start, text, isStreaming, error }).
+ * 기획의도 AI 이어쓰기 SSE 스트림을 소비하는 훅 — useAssistStream과 동일 모양
+ * ({ start, stop, text, isStreaming, error }).
+ *
+ * `stop`은 취소 시 **반드시** 호출해야 한다. 부르지 않으면 패널만 닫히고 SSE 생성은
+ * 끝까지 돌아 토큰이 계속 탄다(내부 AbortController는 다음 `start()` 때야 abort된다).
  */
 export function useSynopsisContinueStream() {
   const [text, setText] = useState('');
@@ -147,5 +150,9 @@ export function useSynopsisContinueStream() {
     }
   }, []);
 
-  return { start, text, isStreaming, error };
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  return { start, stop, text, isStreaming, error };
 }
