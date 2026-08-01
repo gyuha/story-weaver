@@ -168,8 +168,9 @@ describe('WorkTree 드래그 앤 드롭', () => {
 
 describe('WorkTree 새 부/새 화 추가 진행 상태', () => {
   it('새 부 추가 진행 중에는 버튼이 비활성화·스피너로 바뀌고, 재클릭해도 addPart는 1회만 호출된다', async () => {
-    let resolveAddPart: (label: string) => void = () => {};
-    const addPartPromise = new Promise<string>((resolve) => {
+    type AddPartResult = { label: string; chapterId: string };
+    let resolveAddPart: (r: AddPartResult) => void = () => {};
+    const addPartPromise = new Promise<AddPartResult>((resolve) => {
       resolveAddPart = resolve;
     });
     const mockAddPart = vi.fn().mockReturnValue(addPartPromise);
@@ -187,7 +188,7 @@ describe('WorkTree 새 부/새 화 추가 진행 상태', () => {
     fireEvent.click(button);
     expect(mockAddPart).toHaveBeenCalledTimes(1);
 
-    resolveAddPart('제2부');
+    resolveAddPart({ label: '제2부', chapterId: 'ch-of-part2' });
     await waitFor(() => {
       expect(button).not.toBeDisabled();
     });
@@ -234,6 +235,33 @@ describe('WorkTree 새 부/새 화 추가 진행 상태', () => {
     await waitFor(() => {
       expect(firstPartButton).not.toBeDisabled();
     });
+  });
+
+  it('새 부를 추가하면 함께 만들어진 첫 화로 이동한다', async () => {
+    // 새 부는 에피소드와 첫 화를 같이 만든다 — 그 화로 가지 않으면 편집 중이던
+    // 화가 선택된 채로 남는다. 이탈하는 화는 ManuscriptEditor가 자동 저장한다.
+    const mockAddPart = vi.fn().mockResolvedValue({ label: '제3부', chapterId: 'new-part-ch' });
+    useWorksStore.setState({ addPart: mockAddPart });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: '새 부' }));
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: '/works/$workId/write/$chapterId',
+        params: { workId: 'w1', chapterId: 'new-part-ch' },
+      })
+    );
+  });
+
+  it('새 부 추가가 실패하면 이동하지 않는다', async () => {
+    useWorksStore.setState({ addPart: vi.fn().mockRejectedValue(new Error('network error')) });
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: '새 부' }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('새 화를 추가하면 그 화로 이동한다', async () => {

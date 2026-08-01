@@ -151,9 +151,10 @@ describe('addPart', () => {
       orderIndex: 1,
     });
 
-    const label = await useWorksStore.getState().addPart(WORK_ID);
+    const created = await useWorksStore.getState().addPart(WORK_ID);
 
-    expect(label).toBe('제2부');
+    // 부와 함께 만든 첫 화의 id도 돌려준다 — 호출부가 그 화로 이동해야 한다.
+    expect(created).toEqual({ label: '제2부', chapterId: 'ch3' });
     expect(mockCreateEpisode).toHaveBeenCalledWith({
       path: { work_id: WORK_ID },
       body: { title: '제2부', orderIndex: 1 },

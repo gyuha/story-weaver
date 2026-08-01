@@ -65,7 +65,8 @@ interface WorksState {
   /** 지정한 부에 빈 화를 추가하고 새 화 id를 반환 (index = 작품 내 max+1) */
   addChapter: (workId: string, partLabel: string) => Promise<string>;
   /** 새 부(제N부) + 그 안의 첫 화를 함께 생성하고 새 부 라벨을 반환 */
-  addPart: (workId: string) => Promise<string>;
+  /** 새 부와 그 첫 화를 만들고, 부 라벨과 함께 만든 화의 id를 돌려준다. */
+  addPart: (workId: string) => Promise<{ label: string; chapterId: string }>;
   /** 한 부에 속한 모든 화의 partLabel을 일괄 교체 */
   renamePart: (workId: string, oldLabel: string, newLabel: string) => Promise<void>;
   /** 과거 버전의 본문으로 현재 화 본문을 덮어쓰기 (버전 기록 — 현재로 보내기) */
@@ -263,7 +264,7 @@ export const useWorksStore = create<WorksState>()(
       set((state) => {
         state.works.find((w) => w.id === workId)?.chapters.push(chapter);
       });
-      return episode.title;
+      return { label: episode.title, chapterId: chapter.id };
     },
 
     renamePart: async (workId, oldLabel, newLabel) => {

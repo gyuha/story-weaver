@@ -88,9 +88,12 @@ export function WorkTree({ work, activeChapterId }: WorkTreeProps) {
   const handleAddPart = async () => {
     setIsAddingPart(true);
     try {
-      const label = await addPart(work.id);
+      const { label, chapterId } = await addPart(work.id);
       setOpenParts((s) => new Set(s).add(label));
       setEditingPart(label);
+      // 새 부는 첫 화도 함께 만든다 — 그 화로 이동해야 방금 만든 것이 보인다.
+      // 이탈하는 화의 편집분은 ManuscriptEditor의 언마운트 자동 저장이 챙긴다.
+      navigate({ to: '/works/$workId/write/$chapterId', params: { workId: work.id, chapterId } });
     } catch (err) {
       toast.error(apiErrorMessage(err, '부 추가에 실패했습니다'));
     } finally {
