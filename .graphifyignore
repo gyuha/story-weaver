@@ -1,0 +1,46 @@
+# graphify 추출 제외 목록 (.gitignore와 합쳐져 적용된다)
+#
+# 원칙: 사람이 쓴 것만 그래프에 넣는다. 생성물·캐시·아카이브는 노드 수만 부풀리고
+# "이 심볼이 왜 여기 연결됐나"를 흐린다.
+
+# ── 의존성·가상환경·캐시 ─────────────────────────────────────────────
+node_modules/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.pnpm-store/
+
+# ── 빌드 산출물 ──────────────────────────────────────────────────────
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# ── 생성 코드 (CLAUDE.md: 직접 편집 금지 대상) ───────────────────────
+# openapi-ts가 docs/openapi.json에서 생성 — 소스는 백엔드 스키마다.
+web/src/api/
+# @tanstack/router-plugin이 routes/에서 생성.
+web/src/routeTree.gen.ts
+# 생성 SDK의 입력 계약. 사람이 쓰는 문서가 아니라 기계 산출물이다.
+docs/openapi.json
+
+# ── forge 루프 상태 ──────────────────────────────────────────────────
+# done/은 봉인된 작업 아카이브 177개 이상 — 과거 계획·실행 기록이라
+# 현재 코드 구조를 묻는 그래프에 넣으면 노이즈다.
+# 반대로 CONTEXT.md(용어)·adr/(결정)·codebase/(구조 지도)는 남긴다.
+.forge/done/
+.forge/quick/
+.forge/visual/
+.forge/plan.md
+.forge/run.md
+.forge/STATUS.md
+
+# ── graphify 자기 산출물 ─────────────────────────────────────────────
+graphify-out/
+
+# ── 기타 도구 산출물 ─────────────────────────────────────────────────
+.playwright-mcp/
+.gstack/

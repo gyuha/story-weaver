@@ -39,6 +39,22 @@ pnpm generate   # openapi-ts: docs/openapi.json → src/api 타입·SDK 재생�
 
 **화면 확인** — UI 변경의 실제 렌더링·동작을 눈으로 확인해야 할 때는 **playwriter MCP**(`mcp__playwriter_latest__execute`)로 브라우저를 띄워 `http://localhost:3000`을 확인한다. "버튼이 보이는지", "네비게이션이 동작하는지" 등 정적 분석으로 단정할 수 없는 것은 추측하지 말고 playwriter로 직접 확인할 것.
 
+## 코드 그래프 (graphify)
+
+"이 심볼을 누가 호출하나", "A와 B가 어떻게 연결되나"를 grep 대신 그래프로 묻는다. **AST 기반이라 LLM 호출·비용이 없다.**
+
+```bash
+graphify update .                       # 그래프 재생성 (코드 변경 후, 무료)
+graphify query "누가 record_usage를 부르나" --budget 1500
+graphify path "LLMClient" "record_usage"   # 두 노드 사이 최단 경로
+graphify explain "AbstractLLMPort"         # 한 노드와 이웃 설명
+graphify god-nodes                         # 가장 많이 연결된 허브
+```
+
+산출물 `graphify-out/`은 **gitignore된 로컬 전용**이다(`graph.json` 7MB — 저장소의 1MB 대용량 파일 훅 한도를 넘고, 파생물이라 1분이면 재생성된다). 클론 직후엔 없으니 `graphify update .`를 한 번 돌린다. 제외 대상은 `.graphifyignore`가 정한다 — 생성 코드(`web/src/api/`·`routeTree.gen.ts`·`docs/openapi.json`)와 `.forge/done/` 아카이브는 뺀다.
+
+**그래프는 스냅샷이다.** `GRAPH_REPORT.md`의 `Built from commit`을 `git rev-parse HEAD`와 비교해 stale 여부를 확인하고, 낡았으면 결과를 믿기 전에 `graphify update .`를 먼저 돌린다.
+
 ## web — 아키텍처
 
 React 19 + Vite 6 + TypeScript(strict). 상태/데이터는 **TanStack Query**(서버), **Zustand + immer**(클라이언트), 라우팅은 **TanStack Router**(파일 기반), 스타일은 **Tailwind v4**, 린트·포맷은 **Biome**.
