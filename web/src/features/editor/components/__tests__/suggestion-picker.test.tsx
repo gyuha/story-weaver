@@ -134,12 +134,29 @@ describe('SuggestionPicker', () => {
 });
 
 describe('ContinueSuggestionModal', () => {
+  it('헤더에 호출부가 준 액션 이름을 쓴다 — 선택 영역 액션도 이 모달을 공유한다', () => {
+    render(
+      <ContinueSuggestionModal
+        open={true}
+        title="AI 다시쓰기"
+        rawText=""
+        isStreaming={true}
+        error={null}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText('AI 다시쓰기')).toBeInTheDocument();
+    expect(screen.queryByText('AI 이어쓰기')).not.toBeInTheDocument();
+  });
+
   it('열린 동안 바깥 영역은 접근성 트리에서 숨겨져 상호작용할 수 없다', () => {
     render(
       <div>
         <button type="button">편집 영역 버튼</button>
         <ContinueSuggestionModal
           open={true}
+          title="AI 이어쓰기"
           rawText=""
           isStreaming={true}
           error={null}
@@ -161,6 +178,7 @@ describe('ContinueSuggestionModal', () => {
         <button type="button">편집 영역 버튼</button>
         <ContinueSuggestionModal
           open={false}
+          title="AI 이어쓰기"
           rawText=""
           isStreaming={true}
           error={null}
@@ -177,6 +195,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText="1. 가는 중"
         isStreaming={true}
         error={null}
@@ -193,6 +212,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText={'{"text":"가"}\n{"text":"나"}\n{"text":"자라는 중'}
         isStreaming={true}
         error={null}
@@ -212,6 +232,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText={'{"text":"가"}\n{"text":"나"}\n{"text":"다"}'}
         isStreaming={false}
         error={null}
@@ -228,6 +249,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText={'가나다\n라마바'}
         isStreaming={false}
         error={null}
@@ -244,6 +266,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText={'1. 가\n2. 나'}
         isStreaming={false}
         error={null}
@@ -262,6 +285,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText=""
         isStreaming={true}
         error={null}
@@ -280,6 +304,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText=""
         isStreaming={true}
         error={null}
@@ -300,6 +325,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText=""
         isStreaming={true}
         error={null}
@@ -319,6 +345,7 @@ describe('ContinueSuggestionModal', () => {
     render(
       <ContinueSuggestionModal
         open={true}
+        title="AI 이어쓰기"
         rawText=""
         isStreaming={false}
         error={new Error('LLM provider error')}
@@ -360,6 +387,7 @@ function ContinueHarness() {
       </button>
       <ContinueSuggestionModal
         open={open}
+        title="AI 이어쓰기"
         rawText="[이어진문장]"
         isStreaming={false}
         error={null}

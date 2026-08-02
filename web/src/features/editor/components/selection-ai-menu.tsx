@@ -1,5 +1,5 @@
 import { useAssistStream } from '@/features/editor/api/assist.api';
-import { SuggestionPicker } from '@/features/editor/components/suggestion-picker';
+import { ContinueSuggestionModal } from '@/features/editor/components/suggestion-picker';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useState } from 'react';
@@ -24,16 +24,14 @@ const SHORTEN_STYLE = '같은 의미를 유지하며 더 간결하고 축약된 
 const TONE_STYLE = '더 정중하고 격식 있는 문어체로 바꿔줘';
 
 interface Preview {
-  /** 팝오버 헤더 — 누른 액션을 가리킨다("AI 다시쓰기" 등). */
+  /** 모달 헤더 — 누른 액션을 가리킨다("AI 다시쓰기" 등). */
   title: string;
   prefix: string;
   from: number;
   to: number;
-  top: number;
-  left: number;
 }
 
-/** 본문 선택 시 뜨는 AI 액션 버블 메뉴 + 스트리밍 미리보기 팝오버. */
+/** 본문 선택 시 뜨는 AI 액션 버블 메뉴 + 후보 선택 모달. */
 export function SelectionAiMenu({
   editor,
   workId,
@@ -52,14 +50,11 @@ export function SelectionAiMenu({
     const { from, to } = editor.state.selection;
     const text = editor.state.doc.textBetween(from, to, ' ').trim();
     if (!text) return;
-    const coords = editor.view.coordsAtPos(to);
     setPreview({
       title: `AI ${action.label}`,
       prefix: action.key === 'expand' ? `${text} ` : '',
       from,
       to,
-      top: coords.bottom + 6,
-      left: Math.min(coords.left, window.innerWidth - 320),
     });
 
     if (action.key === 'expand') {
@@ -89,30 +84,30 @@ export function SelectionAiMenu({
         ))}
       </BubbleMenu>
 
-      {preview && (
-        <div className="fixed z-50 w-[300px]" style={{ top: preview.top, left: preview.left }}>
-          <SuggestionPicker
-            title={preview.title}
-            rawText={assist.text}
-            isStreaming={assist.isStreaming}
-            error={assist.error}
-            onApply={(text) => {
-              // 적용 시점에도 스트리밍 중일 수 있다 — 남은 후보 생성을 끊는다.
-              assist.stop();
-              editor
-                .chain()
-                .focus()
-                .insertContentAt({ from: preview.from, to: preview.to }, preview.prefix + text)
-                .run();
-              setPreview(null);
-            }}
-            onCancel={() => {
-              assist.stop();
-              setPreview(null);
-            }}
-          />
-        </div>
-      )}
+      {/* 이어쓰기와 같은 모달을 쓴다. 예전엔 선택 영역 아래 팝오버로 띄웠는데,
+          화면 하단에서 잘려 후보를 고를 수 없고 본문 위에 떠 있어 편집도 방해했다. */}
+      <ContinueSuggestionModal
+        open={preview !== null}
+        title={preview?.title ?? ''}
+        rawText={assist.text}
+        isStreaming={assist.isStreaming}
+        error={assist.error}
+        onApply={(text) => {
+          if (!preview) return;
+          // 적용 시점에도 스트리밍 중일 수 있다 — 남은 후보 생성을 끊는다.
+          assist.stop();
+          editor
+            .chain()
+            .focus()
+            .insertContentAt({ from: preview.from, to: preview.to }, preview.prefix + text)
+            .run();
+          setPreview(null);
+        }}
+        onCancel={() => {
+          assist.stop();
+          setPreview(null);
+        }}
+      />
     </>
   );
 }

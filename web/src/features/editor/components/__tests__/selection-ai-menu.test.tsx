@@ -105,6 +105,43 @@ describe('SelectionAiMenu 액션 → 태스크 매핑', () => {
   });
 });
 
+describe('SelectionAiMenu 모달 표시', () => {
+  // 구 동작(선택 영역 아래 띄우는 팝오버)을 대체한다 — 화면 하단에서 잘려 후보를
+  // 고를 수 없고, 팝오버가 본문 위에 떠 있어 편집도 방해했다. 이어쓰기와 같은 모달로 통일.
+
+  it('액션을 누르면 모달로 열리고 헤더가 누른 액션을 가리킨다', async () => {
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '톤 변경' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('AI 톤 변경')).toBeInTheDocument();
+  });
+
+  it('선택 좌표를 계산하지 않는다 — 모달은 화면 중앙에 뜨므로 위치가 필요 없다', async () => {
+    const coordsSpy = vi.fn(() => ({ top: 10, bottom: 20, left: 30 }));
+    const editorWithSpy = { ...fakeEditor, view: { coordsAtPos: coordsSpy } };
+    render(<SelectionAiMenu editor={editorWithSpy} workId="w1" chapterId="ch1" />);
+
+    await userEvent.click(screen.getByRole('button', { name: '다시쓰기' }));
+
+    // 좌표 기반 배치가 하단 잘림의 원인이었다.
+    expect(coordsSpy).not.toHaveBeenCalled();
+  });
+
+  it('취소하면 모달이 닫히고 스트림도 중단한다', async () => {
+    render(<SelectionAiMenu editor={fakeEditor} workId="w1" chapterId="ch1" />);
+    await userEvent.click(screen.getByRole('button', { name: '줄이기' }));
+    act(() => setMockAssistState({ isStreaming: true, text: '일부' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    expect(stopSpy).toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
 describe('SelectionAiMenu 스트리밍 미리보기', () => {
   // 구 동작(원문 blob을 그대로 흘리기)을 대체 — 이어쓰기 모달과 연출을 통일했다.
   // 스트리밍 중엔 원문이 보이지 않고 스켈레톤만 있어야 한다.

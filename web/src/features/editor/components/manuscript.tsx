@@ -440,6 +440,7 @@ export function ManuscriptEditor({
 
       <ContinueSuggestionModal
         open={showDraft}
+        title="AI 이어쓰기"
         rawText={assist.text}
         isStreaming={assist.isStreaming}
         error={assist.error}
