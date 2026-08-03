@@ -49,6 +49,38 @@ export function TimelineScreen({ work }: { work: Work }) {
               );
             })}
 
+            {/* 화별 요약 — 경고(충돌) → 흐름(요약) → 세부(타임라인 상태) 순서.
+                요약이 없는 화도 함께 보여 빈 곳이 드러나게 한다. */}
+            <div className="mt-6 mb-[11px] text-[13px] font-semibold text-muted-ink">화별 요약</div>
+            {work.chapters.length === 0 ? (
+              <div className="rounded-[9px] border border-line px-4 py-[18px] text-[13px] text-faint">
+                아직 화가 없습니다. 집필 화면에서 화를 만들고 `요약`을 눌러 보세요.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-[9px] border border-line">
+                {work.chapters.map((c) => (
+                  <div
+                    key={c.id}
+                    className="border-b border-[#f1f1ef] px-4 py-[13px] last:border-b-0"
+                  >
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-[13px] font-medium text-ink">
+                        {c.index}화 · {c.title}
+                      </span>
+                      {!c.summary && (
+                        <span className="rounded bg-[#f1f1ef] px-1.5 py-[3px] text-[10.5px] font-medium text-faint">
+                          요약 없음
+                        </span>
+                      )}
+                    </div>
+                    {c.summary && (
+                      <div className="text-[13px] leading-[1.7] text-ink-soft">{c.summary}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-6 mb-[11px] text-[13px] font-semibold text-muted-ink">
               최근 타임라인 상태 기록
             </div>

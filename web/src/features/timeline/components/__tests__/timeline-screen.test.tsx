@@ -90,3 +90,83 @@ describe('TimelineScreen 충돌 표시', () => {
     expect(mockList).not.toHaveBeenCalled();
   });
 });
+
+describe('TimelineScreen 화별 요약', () => {
+  const chapter = (over: Partial<Work['chapters'][number]>): Work['chapters'][number] => ({
+    id: 'ch1',
+    episodeId: 'ep1',
+    partLabel: '제1부',
+    index: 1,
+    title: '1화',
+    status: 'draft',
+    paragraphs: [],
+    linkedEntityIds: [],
+    vectorMemory: [],
+    ...over,
+  });
+
+  it('화를 순서대로 보여주고 요약이 있으면 본문을 렌더한다 (task #68 S3)', () => {
+    useWorksStore.setState({
+      works: [
+        {
+          ...structuredClone(WORK),
+          chapters: [
+            chapter({ id: 'c1', index: 1, title: '회귀의 시작', summary: '주인공이 회귀했다.' }),
+            chapter({ id: 'c2', index: 2, title: '거울', summary: '거울에서 눈을 보았다.' }),
+          ],
+        },
+      ],
+    });
+    render(<Harness />);
+
+    expect(screen.getByText('화별 요약')).toBeInTheDocument();
+    expect(screen.getByText('주인공이 회귀했다.')).toBeInTheDocument();
+    expect(screen.getByText('거울에서 눈을 보았다.')).toBeInTheDocument();
+
+    const labels = screen.getAllByText(/^\d화 · /).map((el) => el.textContent);
+    expect(labels).toEqual(['1화 · 회귀의 시작', '2화 · 거울']);
+  });
+
+  it('요약이 없는 화는 없음을 드러낸다 — 빈 곳이 보이는 것이 한눈에 보기의 절반이다', () => {
+    useWorksStore.setState({
+      works: [
+        {
+          ...structuredClone(WORK),
+          chapters: [
+            chapter({ id: 'c1', index: 1, title: '회귀의 시작', summary: '주인공이 회귀했다.' }),
+            chapter({ id: 'c2', index: 2, title: '추적' }),
+          ],
+        },
+      ],
+    });
+    render(<Harness />);
+
+    expect(screen.getByText('요약 없음')).toBeInTheDocument();
+  });
+
+  it('화가 없으면 빈 안내를 보여주고 깨지지 않는다', () => {
+    render(<Harness />); // WORK.chapters = []
+    expect(screen.getByText('화별 요약')).toBeInTheDocument();
+    expect(screen.getByText(/아직 화가 없습니다/)).toBeInTheDocument();
+  });
+
+  it('요약 섹션은 충돌 뒤, 타임라인 상태 기록 앞에 온다 (배치 결정)', () => {
+    useWorksStore.setState({
+      works: [
+        {
+          ...structuredClone(WORK),
+          chapters: [chapter({ id: 'c1', summary: '요약 본문' })],
+        },
+      ],
+    });
+    render(<Harness />);
+
+    const html = document.body.innerHTML;
+    const conflictAt = html.indexOf('설정 충돌 후보');
+    const summaryAt = html.indexOf('화별 요약');
+    const statesAt = html.indexOf('최근 타임라인 상태 기록');
+    expect(conflictAt).toBeGreaterThanOrEqual(0);
+    expect(summaryAt).toBeGreaterThan(conflictAt);
+    expect(statesAt).toBeGreaterThan(summaryAt);
+  });
+});

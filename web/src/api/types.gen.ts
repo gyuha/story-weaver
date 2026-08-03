@@ -134,6 +134,10 @@ export type ChapterResponse = {
      * Body
      */
     body: string;
+    /**
+     * Summary
+     */
+    summary?: string | null;
 };
 
 /**
@@ -154,6 +158,10 @@ export type ChapterUpdate = {
      * Body
      */
     body?: string | null;
+    /**
+     * Summary
+     */
+    summary?: string | null;
 };
 
 /**
@@ -1015,6 +1023,18 @@ export type SuggestionKind = 'new_entity' | 'attribute_change' | 'timeline_state
  * 제안 검토 상태.
  */
 export type SuggestionStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * SummaryRequest
+ *
+ * 화 요약 입력 — 화 본문 전체(DB 미저장 draft를 반영하려 바디로 받는다).
+ */
+export type SummaryRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
 
 /**
  * SynopsisContinueRequest
@@ -3413,6 +3433,38 @@ export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors = {
 export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleErrors];
 
 export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistTitleResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryData = {
+    body: SummaryRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/summary';
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors];
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryResponses = {
     /**
      * Successful Response
      */

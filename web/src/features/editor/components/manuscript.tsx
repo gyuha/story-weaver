@@ -54,12 +54,14 @@ export function ManuscriptEditor({
   const [showHistory, setShowHistory] = useState(false);
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [generatingTitle, setGeneratingTitle] = useState(false);
   const prevStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreChapterVersion = useWorksStore((s) => s.restoreChapterVersion);
   const setChapterParagraphs = useWorksStore((s) => s.setChapterParagraphs);
+  const saveChapterSummary = useWorksStore((s) => s.saveChapterSummary);
   const extractChapterUpdates = useWorksStore((s) => s.extractChapterUpdates);
 
   const initialContent = chapter.paragraphs.length
@@ -135,6 +137,20 @@ export function ManuscriptEditor({
   const dismissDraft = () => {
     assist.stop();
     setShowDraft(false);
+  };
+
+  // 현재 화 본문을 근거로 "무슨 일이 일어났는가" 요약을 생성한다. 모달에서 보고 적용해야
+  // 저장된다 — 요약은 덮어쓰기라 버튼 한 번에 기존 요약이 날아가면 되돌릴 수 없다.
+  const generateSummary = () => {
+    if (!editor) return;
+    const text = editor.getText({ blockSeparator: '\n' });
+    if (!text.trim()) {
+      toast.error('요약할 본문이 없습니다. 몇 문장을 먼저 써 주세요.');
+      return;
+    }
+    setShowDraft(false); // 이어쓰기와 같은 스트림을 쓰므로 그 모달을 먼저 닫는다
+    setShowSummary(true);
+    assist.start('summary', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
 
   // 현재 화 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
@@ -313,11 +329,7 @@ export function ManuscriptEditor({
           {/* 액션 칩 + 품질 티어 */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <ActionChip icon={Save} label="저장" onClick={saveChapter} />
-            <ActionChip
-              icon={ClipboardList}
-              label="요약"
-              onClick={() => toast('요약 생성 (목업)')}
-            />
+            <ActionChip icon={ClipboardList} label="요약" onClick={generateSummary} />
             <ActionChip
               icon={ImageIcon}
               label="장면 이미지"
@@ -450,6 +462,25 @@ export function ManuscriptEditor({
           setShowDraft(false);
         }}
         onCancel={dismissDraft}
+      />
+
+      <ContinueSuggestionModal
+        open={showSummary}
+        title="AI 요약"
+        rawText={assist.text}
+        isStreaming={assist.isStreaming}
+        error={assist.error}
+        onApply={(text) => {
+          assist.stop();
+          setShowSummary(false);
+          saveChapterSummary(work.id, chapter.id, text)
+            .then(() => toast.success('요약을 저장했습니다'))
+            .catch((err) => toast.error(apiErrorMessage(err, '요약을 저장하지 못했습니다')));
+        }}
+        onCancel={() => {
+          assist.stop();
+          setShowSummary(false);
+        }}
       />
 
       {/* 하단 상태바 */}

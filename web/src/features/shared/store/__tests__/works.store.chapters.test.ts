@@ -102,6 +102,30 @@ describe('renameChapter', () => {
   });
 });
 
+describe('saveChapterSummary', () => {
+  it('요약만 PATCH하고 성공 시 스토어에 반영한다 (task #68 S2)', async () => {
+    mockUpdateChapter.mockResolvedValue({ id: 'ch1', workId: WORK_ID, episodeId: 'ep1' });
+
+    await useWorksStore.getState().saveChapterSummary(WORK_ID, 'ch1', '주인공이 돌아왔다.');
+
+    // body를 함께 보내면 백엔드가 본문을 재임베딩한다(task #67 S2) — 요약만 보낸다.
+    expect(mockUpdateChapter).toHaveBeenCalledWith({
+      path: { work_id: WORK_ID, episode_id: 'ep1', chapter_id: 'ch1' },
+      body: { summary: '주인공이 돌아왔다.' },
+    });
+    expect(useWorksStore.getState().works[0].chapters[0].summary).toBe('주인공이 돌아왔다.');
+  });
+
+  it('실패 시 스토어를 바꾸지 않고 에러를 던진다', async () => {
+    mockUpdateChapter.mockRejectedValue(new Error('network error'));
+
+    await expect(
+      useWorksStore.getState().saveChapterSummary(WORK_ID, 'ch1', '요약')
+    ).rejects.toThrow();
+    expect(useWorksStore.getState().works[0].chapters[0].summary).toBeUndefined();
+  });
+});
+
 describe('addChapter', () => {
   it('실 API로 화를 생성하고 성공 시 스토어에 추가한다', async () => {
     mockCreateChapter.mockResolvedValue({

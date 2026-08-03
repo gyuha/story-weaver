@@ -36,6 +36,11 @@ export interface Chapter {
   index: number; // 화 번호
   title: string;
   status: ChapterStatus;
+  /**
+   * 화별 줄거리 요약 — "이 화에서 무슨 일이 일어났는가" 서술. `검토 · 타임라인`
+   * 화면이 화 순서대로 모아 보여준다. 아직 요약하지 않은 화는 `undefined`.
+   */
+  summary?: string;
   /** 원고 본문 문단 */
   paragraphs: Paragraph[];
   /** 명시적으로 연결된 엔티티 — 메모리 1차 근거 */

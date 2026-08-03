@@ -4,6 +4,7 @@ import type {
   DialogueRequest,
   InfillRequest,
   StyleRequest,
+  SummaryRequest,
   TitleRequest,
 } from '@/api';
 import { getAccessToken, useAuthStore } from '@/features/auth/store/auth.store';
@@ -17,7 +18,14 @@ import { refreshAccessToken } from '@/lib/api-interceptors';
 // `data: [DONE]\r\n\r\n`, 실패 시 `event: error\r\ndata: <message>\r\n\r\n`.
 import { useCallback, useRef, useState } from 'react';
 
-export type AssistTaskType = 'continue' | 'infill' | 'dialogue' | 'style' | 'correct' | 'title';
+export type AssistTaskType =
+  | 'continue'
+  | 'infill'
+  | 'dialogue'
+  | 'style'
+  | 'correct'
+  | 'title'
+  | 'summary';
 
 type AssistPayloadMap = {
   continue: ContinueRequest;
@@ -26,6 +34,7 @@ type AssistPayloadMap = {
   style: StyleRequest;
   correct: CorrectRequest;
   title: TitleRequest;
+  summary: SummaryRequest;
 };
 
 export type AssistPayload<T extends AssistTaskType> = AssistPayloadMap[T];

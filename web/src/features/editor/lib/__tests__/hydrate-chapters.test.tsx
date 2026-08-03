@@ -92,6 +92,46 @@ describe('fetchWorkChapters', () => {
     });
   });
 
+  it('서버가 준 화 요약을 Chapter.summary로 옮긴다 (task #68 S1)', async () => {
+    mockEpisodes.mockResolvedValue([{ id: 'ep1', workId: WORK_ID, title: '제1부', orderIndex: 0 }]);
+    mockChapters.mockResolvedValue([
+      {
+        id: 'ch1',
+        workId: WORK_ID,
+        episodeId: 'ep1',
+        title: '1화',
+        orderIndex: 1,
+        globalSeq: 1,
+        body: '본문',
+        summary: '주인공이 10년 전으로 돌아왔다.',
+      },
+    ]);
+
+    const chapters = await fetchWorkChapters(WORK_ID);
+
+    expect(chapters[0].summary).toBe('주인공이 10년 전으로 돌아왔다.');
+  });
+
+  it('요약이 없는 화도 깨지지 않는다 — 아직 요약하지 않은 화는 NULL이다 (task #68 S1)', async () => {
+    mockEpisodes.mockResolvedValue([{ id: 'ep1', workId: WORK_ID, title: '제1부', orderIndex: 0 }]);
+    mockChapters.mockResolvedValue([
+      {
+        id: 'ch1',
+        workId: WORK_ID,
+        episodeId: 'ep1',
+        title: '1화',
+        orderIndex: 1,
+        globalSeq: 1,
+        body: '본문',
+        summary: null,
+      },
+    ]);
+
+    const chapters = await fetchWorkChapters(WORK_ID);
+
+    expect(chapters[0].summary).toBeUndefined();
+  });
+
   it('order_index가 0-based이거나 섞여 있어도 부 내 1-based 순번으로 표시한다(0화 방지)', async () => {
     mockEpisodes.mockResolvedValue([{ id: 'ep1', workId: WORK_ID, title: '제1부', orderIndex: 0 }]);
     // 재정렬을 거쳐 0-based로 섞인 order_index(2,0,1) — 그대로 쓰면 "0화"가 나온다.

@@ -30,12 +30,14 @@ vi.mock('@/features/editor/api/manuscript.api', () => ({
 
 const mockSetChapterParagraphs = vi.fn();
 const mockRenameChapter = vi.fn();
+const mockSaveChapterSummary = vi.fn();
 const mockRestoreChapterVersion = vi.fn();
 const mockExtractChapterUpdates = vi.fn();
 vi.mock('@/features/shared/store/works.store', () => ({
   useWorksStore: (
     selector: (s: {
       renameChapter: typeof mockRenameChapter;
+      saveChapterSummary: typeof mockSaveChapterSummary;
       restoreChapterVersion: typeof mockRestoreChapterVersion;
       setChapterParagraphs: typeof mockSetChapterParagraphs;
       extractChapterUpdates: typeof mockExtractChapterUpdates;
@@ -43,6 +45,7 @@ vi.mock('@/features/shared/store/works.store', () => ({
   ) =>
     selector({
       renameChapter: mockRenameChapter,
+      saveChapterSummary: mockSaveChapterSummary,
       restoreChapterVersion: mockRestoreChapterVersion,
       setChapterParagraphs: mockSetChapterParagraphs,
       extractChapterUpdates: mockExtractChapterUpdates,
@@ -176,6 +179,7 @@ beforeEach(() => {
   mockTextBetween.mockReturnValue('원래 문단');
   mockExtractChapterUpdates.mockResolvedValue(undefined);
   mockRenameChapter.mockResolvedValue(undefined);
+  mockSaveChapterSummary.mockResolvedValue(undefined);
   setMockAssistState = () => {};
 });
 
@@ -525,5 +529,58 @@ describe('ManuscriptEditor AI 제목 생성', () => {
     await userEvent.click(screen.getByRole('button', { name: 'AI 제목 생성' }));
 
     expect(screen.getByRole('button', { name: 'AI 제목 생성' })).toBeDisabled();
+  });
+});
+
+describe('ManuscriptEditor 화 요약', () => {
+  it('요약 클릭 시 summary 태스크로 현재 본문을 보내고 모달을 연다 (task #68 S2)', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    expect(startSpy).toHaveBeenCalledWith('summary', {
+      workId: 'w1',
+      chapterId: 'ch1',
+      payload: { text: '그는 10년 전으로 돌아왔다.' },
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('AI 요약')).toBeInTheDocument();
+  });
+
+  it('적용을 누르면 요약만 저장한다 — 본문은 보내지 않는다 (task #68 S2)', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    act(() => setMockAssistState({ isStreaming: false, text: '주인공이 회귀했다.' }));
+    await userEvent.click(screen.getByRole('button', { name: '적용' }));
+
+    expect(mockSaveChapterSummary).toHaveBeenCalledWith('w1', 'ch1', '주인공이 회귀했다.');
+    expect(mockUpdateChapter).not.toHaveBeenCalled();
+  });
+
+  it('취소하면 저장하지 않고 스트림을 끊는다 (task #68 S2)', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+    act(() => setMockAssistState({ isStreaming: true, text: '주인공이' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    expect(stopSpy).toHaveBeenCalled();
+    expect(mockSaveChapterSummary).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('본문이 비어 있으면 요약을 생성하지 않고 안내한다 (task #68 S2)', async () => {
+    mockGetText.mockReturnValue('   ');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

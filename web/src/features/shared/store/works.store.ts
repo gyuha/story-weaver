@@ -60,11 +60,12 @@ interface WorksState {
   acceptInlineSuggestion: (workId: string, chapterId: string) => void;
   dismissConflict: (workId: string, conflictId: string) => void;
   renameChapter: (workId: string, chapterId: string, title: string) => Promise<void>;
+  /** 화 요약을 저장한다 — 요약만 PATCH한다(본문을 함께 보내면 서버가 재임베딩한다). */
+  saveChapterSummary: (workId: string, chapterId: string, summary: string) => Promise<void>;
   /** 작품 제목을 실 API로 수정 — 시놉시스 화면의 인라인 편집용 */
   renameWork: (workId: string, title: string) => Promise<void>;
   /** 지정한 부에 빈 화를 추가하고 새 화 id를 반환 (index = 작품 내 max+1) */
   addChapter: (workId: string, partLabel: string) => Promise<string>;
-  /** 새 부(제N부) + 그 안의 첫 화를 함께 생성하고 새 부 라벨을 반환 */
   /** 새 부와 그 첫 화를 만들고, 부 라벨과 함께 만든 화의 id를 돌려준다. */
   addPart: (workId: string) => Promise<{ label: string; chapterId: string }>;
   /** 한 부에 속한 모든 화의 partLabel을 일괄 교체 */
@@ -224,6 +225,24 @@ export const useWorksStore = create<WorksState>()(
           .find((w) => w.id === workId)
           ?.chapters.find((c) => c.id === chapterId);
         if (c) c.title = title;
+      });
+    },
+
+    saveChapterSummary: async (workId, chapterId, summary) => {
+      const chapter = get()
+        .works.find((w) => w.id === workId)
+        ?.chapters.find((c) => c.id === chapterId);
+      if (!chapter) return;
+      // body는 싣지 않는다 — 서버가 본문 변경으로 보고 화 전체를 재임베딩한다(task #67 S2).
+      await manuscriptApi.updateChapter({
+        path: { work_id: workId, episode_id: chapter.episodeId, chapter_id: chapterId },
+        body: { summary },
+      });
+      set((state) => {
+        const c = state.works
+          .find((w) => w.id === workId)
+          ?.chapters.find((c) => c.id === chapterId);
+        if (c) c.summary = summary;
       });
     },
 

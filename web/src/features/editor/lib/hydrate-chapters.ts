@@ -34,6 +34,8 @@ async function hydrateChapter(
     partLabel,
     index,
     title: chapter.title,
+    // 서버는 요약이 없으면 null을 준다 — 웹 모양은 optional이라 undefined로 맞춘다.
+    summary: chapter.summary ?? undefined,
     // eco: 'done' 상태는 백엔드에 대응 필드가 없음 — 본문 유무로만 draft/empty를 구분
     status: paragraphs.length ? 'draft' : 'empty',
     paragraphs,

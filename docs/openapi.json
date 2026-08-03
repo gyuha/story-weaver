@@ -3430,6 +3430,73 @@
         }
       }
     },
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/summary": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "화 요약 생성 (SSE)",
+        "description": "화 본문을 근거로 \"무슨 일이 일어났는가\" 요약을 스트리밍한다 (task #67).\n\n저장은 하지 않는다 — 클라이언트가 결과를 보고 `PATCH chapters/{id}`의 `summary`로\n확정한다(ADR-0012의 assist 관례: 생성은 assist, 저장은 소유 도메인).",
+        "operationId": "assist_summary_api_v1_works__work_id__chapters__chapter_id__assist_summary_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates": {
       "post": {
         "tags": [
@@ -3960,6 +4027,17 @@
           "body": {
             "type": "string",
             "title": "Body"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "type": "object",
@@ -4012,6 +4090,17 @@
               }
             ],
             "title": "Body"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "type": "object",
@@ -5279,6 +5368,20 @@
         ],
         "title": "SuggestionStatus",
         "description": "제안 검토 상태."
+      },
+      "SummaryRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SummaryRequest",
+        "description": "화 요약 입력 — 화 본문 전체(DB 미저장 draft를 반영하려 바디로 받는다)."
       },
       "SynopsisContinueRequest": {
         "properties": {
