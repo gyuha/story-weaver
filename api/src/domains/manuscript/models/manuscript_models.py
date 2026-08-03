@@ -82,6 +82,11 @@ class Chapter(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False, default="")
     global_seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: 화별 줄거리 요약 — "이 화에서 무슨 일이 일어났는가" 서술. `검토 · 타임라인`
+    #: 화면이 화 순서대로 모아 보여준다. 아직 요약하지 않은 화는 NULL이다.
+    #: 엔티티 카드의 `entities.summary`(한 줄, 임베딩 대상)와 이름만 같고 다른 개념 —
+    #: 이쪽은 임베딩하지 않는다.
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Chapter id={self.id!r} title={self.title!r}>"

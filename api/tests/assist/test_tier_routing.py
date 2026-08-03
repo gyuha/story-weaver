@@ -140,3 +140,15 @@ def test_get_fast_writing_client_sends_no_provider_specific_params() -> None:
         _, kwargs = mock_chat_litellm.call_args
         assert "thinking" not in str(kwargs)
         assert kwargs.get("model_kwargs") in (None, {})
+
+
+def test_summary_task_exists_and_is_low_cost() -> None:
+    """화 요약은 7번째 assist 태스크다 (task #67 S3).
+
+    티어 표는 `title_`과 같은 `low_cost` — 짧은 서술 생성이라 깊은 추론보다 응답
+    속도가 중요하다. (현재 assist 라우터는 모든 태스크가 `get_fast_writing_client`를
+    쓰므로 이 값은 아직 실제 라우팅에 영향을 주지 않는다 — 표의 의도만 맞춰 둔다.)
+    """
+    assert TaskType.summary.value == "summary"
+    assert TASK_TIER[TaskType.summary] is Tier.low_cost
+    assert len(TaskType) == 7

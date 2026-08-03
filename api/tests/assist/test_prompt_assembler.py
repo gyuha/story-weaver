@@ -226,7 +226,14 @@ def test_continue_prompt_pins_jsonl_candidate_format() -> None:
 
 @pytest.mark.parametrize(
     "task_type",
-    [TaskType.infill, TaskType.dialogue, TaskType.style, TaskType.correct, TaskType.title_],
+    [
+        TaskType.infill,
+        TaskType.dialogue,
+        TaskType.style,
+        TaskType.correct,
+        TaskType.title_,
+        TaskType.summary,
+    ],
 )
 def test_jsonl_format_instruction_does_not_leak_to_other_tasks(task_type: TaskType) -> None:
     """다른 태스크는 단일 본문 반환이다 — JSONL 지시가 새면 출력이 JSON으로 오염된다."""

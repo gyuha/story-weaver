@@ -88,6 +88,7 @@ def _to_chapter_response(chapter: Chapter) -> ChapterResponse:
         order_index=chapter.order_index,
         global_seq=chapter.global_seq,
         body=chapter.body,
+        summary=chapter.summary,
     )
 
 

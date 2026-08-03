@@ -32,6 +32,7 @@ from domains.assist.router.assist_router import (
     _dialogue_llm_client,
     _infill_llm_client,
     _style_llm_client,
+    _summary_llm_client,
     _title_llm_client,
 )
 from domains.auth.models import User
@@ -620,3 +621,59 @@ async def test_continue_real_llm_returns_nonempty_text(
     assert resp.status_code == 200
     chunks = [c for c in _sse_data_lines(resp.text) if c != "[DONE]"]
     assert "".join(chunks).strip() != ""
+
+
+async def test_assist_summary_streams_and_skips_memory_search(
+    app: FastAPI,
+    owner_work: Work,
+    two_users: tuple[User, User],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """화 요약은 SSE로 흐르고, 전체 메모리 검색은 하지 않는다 (task #67 S3).
+
+    요약의 근거는 전달된 본문 자체다 — 메모리를 주입할 이유가 없다(eco 최소 주입).
+    """
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work.id)
+
+    def _must_not_be_called(self: MemorySearchService, *args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("요약 작업은 전체 메모리 검색을 호출하면 안 된다")
+
+    monkeypatch.setattr(MemorySearchService, "search", _must_not_be_called)
+
+    fake = _FakeLLMClient(["주인공이 10년 전으로 돌아왔다. 거울에서 낯선 눈을 보았다."])
+    app.dependency_overrides[_summary_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/summary",
+            json={"text": "그는 10년 전으로 돌아왔다. 거울 속에서 낯선 눈이 그를 보았다."},
+        )
+
+    assert resp.status_code == 200
+    assert _sse_data_lines(resp.text) == [
+        "주인공이 10년 전으로 돌아왔다. 거울에서 낯선 눈을 보았다.",
+        "[DONE]",
+    ]
+
+    system_text = str(fake.received_messages[0].content)
+    human_text = str(fake.received_messages[1].content)
+    assert "요약" in system_text
+    assert "2~3문장" in system_text
+    assert '{"text"' not in system_text, "단일 본문 태스크에 JSONL 계약이 새면 안 된다"
+    assert human_text == "그는 10년 전으로 돌아왔다. 거울 속에서 낯선 눈이 그를 보았다."
+
+
+async def test_assist_summary_rejects_blank_text(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    """빈 본문은 422로 막는다 — 제공사 400을 수위 거절로 오인하지 않도록 (title과 같은 가드)."""
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work.id)
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/summary",
+            json={"text": "   "},
+        )
+    assert resp.status_code == 422

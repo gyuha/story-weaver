@@ -82,6 +82,7 @@ class ChapterUpdate(_CamelModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     order_index: int | None = Field(default=None, ge=0)
     body: str | None = None
+    summary: str | None = None
 
 
 class ChapterResponse(_CamelModel):
@@ -94,3 +95,4 @@ class ChapterResponse(_CamelModel):
     order_index: int
     global_seq: int
     body: str
+    summary: str | None = None

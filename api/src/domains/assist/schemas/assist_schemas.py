@@ -64,7 +64,20 @@ class TitleInput:
     text: str
 
 
+@dataclass(frozen=True, slots=True)
+class SummaryInput:
+    """화 요약: 화 본문 전체."""
+
+    text: str
+
+
 #: assemble_prompt의 task_input 파라미터가 받는 작업별 입력 타입의 합집합.
 AssistTaskInput = (
-    ContinueInput | InfillInput | DialogueInput | StyleInput | CorrectInput | TitleInput
+    SummaryInput
+    | ContinueInput
+    | InfillInput
+    | DialogueInput
+    | StyleInput
+    | CorrectInput
+    | TitleInput
 )

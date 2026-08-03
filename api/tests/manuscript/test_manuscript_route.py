@@ -249,3 +249,34 @@ async def test_global_seq_increases_monotonically_across_chapters_and_episodes(
     )
 
     assert [chapter_a["globalSeq"], chapter_b["globalSeq"], chapter_c["globalSeq"]] == [1, 2, 3]
+
+
+async def test_chapter_summary_patch_and_partial_update(app: FastAPI, owner_work: Work) -> None:
+    """화 요약을 저장·부분수정한다 (task #67 S1).
+
+    요약은 `chapters.summary`에 저장되고, PATCH에 실리지 않은 필드는 건드리지 않는다
+    (`exclude_unset`) — 본문을 고칠 때 요약이 지워지거나 그 반대가 되면 안 된다.
+    """
+    async with AsyncSessionFactory() as session:
+        owner = await session.get(User, owner_work.user_id)
+    assert owner is not None
+    episode = await _create_episode(app, owner, owner_work.id)
+    episode_id = uuid.UUID(str(episode["id"]))
+    chapter = await _create_chapter(app, owner, owner_work.id, episode_id, title="1장")
+    base = f"/api/v1/works/{owner_work.id}/episodes/{episode_id}/chapters/{chapter['id']}"
+
+    # 새 화의 요약은 비어 있다.
+    assert chapter["summary"] is None
+
+    async with _client_as(app, owner) as client:
+        resp = await client.patch(base, json={"summary": "주인공이 10년 전으로 돌아왔다."})
+    assert resp.status_code == 200
+    assert resp.json()["summary"] == "주인공이 10년 전으로 돌아왔다."
+    assert resp.json()["body"] == "본문", "요약만 보냈는데 본문이 바뀌면 안 된다"
+
+    # 본문만 고쳐도 요약은 남는다.
+    async with _client_as(app, owner) as client:
+        resp = await client.patch(base, json={"body": "고친 본문"})
+    assert resp.status_code == 200
+    assert resp.json()["body"] == "고친 본문"
+    assert resp.json()["summary"] == "주인공이 10년 전으로 돌아왔다."

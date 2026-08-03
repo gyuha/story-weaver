@@ -36,6 +36,7 @@ from domains.assist.schemas import (
     DialogueInput,
     InfillInput,
     StyleInput,
+    SummaryInput,
     TitleInput,
 )
 from domains.assist.service.assist_service import AssistService
@@ -120,6 +121,19 @@ class TitleRequest(_CamelModel):
         return value
 
 
+class SummaryRequest(_CamelModel):
+    """화 요약 입력 — 화 본문 전체(DB 미저장 draft를 반영하려 바디로 받는다)."""
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("text는 비어 있을 수 없습니다")
+        return value
+
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -171,6 +185,10 @@ def _correct_llm_client() -> AbstractLLMPort:
 
 
 def _title_llm_client() -> AbstractLLMPort:
+    return get_fast_writing_client()
+
+
+def _summary_llm_client() -> AbstractLLMPort:
     return get_fast_writing_client()
 
 
@@ -447,6 +465,40 @@ async def assist_title(
     try:
         messages = await service.build_messages(
             work_id, current_user.id, chapter_id, TaskType.title_, TitleInput(text=payload.text)
+        )
+    except AppError as exc:
+        _raise_http(exc)
+    return EventSourceResponse(_stream_response(llm, messages, current_user.id))
+
+
+@router.post(
+    "/summary",
+    summary="화 요약 생성 (SSE)",
+    dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def assist_summary(
+    request: Request,
+    work_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    payload: SummaryRequest,
+    current_user: User = Depends(get_current_user),
+    service: AssistService = Depends(_get_service),
+    llm: AbstractLLMPort = Depends(_summary_llm_client),
+) -> EventSourceResponse:
+    """화 본문을 근거로 "무슨 일이 일어났는가" 요약을 스트리밍한다 (task #67).
+
+    저장은 하지 않는다 — 클라이언트가 결과를 보고 `PATCH chapters/{id}`의 `summary`로
+    확정한다(ADR-0012의 assist 관례: 생성은 assist, 저장은 소유 도메인).
+    """
+    bind_llm_call_context(user_id=current_user.id, task="assist.summary")
+    try:
+        messages = await service.build_messages(
+            work_id,
+            current_user.id,
+            chapter_id,
+            TaskType.summary,
+            SummaryInput(text=payload.text),
         )
     except AppError as exc:
         _raise_http(exc)

@@ -56,8 +56,9 @@ class AssistService:
         await self._manuscript_service.get_chapter_by_id(work_id, user_id, chapter_id)
 
         memory_items: list[MemoryItemResponse]
-        if task_type in (TaskType.correct, TaskType.title_):
-            # eco: 교정·제목은 최소 주입(고유명사만) — 전체 검색(P1~P3) 자체를 생략한다.
+        if task_type in (TaskType.correct, TaskType.title_, TaskType.summary):
+            # eco: 교정·제목·요약은 최소 주입(고유명사만) — 전체 검색(P1~P3) 자체를
+            # 생략한다. 요약의 근거는 전달된 본문이므로 메모리가 필요 없다.
             memory_items = []
         else:
             memory_items = await self._memory_search_service.search(work_id, user_id, chapter_id)

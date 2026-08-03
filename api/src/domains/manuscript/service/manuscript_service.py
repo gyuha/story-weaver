@@ -142,9 +142,18 @@ class ManuscriptService:
         data: ChapterUpdate,
     ) -> Chapter:
         chapter = await self.get_chapter(work_id, user_id, episode_id, chapter_id)
-        for field, value in data.model_dump(exclude_unset=True).items():
+        changes = data.model_dump(exclude_unset=True)
+        for field, value in changes.items():
             setattr(chapter, field, value)
-        await self._memory_service.index_chapter(work_id, chapter.id, chapter.body)
+        # 본문이 이번 PATCH에 실렸을 때만 재색인한다. 요약·제목만 바꾸면서 본문 전체를
+        # 다시 임베딩하는 것은 화면에 아무 표시 없이 비용만 나가는 낭비다 —
+        # `요약` 기능은 화를 요약할 때마다 PATCH하므로 특히 잦다.
+        #
+        # 판정은 **키의 존재**로 한다(`"body" in changes`). 빈 문자열을 falsy로 걸러내면
+        # 본문을 비운 화에 낡은 임베딩이 남아 메모리 검색이 조용히 틀린다 —
+        # `ChapterUpdate(body="")`도 `{'body': ''}`로 실려 온다(실측).
+        if "body" in changes:
+            await self._memory_service.index_chapter(work_id, chapter.id, chapter.body)
         return chapter
 
     async def delete_chapter(

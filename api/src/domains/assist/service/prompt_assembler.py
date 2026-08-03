@@ -19,6 +19,7 @@ from domains.assist.schemas import (
     DialogueInput,
     InfillInput,
     StyleInput,
+    SummaryInput,
     TitleInput,
 )
 from domains.assist.tier_routing import TaskType
@@ -61,6 +62,11 @@ _TASK_INSTRUCTION: dict[TaskType, str] = {
     TaskType.title_: (
         "아래 본문을 근거로 이 화(chapter)에 어울리는 짧은 제목 하나만 지으세요. "
         "따옴표·접두어·설명·개행 없이 제목 텍스트만 출력하세요."
+    ),
+    TaskType.summary: (
+        "아래 본문을 근거로 이 화에서 무슨 일이 일어났는지 2~3문장으로 요약하세요. "
+        "줄거리를 아는 사람이 흐름을 되짚을 수 있게 사건 중심으로 쓰고, 키워드 나열이 "
+        "아니라 서술문으로 쓰세요. 머리말·따옴표·번호·개행 없이 요약 문장만 출력하세요."
     ),
 }
 
@@ -172,6 +178,13 @@ def assemble_prompt(
     elif task_type is TaskType.title_:
         if not isinstance(task_input, TitleInput):
             raise TypeError(f"title task requires TitleInput, got {type(task_input).__name__}")
+        system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_minimal(memory_items)}")
+        user_text = task_input.text
+    elif task_type is TaskType.summary:
+        if not isinstance(task_input, SummaryInput):
+            raise TypeError(f"summary task requires SummaryInput, got {type(task_input).__name__}")
+        # 요약은 "본문에 무슨 일이 있었나"를 적는 것이라 메모리 주입이 필요 없다 —
+        # 근거는 전달된 본문 자체다(eco: 최소 주입).
         system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_minimal(memory_items)}")
         user_text = task_input.text
     else:
