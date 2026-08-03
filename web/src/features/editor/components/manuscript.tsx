@@ -34,6 +34,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { SelectionAiMenu } from './selection-ai-menu';
 import { ContinueSuggestionModal } from './suggestion-picker';
+import { SummaryModal, type SummaryPhase } from './summary-modal';
 import { VersionHistoryModal } from './version-history-modal';
 
 /** 품질 티어 — ADR-0004. 사용자는 모델명이 아닌 이 티어만 고른다. */
@@ -55,8 +56,11 @@ export function ManuscriptEditor({
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [summaryPhase, setSummaryPhase] = useState<SummaryPhase>('idle');
   const [generatingTitle, setGeneratingTitle] = useState(false);
   const prevStreamingRef = useRef(false);
+  // 요약 완료 감지용 — 제목 생성과 ref를 공유하면 서로의 전이를 훔친다.
+  const prevSummaryStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreChapterVersion = useWorksStore((s) => s.restoreChapterVersion);
@@ -139,17 +143,24 @@ export function ManuscriptEditor({
     setShowDraft(false);
   };
 
-  // 현재 화 본문을 근거로 "무슨 일이 일어났는가" 요약을 생성한다. 모달에서 보고 적용해야
-  // 저장된다 — 요약은 덮어쓰기라 버튼 한 번에 기존 요약이 날아가면 되돌릴 수 없다.
-  const generateSummary = () => {
+  // `요약` 칩은 **생성하지 않고 모달만 연다** — 저장된 요약을 확인하고 닫는 것이 흔한
+  // 경우이므로, 열자마자 토큰을 태우지 않는다. 생성은 모달 안의 `요약`/`다시 요약`이 한다.
+  const openSummary = () => {
+    setShowDraft(false); // 이어쓰기와 같은 스트림을 쓰므로 그 모달을 먼저 닫는다
+    setSummaryPhase('idle');
+    setShowSummary(true);
+  };
+
+  // 모달에서 `요약`/`다시 요약`을 눌렀을 때만 실제 생성한다. 결과는 `적용`을 눌러야
+  // 저장된다 — 요약은 덮어쓰기라 확인 없이 기존 요약을 날리면 되돌릴 수 없다.
+  const runSummary = () => {
     if (!editor) return;
     const text = editor.getText({ blockSeparator: '\n' });
     if (!text.trim()) {
       toast.error('요약할 본문이 없습니다. 몇 문장을 먼저 써 주세요.');
       return;
     }
-    setShowDraft(false); // 이어쓰기와 같은 스트림을 쓰므로 그 모달을 먼저 닫는다
-    setShowSummary(true);
+    setSummaryPhase('generating');
     assist.start('summary', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
 
@@ -165,6 +176,15 @@ export function ManuscriptEditor({
     setGeneratingTitle(true);
     assist.start('title', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
+
+  // 요약도 같은 방식으로 완료를 감지한다. 완료되면 `done`으로 넘어가 `적용` 버튼이 나온다.
+  // 실패하면 `idle`로 되돌려 기존 요약과 함께 다시 시도할 수 있게 한다.
+  useEffect(() => {
+    const finished = prevSummaryStreamingRef.current && !assist.isStreaming;
+    prevSummaryStreamingRef.current = assist.isStreaming;
+    if (!finished || summaryPhase !== 'generating') return;
+    setSummaryPhase(assist.error ? 'idle' : 'done');
+  }, [assist.isStreaming, assist.error, summaryPhase]);
 
   // useAssistStream엔 완료 콜백이 없어, 스트리밍 true→false 전이로 제목 생성 완료를 감지한다.
   useEffect(() => {
@@ -329,7 +349,7 @@ export function ManuscriptEditor({
           {/* 액션 칩 + 품질 티어 */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <ActionChip icon={Save} label="저장" onClick={saveChapter} />
-            <ActionChip icon={ClipboardList} label="요약" onClick={generateSummary} />
+            <ActionChip icon={ClipboardList} label="요약" onClick={openSummary} />
             <ActionChip
               icon={ImageIcon}
               label="장면 이미지"
@@ -464,12 +484,13 @@ export function ManuscriptEditor({
         onCancel={dismissDraft}
       />
 
-      <ContinueSuggestionModal
+      <SummaryModal
         open={showSummary}
-        title="AI 요약"
-        rawText={assist.text}
-        isStreaming={assist.isStreaming}
+        existingSummary={chapter.summary}
+        generatedText={assist.text}
+        phase={summaryPhase}
         error={assist.error}
+        onGenerate={runSummary}
         onApply={(text) => {
           assist.stop();
           setShowSummary(false);
@@ -477,7 +498,7 @@ export function ManuscriptEditor({
             .then(() => toast.success('요약을 저장했습니다'))
             .catch((err) => toast.error(apiErrorMessage(err, '요약을 저장하지 못했습니다')));
         }}
-        onCancel={() => {
+        onClose={() => {
           assist.stop();
           setShowSummary(false);
         }}

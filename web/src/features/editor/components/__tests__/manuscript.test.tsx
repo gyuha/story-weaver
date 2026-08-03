@@ -533,54 +533,88 @@ describe('ManuscriptEditor AI 제목 생성', () => {
 });
 
 describe('ManuscriptEditor 화 요약', () => {
-  it('요약 클릭 시 summary 태스크로 현재 본문을 보내고 모달을 연다 (task #68 S2)', async () => {
+  it('요약 클릭 시 생성하지 않고 모달만 연다 — 저장된 요약을 먼저 보여준다', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
-    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
 
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('이미 있는 요약.')).toBeInTheDocument();
+    // 열자마자 토큰을 태우지 않는다 — 기존 요약만 보고 닫는 것이 흔한 경우다.
+    expect(startSpy).not.toHaveBeenCalled();
+  });
+
+  it('다시 요약을 누를 때 비로소 summary 태스크로 현재 본문을 보낸다', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '다시 요약' }));
 
     expect(startSpy).toHaveBeenCalledWith('summary', {
       workId: 'w1',
       chapterId: 'ch1',
       payload: { text: '그는 10년 전으로 돌아왔다.' },
     });
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('AI 요약')).toBeInTheDocument();
   });
 
-  it('적용을 누르면 요약만 저장한다 — 본문은 보내지 않는다 (task #68 S2)', async () => {
+  it('저장된 요약이 없으면 모달의 요약 버튼으로 생성한다', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
     render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
 
+    // 저장된 요약이 없으므로 라벨이 '요약'이고 본문 자리는 비어 있다.
+    expect(screen.getByTestId('summary-body').textContent).toBe('');
+    const buttons = screen.getAllByRole('button', { name: '요약' });
+    await userEvent.click(buttons[buttons.length - 1]);
+
+    expect(startSpy).toHaveBeenCalledWith('summary', {
+      workId: 'w1',
+      chapterId: 'ch1',
+      payload: { text: '그는 10년 전으로 돌아왔다.' },
+    });
+  });
+
+  it('생성이 끝난 뒤 적용을 누르면 요약만 저장한다 — 본문은 보내지 않는다', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+    const buttons = screen.getAllByRole('button', { name: '요약' });
+    await userEvent.click(buttons[buttons.length - 1]);
+
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
     act(() => setMockAssistState({ isStreaming: false, text: '주인공이 회귀했다.' }));
+
     await userEvent.click(screen.getByRole('button', { name: '적용' }));
 
     expect(mockSaveChapterSummary).toHaveBeenCalledWith('w1', 'ch1', '주인공이 회귀했다.');
     expect(mockUpdateChapter).not.toHaveBeenCalled();
   });
 
-  it('취소하면 저장하지 않고 스트림을 끊는다 (task #68 S2)', async () => {
+  it('생성 후 닫기를 누르면 저장하지 않고 스트림을 끊는다', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
-    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
+    await userEvent.click(screen.getByRole('button', { name: '다시 요약' }));
     act(() => setMockAssistState({ isStreaming: true, text: '주인공이' }));
 
-    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+    await userEvent.click(screen.getByRole('button', { name: '닫기' }));
 
     expect(stopSpy).toHaveBeenCalled();
     expect(mockSaveChapterSummary).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('본문이 비어 있으면 요약을 생성하지 않고 안내한다 (task #68 S2)', async () => {
+  it('본문이 비어 있으면 생성하지 않고 안내한다 — 모달은 열려 있다', async () => {
     mockGetText.mockReturnValue('   ');
     render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
-
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
+
+    const buttons = screen.getAllByRole('button', { name: '요약' });
+    await userEvent.click(buttons[buttons.length - 1]);
 
     expect(startSpy).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
