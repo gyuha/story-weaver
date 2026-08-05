@@ -17,6 +17,7 @@ from domains.assist.schemas import (
     ContinueInput,
     CorrectInput,
     DialogueInput,
+    DraftInput,
     InfillInput,
     StyleInput,
     TitleInput,
@@ -233,8 +234,48 @@ def test_continue_prompt_pins_jsonl_candidate_format() -> None:
         TaskType.correct,
         TaskType.title_,
         TaskType.summary,
+        TaskType.draft,
     ],
 )
 def test_jsonl_format_instruction_does_not_leak_to_other_tasks(task_type: TaskType) -> None:
     """다른 태스크는 단일 본문 반환이다 — JSONL 지시가 새면 출력이 JSON으로 오염된다."""
     assert '{"text"' not in _TASK_INSTRUCTION[task_type]
+
+
+def test_draft_prompt_has_full_memory() -> None:
+    """늘려쓰기는 전체 메모리를 주입한다 (task #69 S2).
+
+    인물·설정을 모르고 원고를 쓰면 "기억하는 AI"라는 제품 전제가 무너진다.
+    `correct`·`title`·`summary`가 최소 주입인 것과 반대 방향이고, 그 차이가
+    **생략 목록에 넣지 않는 것**으로만 표현되므로 여기서 양성으로 고정한다.
+    """
+    messages = assemble_prompt(
+        TaskType.draft,
+        work_genre="무협",
+        work_style="간결체",
+        memory_items=_MEMORY_ITEMS,
+        task_input=DraftInput(text="주인공이 스승을 만나 검을 받는다."),
+    )
+
+    assert isinstance(messages[0], SystemMessage)
+    assert isinstance(messages[1], HumanMessage)
+    text = _combined_text(messages)
+
+    # 풀세트: P1(엔티티) + P2(타임라인 상태) + P3(벡터 매칭)
+    assert "한지원" in text
+    assert "life_status" in text
+    assert "지원은 과거 스승과의 대화" in text
+    # 지시문이 실렸고, 요약이 user 메시지다.
+    assert "본문을 쓰세요" in text
+    assert str(messages[1].content) == "주인공이 스승을 만나 검을 받는다."
+
+
+def test_draft_prompt_rejects_wrong_input_type() -> None:
+    with pytest.raises(TypeError, match="draft"):
+        assemble_prompt(
+            TaskType.draft,
+            work_genre="무협",
+            work_style="간결체",
+            memory_items=_MEMORY_ITEMS,
+            task_input=ContinueInput(cursor_text="틀린 입력"),
+        )

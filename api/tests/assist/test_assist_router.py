@@ -30,6 +30,7 @@ from domains.assist.router.assist_router import (
     _continue_llm_client,
     _correct_llm_client,
     _dialogue_llm_client,
+    _draft_llm_client,
     _infill_llm_client,
     _style_llm_client,
     _summary_llm_client,
@@ -674,6 +675,64 @@ async def test_assist_summary_rejects_blank_text(
     async with _client_as(app, owner) as client:
         resp = await client.post(
             f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/summary",
+            json={"text": "   "},
+        )
+    assert resp.status_code == 422
+
+
+async def test_assist_draft_streams_and_uses_full_memory(
+    app: FastAPI,
+    owner_work: Work,
+    two_users: tuple[User, User],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """늘려쓰기는 SSE로 본문을 흘리고 **전체 메모리 검색을 실제로 호출한다** (task #69 S3).
+
+    `title`·`summary` 테스트가 "검색을 호출하면 안 된다"를 단정하는 것의 정반대다 —
+    메모리 주입이 "생략 목록에 넣지 않는 것"으로만 켜지므로, 빠뜨려서 켜진 것과
+    의도해서 켠 것을 코드로는 구분할 수 없다. 여기서 양성으로 고정한다.
+    """
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work.id)
+
+    searched: list[bool] = []
+
+    async def _record_search(self: MemorySearchService, *args: Any, **kwargs: Any) -> Any:
+        searched.append(True)
+        return []
+
+    monkeypatch.setattr(MemorySearchService, "search", _record_search)
+
+    fake = _FakeLLMClient(["주인공은 스승 앞에 무릎을 꿇었다."])
+    app.dependency_overrides[_draft_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/draft",
+            json={"text": "주인공이 스승을 만나 검을 받는다."},
+        )
+
+    assert resp.status_code == 200
+    assert _sse_data_lines(resp.text) == ["주인공은 스승 앞에 무릎을 꿇었다.", "[DONE]"]
+    assert searched, "늘려쓰기는 전체 메모리 검색을 호출해야 한다"
+
+    system_text = str(fake.received_messages[0].content)
+    human_text = str(fake.received_messages[1].content)
+    assert "본문을 쓰세요" in system_text
+    assert '{"text"' not in system_text, "단일 본문 태스크에 JSONL 계약이 새면 안 된다"
+    assert human_text == "주인공이 스승을 만나 검을 받는다."
+
+
+async def test_assist_draft_rejects_blank_summary(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    """빈 요약은 422로 막는다 — 요약 없이 원고를 쓰라고 시킬 수 없다."""
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work.id)
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/chapters/{chapter['id']}/assist/draft",
             json={"text": "   "},
         )
     assert resp.status_code == 422

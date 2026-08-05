@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useAssistStream } from '@/features/editor/api/assist.api';
 import { manuscriptApi } from '@/features/editor/api/manuscript.api';
@@ -32,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { DraftProgressModal } from './draft-progress-modal';
 import { SelectionAiMenu } from './selection-ai-menu';
 import { ContinueSuggestionModal } from './suggestion-picker';
 import { SummaryModal, type SummaryPhase } from './summary-modal';
@@ -57,10 +59,19 @@ export function ManuscriptEditor({
   const [showDraft, setShowDraft] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryPhase, setSummaryPhase] = useState<SummaryPhase>('idle');
+  // AI 요약 결과 — 편집란으로 흘려보낸다. null이면 저장된 요약을 쓴다.
+  const [summaryDraft, setSummaryDraft] = useState<string | null>(null);
   const [generatingTitle, setGeneratingTitle] = useState(false);
+  // 늘려쓰기(요약 → 본문) 진행 중. 요약 생성과 별개의 상태로 두어야 완료 전이가 섞이지
+  // 않는다 — 섞이면 요약 완료가 본문을 갈아끼운다.
+  const [draftingBody, setDraftingBody] = useState(false);
+  // 대체 확인을 기다리는 요약. null이면 확인창이 닫힌 상태다.
+  const [pendingDraft, setPendingDraft] = useState<string | null>(null);
   const prevStreamingRef = useRef(false);
   // 요약 완료 감지용 — 제목 생성과 ref를 공유하면 서로의 전이를 훔친다.
   const prevSummaryStreamingRef = useRef(false);
+  // 늘려쓰기 완료 감지용 — 위 두 ref와 공유 금지(같은 이유).
+  const prevDraftStreamingRef = useRef(false);
   const assist = useAssistStream();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const restoreChapterVersion = useWorksStore((s) => s.restoreChapterVersion);
@@ -148,6 +159,7 @@ export function ManuscriptEditor({
   const openSummary = () => {
     setShowDraft(false); // 이어쓰기와 같은 스트림을 쓰므로 그 모달을 먼저 닫는다
     setSummaryPhase('idle');
+    setSummaryDraft(null);
     setShowSummary(true);
   };
 
@@ -164,6 +176,44 @@ export function ManuscriptEditor({
     assist.start('summary', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
 
+  // 늘려쓰기 중단. **플래그를 `stop()`보다 먼저 끈다** — `stop()`은 abort 뒤
+  // `finally`에서 isStreaming을 내리므로 완료 전이가 실제로 발생하고, 플래그가 남아
+  // 있으면 쓰다 만 생성물이 본문을 덮어쓴다. 플래그가 진행 다이얼로그의 `open`이기도
+  // 해서, 이 한 줄이 중단과 다이얼로그 닫힘을 함께 처리한다.
+  const cancelDraft = () => {
+    setDraftingBody(false);
+    assist.stop();
+  };
+
+  // 편집란의 요약을 근거로 이 화의 본문을 생성한다(늘려쓰기). 생성 결과는 완료 시
+  // 본문 전체를 **대체**하므로, 원고가 이미 있으면 확인을 먼저 받는다 — `버전 기록`은
+  // 아직 목업이라 되돌릴 수단이 에디터의 되돌리기(⌘Z)뿐이다.
+  const runDraft = (summary: string) => {
+    if (!summary.trim()) {
+      toast.error('늘려쓸 요약이 없습니다. 요약을 먼저 쓰거나 생성해 주세요.');
+      return;
+    }
+    // 편집 중인 요약으로 생성하므로, 그 요약을 먼저 저장한다 — 생성 근거와 저장된
+    // 요약이 어긋나면 나중에 왜 이런 본문이 나왔는지 되짚을 수 없다.
+    saveChapterSummary(work.id, chapter.id, summary).catch((err) => {
+      toast.error(apiErrorMessage(err, '요약을 저장하지 못했습니다'));
+    });
+
+    if (chapter.paragraphs.length) {
+      setPendingDraft(summary); // 잃을 원고가 있으면 확인을 먼저 받는다
+      return;
+    }
+    startDraft(summary); // 빈 화는 확인이 방해만 된다
+  };
+
+  const startDraft = (summary: string) => {
+    setDraftingBody(true);
+    // 요약 모달은 곧바로 닫는다 — 생성이 끝날 때까지 붙잡아 두면 본문이 가려진다.
+    // 진행 표시와 중단 수단은 `draftingBody`에 묶인 진행 다이얼로그가 이어받는다.
+    setShowSummary(false);
+    assist.start('draft', { workId: work.id, chapterId: chapter.id, payload: { text: summary } });
+  };
+
   // 현재 화 라이브 본문을 근거로 화 제목 1개를 생성해 제목 입력란에 채운다(저장은 기존 blur→commitTitle).
   const generateTitle = () => {
     if (!editor) return;
@@ -177,14 +227,36 @@ export function ManuscriptEditor({
     assist.start('title', { workId: work.id, chapterId: chapter.id, payload: { text } });
   };
 
-  // 요약도 같은 방식으로 완료를 감지한다. 완료되면 `done`으로 넘어가 `적용` 버튼이 나온다.
-  // 실패하면 `idle`로 되돌려 기존 요약과 함께 다시 시도할 수 있게 한다.
+  // 요약 생성 완료를 감지해 결과를 **편집란으로 흘려보낸다**. 별도 "적용 대기" 단계를
+  // 두지 않는 이유: 편집란에 들어오면 작가가 손볼 수 있고, `저장` 버튼이 확인 역할을
+  // 그대로 한다(단계가 하나 줄어든다). 실패하면 편집 내용을 건드리지 않는다.
   useEffect(() => {
     const finished = prevSummaryStreamingRef.current && !assist.isStreaming;
     prevSummaryStreamingRef.current = assist.isStreaming;
     if (!finished || summaryPhase !== 'generating') return;
-    setSummaryPhase(assist.error ? 'idle' : 'done');
-  }, [assist.isStreaming, assist.error, summaryPhase]);
+    setSummaryPhase('idle');
+    if (!assist.error && assist.text.trim()) setSummaryDraft(assist.text);
+  }, [assist.isStreaming, assist.error, assist.text, summaryPhase]);
+
+  // 늘려쓰기 완료를 감지해 본문을 **한 번에** 대체한다. 조각조각 넣지 않는 이유: 한 번의
+  // setContent면 에디터의 되돌리기 한 번으로 원상복구되기 때문이다(`restoreVersion`과 같은 방식).
+  useEffect(() => {
+    const finished = prevDraftStreamingRef.current && !assist.isStreaming;
+    prevDraftStreamingRef.current = assist.isStreaming;
+    if (!finished || !draftingBody) return;
+    setDraftingBody(false);
+    if (assist.error) {
+      toast.error('본문 생성에 실패했습니다. 다시 시도해 주세요.');
+      return;
+    }
+    const paragraphs = assist.text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!paragraphs.length) return;
+    editor?.commands.setContent(paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join(''));
+    toast.success('본문에 반영했습니다 — 되돌리려면 편집기의 되돌리기');
+  }, [assist.isStreaming, assist.text, assist.error, draftingBody, editor]);
 
   // useAssistStream엔 완료 콜백이 없어, 스트리밍 true→false 전이로 제목 생성 완료를 감지한다.
   useEffect(() => {
@@ -484,22 +556,38 @@ export function ManuscriptEditor({
         onCancel={dismissDraft}
       />
 
+      <ConfirmDialog
+        open={pendingDraft !== null}
+        title="요약으로 본문 쓰기"
+        message="기존 본문을 대체합니다. 복구할 수 없습니다. 계속할까요?"
+        onConfirm={() => {
+          const summary = pendingDraft;
+          setPendingDraft(null);
+          if (summary) startDraft(summary);
+        }}
+        onCancel={() => setPendingDraft(null)}
+      />
+
+      <DraftProgressModal open={draftingBody} onCancel={cancelDraft} />
+
       <SummaryModal
         open={showSummary}
-        existingSummary={chapter.summary}
-        generatedText={assist.text}
-        phase={summaryPhase}
+        existingSummary={summaryDraft ?? chapter.summary}
+        phase={draftingBody ? 'generating' : summaryPhase}
         error={assist.error}
         onGenerate={runSummary}
-        onApply={(text) => {
-          assist.stop();
-          setShowSummary(false);
+        onDraft={runDraft}
+        onSave={(text) => {
+          // 모달은 닫지 않는다 — 연달아 손보는 흐름을 끊지 않는다.
           saveChapterSummary(work.id, chapter.id, text)
             .then(() => toast.success('요약을 저장했습니다'))
             .catch((err) => toast.error(apiErrorMessage(err, '요약을 저장하지 못했습니다')));
         }}
         onClose={() => {
-          assist.stop();
+          // 늘려쓰기 중에는 이 모달이 이미 닫혀 있어 여기로 오지 않는다(중단은 진행
+          // 다이얼로그의 `중단` → cancelDraft). 그래도 같은 이유로 플래그를 먼저 끈다 —
+          // `stop()`이 완료 전이를 만들기 때문이다.
+          cancelDraft();
           setShowSummary(false);
         }}
       />

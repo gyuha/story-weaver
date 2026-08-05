@@ -34,6 +34,7 @@ from domains.assist.schemas import (
     ContinueInput,
     CorrectInput,
     DialogueInput,
+    DraftInput,
     InfillInput,
     StyleInput,
     SummaryInput,
@@ -134,6 +135,19 @@ class SummaryRequest(_CamelModel):
         return value
 
 
+class DraftRequest(_CamelModel):
+    """늘려쓰기 입력 — 화 요약(작가가 모달에서 손본 것일 수 있어 바디로 받는다)."""
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("text는 비어 있을 수 없습니다")
+        return value
+
+
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
@@ -189,6 +203,10 @@ def _title_llm_client() -> AbstractLLMPort:
 
 
 def _summary_llm_client() -> AbstractLLMPort:
+    return get_fast_writing_client()
+
+
+def _draft_llm_client() -> AbstractLLMPort:
     return get_fast_writing_client()
 
 
@@ -499,6 +517,43 @@ async def assist_summary(
             chapter_id,
             TaskType.summary,
             SummaryInput(text=payload.text),
+        )
+    except AppError as exc:
+        _raise_http(exc)
+    return EventSourceResponse(_stream_response(llm, messages, current_user.id))
+
+
+@router.post(
+    "/draft",
+    summary="요약으로 화 본문 생성 (늘려쓰기, SSE)",
+    dependencies=[Depends(require_budget_available), Depends(_bind_rate_limit_user)],
+)
+@limiter.limit(LLM_RATE_LIMIT)
+async def assist_draft(
+    request: Request,
+    work_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    payload: DraftRequest,
+    current_user: User = Depends(get_current_user),
+    service: AssistService = Depends(_get_service),
+    llm: AbstractLLMPort = Depends(_draft_llm_client),
+) -> EventSourceResponse:
+    """화 요약을 근거로 그 화의 본문을 스트리밍한다 (늘려쓰기, task #69).
+
+    `continue`(이어쓰기)와 방향이 반대다 — 이어쓰기는 본문을 근거로 다음 전개 후보를
+    내고 작가가 채택하지만, 이쪽은 요약을 근거로 원고를 생성한다. 그래서 **전체 메모리**를
+    주입한다(`assist_service`의 생략 목록에 넣지 않는 것으로 켜진다).
+
+    저장은 하지 않는다 — 클라이언트가 결과를 본문에 반영하고 기존 저장 경로로 확정한다.
+    """
+    bind_llm_call_context(user_id=current_user.id, task="assist.draft")
+    try:
+        messages = await service.build_messages(
+            work_id,
+            current_user.id,
+            chapter_id,
+            TaskType.draft,
+            DraftInput(text=payload.text),
         )
     except AppError as exc:
         _raise_http(exc)

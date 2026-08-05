@@ -6,51 +6,57 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { useEffect, useState } from 'react';
 
 /** 요약 모달의 단계. `요약` 칩을 누르면 언제나 `idle`로 열린다. */
-export type SummaryPhase = 'idle' | 'generating' | 'done';
+export type SummaryPhase = 'idle' | 'generating';
 
 interface SummaryModalProps {
   open: boolean;
   /** 저장돼 있는 요약. 없거나 공백뿐이면 "없음"으로 본다. */
   existingSummary?: string;
-  /** 이번에 생성한 요약(아직 저장되지 않음). */
-  generatedText: string;
   phase: SummaryPhase;
   error: Error | null;
+  /** 본문 → 요약 생성. 결과는 호출부가 `existingSummary`로 흘려 편집란에 들어온다. */
   onGenerate: () => void;
-  onApply: (text: string) => void;
+  /** 편집란 요약으로 화 본문을 생성한다(늘려쓰기). */
+  onDraft: (summary: string) => void;
+  onSave: (summary: string) => void;
   onClose: () => void;
 }
 
 /**
- * 화 요약 보기·생성 모달. 후보 피커(`ContinueSuggestionModal`)와 모양이 다르다 —
- * 후보 여러 장을 고르는 게 아니라 요약 한 덩어리를 보여주고, 그 앞에 "저장된 요약을
- * 먼저 보여준다"는 단계가 있다.
+ * 화 요약 편집 모달 — **편집란 하나 + 직업 4개** 구조(task #70).
  *
- * 단계별 버튼:
- * - `idle` + 저장된 요약 있음 → 그 요약 + `다시 요약` / `닫기`
- * - `idle` + 저장된 요약 없음 → **빈 상자** + `요약` / `닫기` (비었다는 게 눈에 보이게)
- * - `generating` → 스켈레톤 + `닫기`
- * - `done` → 새 요약 + `적용` / `닫기`
+ * 요약은 AI 전용 산출물이 아니라 작가가 소유하는 텍스트다. 그래서 저장된 요약이
+ * 편집란에 들어 있고 직접 고쳐 저장할 수 있다. `AI 요약` 결과도 편집란에 들어와
+ * 손본 뒤 저장하므로, 이전의 `done`(적용 대기) 단계가 필요 없어졌다 — `저장` 버튼이
+ * 그 확인 역할을 한다.
  *
- * **`done`에서 `닫기`는 저장하지 않는다** — 요약은 덮어쓰기라 확인 없이 기존 요약을
- * 날리면 되돌릴 수 없다. `적용`을 눌러야 저장된다.
+ * **`닫기`는 저장하지 않는다** — 요약은 덮어쓰기라 확인 없이 저장하지 않는다.
  */
 export function SummaryModal({
   open,
   existingSummary,
-  generatedText,
   phase,
   error,
   onGenerate,
-  onApply,
+  onDraft,
+  onSave,
   onClose,
 }: SummaryModalProps) {
   const saved = existingSummary?.trim() ? existingSummary : '';
-  // 생성 중·완료 단계에서는 기존 요약을 감춘다 — 새 결과가 올 자리이고, 둘을 같이
-  // 보여주면 어느 쪽이 저장된 것인지 헷갈린다.
-  const shown = phase === 'idle' ? saved : phase === 'done' ? generatedText : '';
+  const [value, setValue] = useState(saved);
+
+  // 저장된 요약이 바뀌면 편집란을 새 값으로 맞춘다 — 다른 화로 옮겼거나, AI 요약
+  // 결과가 흘러들어온 경우다. 편집 중 내용이 이걸로 덮이지만 textarea의 기본
+  // 되돌리기(⌘Z)가 있어 위험도가 낮다.
+  useEffect(() => {
+    setValue(saved);
+  }, [saved]);
+
+  const busy = phase === 'generating';
 
   return (
     <Dialog
@@ -61,49 +67,63 @@ export function SummaryModal({
     >
       <DialogContent showCloseButton={false} className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle className="text-ai">AI 요약</DialogTitle>
-          {phase === 'done' && (
-            <p className="text-[12.5px] text-ink-soft">
-              적용하면 기존 요약을 덮어씁니다. 닫으면 저장하지 않습니다.
-            </p>
-          )}
+          <DialogTitle className="text-ai">요약</DialogTitle>
+          <p className="text-[12.5px] text-ink-soft">
+            이 화의 줄거리를 적어 두면 나중에 흐름을 되짚을 때 씁니다. 직접 고쳐도 됩니다.
+          </p>
         </DialogHeader>
 
         {error && <p className="text-[13px] text-danger">{error.message}</p>}
 
-        <div
-          data-testid="summary-body"
-          className="min-h-[96px] rounded-md border border-line-strong p-3 text-[13.5px] leading-[1.75] text-ink"
-        >
-          {phase === 'generating' ? (
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-4 w-full rounded" />
-              <Skeleton className="h-4 w-[85%] rounded" />
-            </div>
-          ) : (
-            shown
-          )}
-        </div>
+        {busy ? (
+          // 편집란과 같은 높이 규칙을 써서 생성 중에 모달 크기가 튀지 않게 한다.
+          <div className="flex min-h-[min(270px,40vh)] flex-col gap-2 rounded-md border border-line-strong p-3">
+            <Skeleton className="h-4 w-full rounded" />
+            <Skeleton className="h-4 w-[85%] rounded" />
+            <Skeleton className="h-4 w-[60%] rounded" />
+          </div>
+        ) : null}
+
+        <Textarea
+          aria-label="화 요약"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={busy}
+          rows={5}
+          placeholder="이 화에서 무슨 일이 일어났는지 적어 보세요."
+          // 요약을 여러 문단 손보는 곳이라 처음부터 넉넉히 연다(요청 높이 270px).
+          // `DialogContent`에 max-h가 없어, 짧은 창에서 하단 버튼이 화면 밖으로 나가지
+          // 않도록 하한을 40vh로 함께 묶고 상한을 55vh로 잡는다(넘치면 상자 안에서 스크롤).
+          className={
+            busy ? 'sr-only' : 'min-h-[min(270px,40vh)] max-h-[55vh] text-[13.5px] leading-[1.75]'
+          }
+        />
 
         <DialogFooter>
-          {phase === 'done' && (
-            <button
-              type="button"
-              onClick={() => onApply(generatedText)}
-              className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              적용
-            </button>
-          )}
-          {phase === 'idle' && (
-            <button
-              type="button"
-              onClick={onGenerate}
-              className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              {saved ? '다시 요약' : '요약'}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={busy}
+            className="h-8 rounded-[5px] border border-line-strong bg-paper px-3 text-[12.5px] font-medium text-ai transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            AI로 본문 요약
+          </button>
+          <button
+            type="button"
+            onClick={() => onDraft(value)}
+            disabled={busy}
+            className="h-8 rounded-[5px] border border-line-strong bg-paper px-3 text-[12.5px] font-medium text-ai transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            요약으로 본문 작성
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(value)}
+            disabled={busy}
+            className="h-8 rounded-[5px] bg-primary px-3 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            요약 저장
+          </button>
           <button
             type="button"
             onClick={onClose}

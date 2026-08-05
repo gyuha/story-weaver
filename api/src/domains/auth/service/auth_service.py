@@ -422,9 +422,7 @@ class AuthService:
 
         logger.info("password_reset_completed", user_id=str(pr.user_id))
 
-    async def change_password(
-        self, user: User, current_password: str, new_password: str
-    ) -> None:
+    async def change_password(self, user: User, current_password: str, new_password: str) -> None:
         """Change an authenticated user's password and revoke all sessions.
 
         Raises

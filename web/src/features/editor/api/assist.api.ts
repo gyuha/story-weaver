@@ -2,6 +2,7 @@ import type {
   ContinueRequest,
   CorrectRequest,
   DialogueRequest,
+  DraftRequest,
   InfillRequest,
   StyleRequest,
   SummaryRequest,
@@ -25,7 +26,8 @@ export type AssistTaskType =
   | 'style'
   | 'correct'
   | 'title'
-  | 'summary';
+  | 'summary'
+  | 'draft';
 
 type AssistPayloadMap = {
   continue: ContinueRequest;
@@ -35,6 +37,7 @@ type AssistPayloadMap = {
   correct: CorrectRequest;
   title: TitleRequest;
   summary: SummaryRequest;
+  draft: DraftRequest;
 };
 
 export type AssistPayload<T extends AssistTaskType> = AssistPayloadMap[T];

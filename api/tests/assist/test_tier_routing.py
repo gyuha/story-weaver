@@ -151,4 +151,14 @@ def test_summary_task_exists_and_is_low_cost() -> None:
     """
     assert TaskType.summary.value == "summary"
     assert TASK_TIER[TaskType.summary] is Tier.low_cost
-    assert len(TaskType) == 7
+
+
+def test_draft_task_exists_and_is_high_quality() -> None:
+    """늘려쓰기(요약→본문)는 8번째 assist 태스크다 (task #69 S1).
+
+    티어는 `dialogue`·`style`과 같은 `high_quality` — 원고를 대신 쓰는 작업이라 이
+    제품에서 품질이 가장 중요한 생성이다. 실제 티어 라우팅이 붙으면 이 태스크가
+    자동으로 좋은 모델로 가는 것이 이 값을 지금 제대로 정해 두는 이유다.
+    """
+    assert TaskType.draft.value == "draft"
+    assert TASK_TIER[TaskType.draft] is Tier.high_quality

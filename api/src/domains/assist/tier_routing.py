@@ -33,7 +33,7 @@ from domains.chat.ports import AbstractLLMPort, LLMClientFactoryProtocol
 class TaskType(StrEnum):
     """The writing-assist operations (ai-pipeline.md §3.1).
 
-    ``title`` was added per ADR-0012, ``summary`` per task #67.
+    ``title`` was added per ADR-0012, ``summary`` per task #67, ``draft`` per task #69.
     """
 
     continue_ = "continue"
@@ -44,6 +44,9 @@ class TaskType(StrEnum):
     # ``title``은 ``str.title`` 메서드와 충돌 → ``continue_``처럼 밑줄 접미사(값은 "title").
     title_ = "title"
     summary = "summary"
+    #: 요약을 근거로 화 본문을 쓴다(늘려쓰기). `continue_`와 방향이 반대다 —
+    #: 이어쓰기는 본문 → 다음 전개 후보, 늘려쓰기는 요약 → 원고.
+    draft = "draft"
 
 
 class Tier(StrEnum):
@@ -62,6 +65,8 @@ TASK_TIER: dict[TaskType, Tier] = {
     TaskType.style: Tier.high_quality,
     TaskType.title_: Tier.low_cost,
     TaskType.summary: Tier.low_cost,
+    # 원고를 대신 쓰는 작업이라 품질이 가장 중요하다.
+    TaskType.draft: Tier.high_quality,
 }
 
 #: tier → factory-getter dispatch. Both tiers use the chat domain's default

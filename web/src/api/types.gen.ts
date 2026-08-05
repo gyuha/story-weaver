@@ -379,6 +379,18 @@ export type DialogueRequest = {
 };
 
 /**
+ * DraftRequest
+ *
+ * 늘려쓰기 입력 — 화 요약(작가가 모달에서 손본 것일 수 있어 바디로 받는다).
+ */
+export type DraftRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
  * EmbeddingSourceType
  *
  * 임베딩 출처 판별 타입 (data-model.md 6장).
@@ -3465,6 +3477,38 @@ export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors = {
 export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryErrors];
 
 export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistSummaryResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftData = {
+    body: DraftRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/chapters/{chapter_id}/assist/draft';
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftError = PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftErrors[keyof PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftErrors];
+
+export type PostApiV1WorksByWorkIdChaptersByChapterIdAssistDraftResponses = {
     /**
      * Successful Response
      */

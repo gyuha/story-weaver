@@ -54,6 +54,9 @@ vi.mock('@/features/shared/store/works.store', () => ({
 
 vi.mock('../selection-ai-menu', () => ({ SelectionAiMenu: () => null }));
 
+// 대체 확인 다이얼로그는 목하지 않는다 — 요약·진행 모달과 같은 Base UI `Dialog`라
+// 실제로 렌더되고, `확인`/`취소`를 직접 누르는 것이 진짜 경로다.
+
 const startSpy = vi.fn();
 const stopSpy = vi.fn();
 interface MockAssistState {
@@ -533,24 +536,26 @@ describe('ManuscriptEditor AI 제목 생성', () => {
 });
 
 describe('ManuscriptEditor 화 요약', () => {
-  it('요약 클릭 시 생성하지 않고 모달만 연다 — 저장된 요약을 먼저 보여준다', async () => {
+  const box = () => screen.getByRole('textbox', { name: '화 요약' });
+
+  it('요약 클릭 시 생성하지 않고 모달만 연다 — 저장된 요약이 편집란에 들어온다', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
     render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
 
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('이미 있는 요약.')).toBeInTheDocument();
-    // 열자마자 토큰을 태우지 않는다 — 기존 요약만 보고 닫는 것이 흔한 경우다.
+    expect(box()).toHaveValue('이미 있는 요약.');
+    // 열자마자 토큰을 태우지 않는다 — 저장된 요약만 보고 닫는 것이 흔한 경우다.
     expect(startSpy).not.toHaveBeenCalled();
   });
 
-  it('다시 요약을 누를 때 비로소 summary 태스크로 현재 본문을 보낸다', async () => {
+  it('AI 요약을 누를 때 비로소 summary 태스크로 현재 본문을 보낸다', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
     render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
 
-    await userEvent.click(screen.getByRole('button', { name: '다시 요약' }));
+    await userEvent.click(screen.getByRole('button', { name: 'AI로 본문 요약' }));
 
     expect(startSpy).toHaveBeenCalledWith('summary', {
       workId: 'w1',
@@ -559,45 +564,57 @@ describe('ManuscriptEditor 화 요약', () => {
     });
   });
 
-  it('저장된 요약이 없으면 모달의 요약 버튼으로 생성한다', async () => {
+  it('생성이 끝나면 결과가 편집란에 들어온다 (task #70 S2)', async () => {
     mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
     render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
-
-    // 저장된 요약이 없으므로 라벨이 '요약'이고 본문 자리는 비어 있다.
-    expect(screen.getByTestId('summary-body').textContent).toBe('');
-    const buttons = screen.getAllByRole('button', { name: '요약' });
-    await userEvent.click(buttons[buttons.length - 1]);
-
-    expect(startSpy).toHaveBeenCalledWith('summary', {
-      workId: 'w1',
-      chapterId: 'ch1',
-      payload: { text: '그는 10년 전으로 돌아왔다.' },
-    });
-  });
-
-  it('생성이 끝난 뒤 적용을 누르면 요약만 저장한다 — 본문은 보내지 않는다', async () => {
-    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
-    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
-    await userEvent.click(screen.getByRole('button', { name: '요약' }));
-    const buttons = screen.getAllByRole('button', { name: '요약' });
-    await userEvent.click(buttons[buttons.length - 1]);
+    await userEvent.click(screen.getByRole('button', { name: 'AI로 본문 요약' }));
 
     act(() => setMockAssistState({ isStreaming: true, text: '' }));
     act(() => setMockAssistState({ isStreaming: false, text: '주인공이 회귀했다.' }));
 
-    await userEvent.click(screen.getByRole('button', { name: '적용' }));
+    expect(box()).toHaveValue('주인공이 회귀했다.');
+  });
 
-    expect(mockSaveChapterSummary).toHaveBeenCalledWith('w1', 'ch1', '주인공이 회귀했다.');
+  it('생성 결과를 손본 뒤 저장하면 고친 내용이 저장된다 (task #70 S3)', async () => {
+    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+    await userEvent.click(screen.getByRole('button', { name: 'AI로 본문 요약' }));
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
+    act(() => setMockAssistState({ isStreaming: false, text: '주인공이 회귀했다.' }));
+
+    await userEvent.type(box(), ' 거울도 보았다.');
+    await userEvent.click(screen.getByRole('button', { name: '요약 저장' }));
+
+    expect(mockSaveChapterSummary).toHaveBeenCalledWith(
+      'w1',
+      'ch1',
+      '주인공이 회귀했다. 거울도 보았다.'
+    );
+    // body를 함께 실으면 서버가 본문을 재임베딩한다(task #67 S2).
     expect(mockUpdateChapter).not.toHaveBeenCalled();
   });
 
-  it('생성 후 닫기를 누르면 저장하지 않고 스트림을 끊는다', async () => {
-    mockGetText.mockReturnValue('그는 10년 전으로 돌아왔다.');
-    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '이미 있는 요약.' }} />);
+  it('직접 고쳐 저장할 수 있다 — AI를 거치지 않아도 된다 (task #70 S1)', async () => {
+    mockGetText.mockReturnValue('본문');
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '원래 요약' }} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
-    await userEvent.click(screen.getByRole('button', { name: '다시 요약' }));
-    act(() => setMockAssistState({ isStreaming: true, text: '주인공이' }));
+
+    await userEvent.clear(box());
+    await userEvent.type(box(), '작가가 쓴 요약');
+    await userEvent.click(screen.getByRole('button', { name: '요약 저장' }));
+
+    expect(mockSaveChapterSummary).toHaveBeenCalledWith('w1', 'ch1', '작가가 쓴 요약');
+    expect(startSpy).not.toHaveBeenCalled();
+  });
+
+  it('닫기는 편집 내용을 저장하지 않고 스트림을 끊는다', async () => {
+    mockGetText.mockReturnValue('본문');
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '원래 요약' }} />);
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+    await userEvent.clear(box());
+    await userEvent.type(box(), '버려질 편집');
 
     await userEvent.click(screen.getByRole('button', { name: '닫기' }));
 
@@ -611,10 +628,214 @@ describe('ManuscriptEditor 화 요약', () => {
     render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
     await userEvent.click(screen.getByRole('button', { name: '요약' }));
 
-    const buttons = screen.getAllByRole('button', { name: '요약' });
-    await userEvent.click(buttons[buttons.length - 1]);
+    await userEvent.click(screen.getByRole('button', { name: 'AI로 본문 요약' }));
 
     expect(startSpy).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe('ManuscriptEditor 늘려쓰기', () => {
+  const box = () => screen.getByRole('textbox', { name: '화 요약' });
+  const openModal = async () => {
+    await userEvent.click(screen.getByRole('button', { name: '요약' }));
+  };
+  /** `요약으로 본문 작성` → (원고가 있으면) 확인창까지 통과 */
+  const clickDraft = async (confirm = true) => {
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+    const ok = screen.queryByRole('button', { name: '확인' });
+    if (ok && confirm) await userEvent.click(ok);
+    else if (ok) await userEvent.click(screen.getByRole('button', { name: '취소' }));
+  };
+
+  it('편집란이 비어 있으면 생성하지 않고 안내한다 (task #71 S2)', async () => {
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await openModal();
+
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+
+    expect(startSpy).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('본문이 비어 있으면 확인 없이 바로 생성한다 (task #71 S2)', async () => {
+    mockGetText.mockReturnValue(''); // 빈 화
+    render(
+      <ManuscriptEditor
+        work={WORK}
+        chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.', paragraphs: [] }}
+      />
+    );
+    await openModal();
+
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+
+    expect(screen.queryByRole('button', { name: '확인' })).not.toBeInTheDocument();
+    expect(startSpy).toHaveBeenCalledWith('draft', {
+      workId: 'w1',
+      chapterId: 'ch1',
+      payload: { text: '주인공이 회귀한다.' },
+    });
+  });
+
+  it('생성 전에 편집란 요약을 먼저 저장한다 (task #71 S2)', async () => {
+    mockGetText.mockReturnValue('');
+    render(
+      <ManuscriptEditor
+        work={WORK}
+        chapter={{ ...CHAPTER, summary: '원래 요약', paragraphs: [] }}
+      />
+    );
+    await openModal();
+    await userEvent.clear(box());
+    await userEvent.type(box(), '손본 요약');
+
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+
+    expect(mockSaveChapterSummary).toHaveBeenCalledWith('w1', 'ch1', '손본 요약');
+    expect(startSpy).toHaveBeenCalledWith('draft', {
+      workId: 'w1',
+      chapterId: 'ch1',
+      payload: { text: '손본 요약' },
+    });
+  });
+
+  it('원고가 있으면 대체 확인을 거치고, 취소하면 생성하지 않는다 (task #71 S2)', async () => {
+    // 취소인데 생성이 시작되면 토큰만 나간다.
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+
+    expect(screen.getByText(/복구할 수 없습니다/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+    expect(startSpy).not.toHaveBeenCalled();
+  });
+
+  it('대체를 확인하면 생성이 시작된다 (task #71 S2)', async () => {
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+
+    await clickDraft();
+
+    expect(startSpy).toHaveBeenCalledWith('draft', {
+      workId: 'w1',
+      chapterId: 'ch1',
+      payload: { text: '주인공이 회귀한다.' },
+    });
+  });
+
+  it('생성이 끝나면 본문을 한 번에 반영하고 모달을 닫는다 (task #71 S3)', async () => {
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+    await clickDraft();
+
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
+    expect(mockSetContent).not.toHaveBeenCalled(); // 스트리밍 중엔 원고를 건드리지 않는다
+    act(() => setMockAssistState({ isStreaming: false, text: '첫 문단\n둘째 문단' }));
+
+    expect(mockSetContent).toHaveBeenCalledWith('<p>첫 문단</p><p>둘째 문단</p>');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('생성문의 특수문자를 escape한다 (task #71 S3)', async () => {
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+    await clickDraft();
+
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
+    act(() => setMockAssistState({ isStreaming: false, text: '<script>alert(1)</script>' }));
+
+    const html = String(mockSetContent.mock.calls[0][0]);
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('확인창이 요약 모달과 같은 다이얼로그 시스템에 뜬다 (UAT 발견)', async () => {
+    // `useModal`은 `Modal.Ground`(fixed z-50)가 stacking context를 만들어, 그 안의
+    // z-index를 얼마로 줘도 Base UI 요약 모달(z-50, body 끝 포털) 위로 올라가지 못한다.
+    // 그래서 확인창도 Base UI `Dialog`로 띄운다 — 같은 층에서 나중에 열린 쪽이 위다.
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+
+    await userEvent.click(screen.getByRole('button', { name: '요약으로 본문 작성' }));
+
+    const dialogs = screen.getAllByRole('dialog');
+    expect(dialogs.length).toBeGreaterThanOrEqual(1);
+    // 확인창이 요약 모달보다 **뒤에** 붙어야 위에 그려진다.
+    const confirm = screen.getByText(/복구할 수 없습니다/).closest('[role="dialog"]');
+    expect(dialogs.at(-1)).toBe(confirm);
+  });
+
+  it('확인하면 요약 모달이 닫히고 진행 다이얼로그가 뜬다 (UAT 발견)', async () => {
+    // 프로그램적으로 open을 내릴 때 Dialog가 onOpenChange를 쏘면 onClose가 `stop()`을
+    // 불러 **생성이 즉시 취소된다**. stopSpy 미호출 단정이 그 함정을 잡는다.
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+
+    await clickDraft();
+
+    expect(screen.queryByRole('textbox', { name: '화 요약' })).not.toBeInTheDocument();
+    expect(screen.getByText('AI로 작성 중')).toBeInTheDocument();
+    expect(startSpy).toHaveBeenCalled();
+    expect(stopSpy).not.toHaveBeenCalled();
+  });
+
+  it('작성이 완료되면 진행 다이얼로그가 닫힌다 (UAT 발견)', async () => {
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+    await clickDraft();
+
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
+    expect(screen.getByText('AI로 작성 중')).toBeInTheDocument();
+    act(() => setMockAssistState({ isStreaming: false, text: '첫 문단' }));
+
+    expect(screen.queryByText('AI로 작성 중')).not.toBeInTheDocument();
+  });
+
+  it('진행 다이얼로그의 중단은 스트림을 끊고 원고를 건드리지 않는다 (UAT 발견)', async () => {
+    // 실제 `stop()`은 abort → `finally`에서 isStreaming을 false로 내린다. 즉 중단 뒤에
+    // 완료 전이가 **실제로 발생**하므로, 플래그를 먼저 끄지 않으면 쓰다 만 생성물이 본문을 덮어쓴다.
+    render(
+      <ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '주인공이 회귀한다.' }} />
+    );
+    await openModal();
+    await clickDraft();
+    act(() => setMockAssistState({ isStreaming: true, text: '쓰다 만 문장' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '중단' }));
+    act(() => setMockAssistState({ isStreaming: false })); // abort의 finally가 하는 일
+
+    expect(stopSpy).toHaveBeenCalled();
+    expect(mockSetContent).not.toHaveBeenCalled();
+    expect(screen.queryByText('AI로 작성 중')).not.toBeInTheDocument();
+  });
+
+  it('AI 요약 완료가 본문을 덮어쓰지 않는다 — 전이 감지가 서로 간섭하지 않는다 (task #71 S3)', async () => {
+    // 늘려쓰기와 요약이 스트림 전이 ref를 공유하면 요약 완료가 본문을 갈아끼운다.
+    mockGetText.mockReturnValue('본문이 있다');
+    render(<ManuscriptEditor work={WORK} chapter={{ ...CHAPTER, summary: '원래 요약' }} />);
+    await openModal();
+    await userEvent.click(screen.getByRole('button', { name: 'AI로 본문 요약' }));
+
+    act(() => setMockAssistState({ isStreaming: true, text: '' }));
+    act(() => setMockAssistState({ isStreaming: false, text: '새 요약문' }));
+
+    expect(box()).toHaveValue('새 요약문');
+    expect(mockSetContent).not.toHaveBeenCalled();
   });
 });

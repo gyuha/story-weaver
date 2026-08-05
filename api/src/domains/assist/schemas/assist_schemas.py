@@ -71,9 +71,17 @@ class SummaryInput:
     text: str
 
 
+@dataclass(frozen=True, slots=True)
+class DraftInput:
+    """늘려쓰기: 화 요약(작가가 손본 것일 수 있다)."""
+
+    text: str
+
+
 #: assemble_prompt의 task_input 파라미터가 받는 작업별 입력 타입의 합집합.
 AssistTaskInput = (
-    SummaryInput
+    DraftInput
+    | SummaryInput
     | ContinueInput
     | InfillInput
     | DialogueInput

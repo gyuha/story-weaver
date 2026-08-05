@@ -85,7 +85,14 @@ async def test_create_work_returns_201_with_camelcase(client: AsyncClient) -> No
     assert resp.status_code == 201
     body = resp.json()
     # 프론트 Work 계약(camelCase)
-    for key in ("shortLabel", "subGenre", "coverTheme", "lastEditedLabel", "stats", "reviewSummary"):
+    for key in (
+        "shortLabel",
+        "subGenre",
+        "coverTheme",
+        "lastEditedLabel",
+        "stats",
+        "reviewSummary",
+    ):
         assert key in body
     assert body["stats"]["wordsUnit"] == "천자"
     assert body["reviewSummary"]["scenes"] == 0

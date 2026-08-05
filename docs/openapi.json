@@ -3497,6 +3497,73 @@
         }
       }
     },
+    "/api/v1/works/{work_id}/chapters/{chapter_id}/assist/draft": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "요약으로 화 본문 생성 (늘려쓰기, SSE)",
+        "description": "화 요약을 근거로 그 화의 본문을 스트리밍한다 (늘려쓰기, task #69).\n\n`continue`(이어쓰기)와 방향이 반대다 — 이어쓰기는 본문을 근거로 다음 전개 후보를\n내고 작가가 채택하지만, 이쪽은 요약을 근거로 원고를 생성한다. 그래서 **전체 메모리**를\n주입한다(`assist_service`의 생략 목록에 넣지 않는 것으로 켜진다).\n\n저장은 하지 않는다 — 클라이언트가 결과를 본문에 반영하고 기존 저장 경로로 확정한다.",
+        "operationId": "assist_draft_api_v1_works__work_id__chapters__chapter_id__assist_draft_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/works/{work_id}/chapters/{chapter_id}/extract-updates": {
       "post": {
         "tags": [
@@ -4416,6 +4483,20 @@
           "targetEntityId"
         ],
         "title": "DialogueRequest"
+      },
+      "DraftRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "DraftRequest",
+        "description": "늘려쓰기 입력 — 화 요약(작가가 모달에서 손본 것일 수 있어 바디로 받는다)."
       },
       "EmbeddingSourceType": {
         "type": "string",

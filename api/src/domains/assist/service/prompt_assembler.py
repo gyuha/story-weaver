@@ -17,6 +17,7 @@ from domains.assist.schemas import (
     ContinueInput,
     CorrectInput,
     DialogueInput,
+    DraftInput,
     InfillInput,
     StyleInput,
     SummaryInput,
@@ -67,6 +68,11 @@ _TASK_INSTRUCTION: dict[TaskType, str] = {
         "아래 본문을 근거로 이 화에서 무슨 일이 일어났는지 2~3문장으로 요약하세요. "
         "줄거리를 아는 사람이 흐름을 되짚을 수 있게 사건 중심으로 쓰고, 키워드 나열이 "
         "아니라 서술문으로 쓰세요. 머리말·따옴표·번호·개행 없이 요약 문장만 출력하세요."
+    ),
+    TaskType.draft: (
+        "아래 요약을 근거로 이 화의 본문을 쓰세요. 요약의 각 사건을 문단으로 펼치고, "
+        "요약에 없는 사건을 새로 만들지 마세요. 메모리 컨텍스트의 인물·설정과 모순되지 "
+        "않게 쓰세요. 머리말·제목·설명·따옴표 없이 본문만 출력하세요."
     ),
 }
 
@@ -186,6 +192,13 @@ def assemble_prompt(
         # 요약은 "본문에 무슨 일이 있었나"를 적는 것이라 메모리 주입이 필요 없다 —
         # 근거는 전달된 본문 자체다(eco: 최소 주입).
         system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_minimal(memory_items)}")
+        user_text = task_input.text
+    elif task_type is TaskType.draft:
+        if not isinstance(task_input, DraftInput):
+            raise TypeError(f"draft task requires DraftInput, got {type(task_input).__name__}")
+        # 늘려쓰기는 원고를 대신 쓰는 작업이라 **전체 메모리**를 넣는다 — 인물·설정을
+        # 모르고 쓰면 이 제품의 전제가 무너진다. `summary`가 최소 주입인 것과 반대다.
+        system_parts.append(f"[메모리 컨텍스트]\n{_format_memory_full(memory_items)}")
         user_text = task_input.text
     else:
         if not isinstance(task_input, CorrectInput):
