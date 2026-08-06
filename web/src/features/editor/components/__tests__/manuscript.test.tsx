@@ -26,19 +26,31 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 const mockUpdateChapter = vi.fn();
 vi.mock('@/features/editor/api/manuscript.api', () => ({
   manuscriptApi: { updateChapter: (...args: unknown[]) => mockUpdateChapter(...args) },
+  // 실 팩토리 대신 결정적인 stand-in — invalidate 호출을 정확한 인자로 단정하기 위함
+  // (version-history-modal.test.tsx와 동일한 패턴).
+  manuscriptQueries: {
+    chapterVersionsKey: (options: unknown) => ['chapter-versions-key-test', options],
+  },
 }));
+
+const mockInvalidateQueries = vi.fn();
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  };
+});
 
 const mockSetChapterParagraphs = vi.fn();
 const mockRenameChapter = vi.fn();
 const mockSaveChapterSummary = vi.fn();
-const mockRestoreChapterVersion = vi.fn();
 const mockExtractChapterUpdates = vi.fn();
 vi.mock('@/features/shared/store/works.store', () => ({
   useWorksStore: (
     selector: (s: {
       renameChapter: typeof mockRenameChapter;
       saveChapterSummary: typeof mockSaveChapterSummary;
-      restoreChapterVersion: typeof mockRestoreChapterVersion;
       setChapterParagraphs: typeof mockSetChapterParagraphs;
       extractChapterUpdates: typeof mockExtractChapterUpdates;
     }) => unknown
@@ -46,13 +58,31 @@ vi.mock('@/features/shared/store/works.store', () => ({
     selector({
       renameChapter: mockRenameChapter,
       saveChapterSummary: mockSaveChapterSummary,
-      restoreChapterVersion: mockRestoreChapterVersion,
       setChapterParagraphs: mockSetChapterParagraphs,
       extractChapterUpdates: mockExtractChapterUpdates,
     }),
 }));
 
 vi.mock('../selection-ai-menu', () => ({ SelectionAiMenu: () => null }));
+
+// 버전 기록 모달 자체(목록 조회·diff)는 version-history-modal.test.tsx가 전담한다. 여기서는
+// manuscript.tsx가 넘기는 currentText prop만 가로채 검사한다 — chapter.paragraphs로 되돌아가는
+// 회귀를 잡으려면 실제 prop 값을 봐야 하므로, 목이 '아무 값'이 아니라 실제로 넘어온 값을 담아야 한다.
+let capturedVersionModalProps: {
+  workId?: string;
+  currentText?: string;
+  onRestore?: (version: { id: string; body: string }) => void | Promise<void>;
+} | null = null;
+vi.mock('../version-history-modal', () => ({
+  VersionHistoryModal: (props: {
+    workId?: string;
+    currentText?: string;
+    onRestore?: (version: { id: string; body: string }) => void | Promise<void>;
+  }) => {
+    capturedVersionModalProps = props;
+    return <div data-testid="version-history-modal-stub" />;
+  },
+}));
 
 // 대체 확인 다이얼로그는 목하지 않는다 — 요약·진행 모달과 같은 Base UI `Dialog`라
 // 실제로 렌더되고, `확인`/`취소`를 직접 누르는 것이 진짜 경로다.
@@ -184,16 +214,29 @@ beforeEach(() => {
   mockRenameChapter.mockResolvedValue(undefined);
   mockSaveChapterSummary.mockResolvedValue(undefined);
   setMockAssistState = () => {};
+  capturedVersionModalProps = null;
 });
+
+// 여러 describe에서 공유 — 실제 onUpdate 콜백을 통해 편집을 흉내낸다(mockGetText를 렌더
+// 전에 미리 다른 값으로 세팅하는 방식은 마운트 시점 기준값도 그 값으로 잡혀버려
+// 되돌리기의 "미저장 편집분" 시뮬레이션에 더 이상 쓸 수 없다 — task #73 되돌리기 회귀 수정).
+const edit = (text: string) => {
+  mockGetText.mockReturnValue(text);
+  act(() => capturedOnUpdate.current?.({ editor: { getText: mockGetText } }));
+};
+
+/** 지금 당장 resolve/reject하지 않는 프라미스 — 요청이 in-flight인 상태를 붙잡아 둔다. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
 
 describe('ManuscriptEditor 화 이탈 시 자동 저장', () => {
   // editor-screen이 key={chapter.id}로 화마다 새로 마운트하므로, 언마운트 정리가
   // 트리에서 다른 화 클릭·새 화 추가·읽기 모드 전환 등 모든 이탈 경로를 덮는다.
-
-  const edit = (text: string) => {
-    mockGetText.mockReturnValue(text);
-    act(() => capturedOnUpdate.current?.({ editor: { getText: mockGetText } }));
-  };
 
   it('편집한 뒤 화를 떠나면 자동으로 저장한다', async () => {
     mockUpdateChapter.mockResolvedValue({});
@@ -837,5 +880,190 @@ describe('ManuscriptEditor 늘려쓰기', () => {
 
     expect(box()).toHaveValue('새 요약문');
     expect(mockSetContent).not.toHaveBeenCalled();
+  });
+});
+
+describe('ManuscriptEditor 버전 기록 진입 (task #73 S3)', () => {
+  it('버전 기록을 열면 저장된 문단이 아니라 에디터의 실시간 텍스트를 currentText로 넘긴다', async () => {
+    // CHAPTER.paragraphs는 '원래 문단' 하나뿐이라, 저장된 문단을 넘기면 '원래 문단'이 되어
+    // 아래 기대값과 다르다 — 실시간 에디터 텍스트(mockGetText)를 실제로 읽는지 구분해서 잡는다.
+    mockGetText.mockReturnValue('원래 문단\n실시간으로 고친 문장');
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await userEvent.click(screen.getByRole('button', { name: '버전 기록' }));
+
+    expect(capturedVersionModalProps?.workId).toBe('w1');
+    expect(capturedVersionModalProps?.currentText).toBe('원래 문단\n실시간으로 고친 문장');
+  });
+});
+
+describe('ManuscriptEditor 되돌리기 (task #73 S4)', () => {
+  const CHAPTER_PATH = { work_id: 'w1', episode_id: 'ep1', chapter_id: 'ch1' };
+
+  const openHistory = async () => {
+    await userEvent.click(screen.getByRole('button', { name: '버전 기록' }));
+  };
+
+  it('미저장 편집분이 있으면 현재 본문 선저장 → 선택 버전 PATCH 순으로 두 번 호출된다 (완성 기준 ①)', async () => {
+    mockUpdateChapter.mockResolvedValue({});
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    // 실제 편집을 흉내내 마운트 시점 기준값과 달라지게 한다 — CHAPTER.paragraphs('원래 문단')
+    // 와 다른 값이라 미저장 편집분이 있는 상태다.
+    edit('원래 문단\n실시간으로 고친 문장');
+    await openHistory();
+    await act(async () => {
+      await capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+    });
+
+    expect(mockUpdateChapter).toHaveBeenNthCalledWith(1, {
+      path: CHAPTER_PATH,
+      body: { body: '원래 문단\n실시간으로 고친 문장' },
+    });
+    expect(mockUpdateChapter).toHaveBeenNthCalledWith(2, {
+      path: CHAPTER_PATH,
+      body: { body: '이전 버전 본문' },
+    });
+    // 되돌리기 성공까지 마쳤을 때의 나머지 배선(에디터·스토어·토스트)도 함께 고정한다.
+    expect(mockSetContent).toHaveBeenCalledWith('<p>이전 버전 본문</p>');
+    expect(mockSetChapterParagraphs).toHaveBeenLastCalledWith('w1', 'ch1', [
+      { text: '이전 버전 본문' },
+    ]);
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('선저장이 실패하면 되돌리기 PATCH를 진행하지 않고 에디터를 건드리지 않으며 에러 토스트를 띄운다 (완성 기준 ②)', async () => {
+    mockUpdateChapter.mockRejectedValue(new Error('presave failed'));
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    edit('원래 문단\n저장 안 된 편집');
+    await openHistory();
+    await act(async () => {
+      await capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+    });
+
+    // 선저장 1회만 시도되고, 실패했으니 되돌리기 PATCH(2번째 호출)는 나가지 않는다.
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+    expect(mockSetContent).not.toHaveBeenCalled();
+    expect(mockSetChapterParagraphs).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('미저장 편집분이 없으면 되돌리기 PATCH가 한 번만 호출된다 (완성 기준 ③)', async () => {
+    // CHAPTER.paragraphs와 같은 값 — 미저장 편집분 없음.
+    mockGetText.mockReturnValue('원래 문단');
+    mockUpdateChapter.mockResolvedValue({});
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await openHistory();
+    await act(async () => {
+      await capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+    });
+
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+    expect(mockUpdateChapter).toHaveBeenCalledWith({
+      path: CHAPTER_PATH,
+      body: { body: '이전 버전 본문' },
+    });
+  });
+
+  it('성공 후 버전 목록을 invalidate해 재조회를 트리거한다 (완성 기준 ④)', async () => {
+    mockGetText.mockReturnValue('원래 문단');
+    mockUpdateChapter.mockResolvedValue({});
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await openHistory();
+    await act(async () => {
+      await capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['chapter-versions-key-test', { path: CHAPTER_PATH }],
+    });
+  });
+
+  it('원본 문단의 공백이 에디터 정규화와 달라도 실제 편집이 없으면 선저장을 하지 않는다 (리뷰 high: 공백 정규화 오탐)', async () => {
+    // 실측(vitest, 실 TipTap Editor): ProseMirror는 HTML 파싱 시 문단 내부 연속 공백을 단일
+    // 공백으로 정규화한다. 원본 문단에 이중 공백이 있으면 에디터는 마운트 시점부터(편집
+    // 없이도) 정규화된 텍스트를 돌려주므로, 기준값을 raw 문단 텍스트로 잡으면 "미저장"으로
+    // 오탐한다. 여기서는 edit()를 호출하지 않는다 — 편집이 전혀 없는 상태를 시뮬레이션한다.
+    const NORMALIZED = '그는 천천히 걸었다.'; // 에디터가 정규화해 돌려주는 값 — 마운트 시부터 고정
+    mockGetText.mockReturnValue(NORMALIZED);
+    mockUpdateChapter.mockResolvedValue({});
+
+    render(
+      <ManuscriptEditor
+        work={WORK}
+        chapter={{ ...CHAPTER, paragraphs: [{ text: '그는  천천히 걸었다.' }] }} // 원본: 이중 공백
+      />
+    );
+    await openHistory();
+    await act(async () => {
+      await capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+    });
+
+    // 편집이 없었으므로 되돌리기 PATCH 한 번만 나가야 한다 — 선저장(정규화 오탐)이 없어야 한다.
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+    expect(mockUpdateChapter).toHaveBeenCalledWith({
+      path: CHAPTER_PATH,
+      body: { body: '이전 버전 본문' },
+    });
+  });
+
+  it('되돌리기 진행 중 재진입(더블클릭 등)하면 두 번째 호출은 무시된다 (리뷰 medium: 재진입 가드)', async () => {
+    // 미저장 편집분 없음 — 정상 시나리오라면 PATCH 1회다. 재진입이 막히지 않으면 2회가 된다.
+    mockUpdateChapter.mockResolvedValue({});
+
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    await openHistory();
+
+    await act(async () => {
+      const first = capturedVersionModalProps?.onRestore?.({ id: 'v-old', body: '이전 버전 본문' });
+      const second = capturedVersionModalProps?.onRestore?.({
+        id: 'v-old',
+        body: '이전 버전 본문',
+      });
+      await Promise.all([first, second]);
+    });
+
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+  });
+
+  it('되돌리기 선저장이 진행 중일 때 화를 떠나도 언마운트 자동 저장이 별도 PATCH를 쏘지 않는다 (리뷰 critical: 되돌리기-이탈 경합)', async () => {
+    // 미저장 편집분이 있는 상태에서 되돌리기를 시작하고, 선저장 PATCH가 아직 resolve되기
+    // 전에 화를 떠난다(언마운트). 언마운트 정리가 자기 나름의 PATCH를 또 쏘면, 그 PATCH가
+    // 되돌리기의 최종 PATCH보다 늦게 resolve될 때 방금 끝난 되돌리기가 조용히 무효화된다.
+    render(<ManuscriptEditor work={WORK} chapter={CHAPTER} />);
+    edit('원래 문단\n실시간으로 고친 문장');
+    await openHistory();
+
+    const presave = deferred<unknown>();
+    const restorePatch = deferred<unknown>();
+    mockUpdateChapter.mockImplementationOnce(() => presave.promise);
+    mockUpdateChapter.mockImplementationOnce(() => restorePatch.promise);
+
+    const restorePromise = capturedVersionModalProps?.onRestore?.({
+      id: 'v-old',
+      body: '이전 버전 본문',
+    });
+
+    // 선저장 PATCH가 나갔고 아직 아무것도 resolve되지 않은 상태에서 언마운트.
+    await waitFor(() => expect(mockUpdateChapter).toHaveBeenCalledTimes(1));
+    cleanup();
+
+    // 언마운트가 자기 나름의 PATCH를 추가로 쏘지 않는다 — 여전히 선저장 1회뿐이어야 한다.
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+
+    // 되돌리기 자체는 계속 진행돼 정상적으로 완주한다.
+    presave.resolve({});
+    restorePatch.resolve({});
+    await act(async () => {
+      await restorePromise;
+    });
+
+    expect(mockUpdateChapter).toHaveBeenCalledTimes(2);
+    expect(mockSetChapterParagraphs).toHaveBeenLastCalledWith('w1', 'ch1', [
+      { text: '이전 버전 본문' },
+    ]);
   });
 });

@@ -14,7 +14,7 @@ import uuid
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domains.manuscript.models import Chapter, Episode, Synopsis
+from domains.manuscript.models import Chapter, ChapterVersion, Episode, Synopsis
 
 
 class ManuscriptRepository:
@@ -111,3 +111,63 @@ class ManuscriptRepository:
             )
         )
         return list(result.scalars().all())
+
+    # -- Chapter Versions ---------------------------------------------------
+
+    async def get_latest_version(self, chapter_id: uuid.UUID) -> ChapterVersion | None:
+        """화의 가장 최신 버전(``created_at`` 내림차순 1건) — 없으면 ``None``."""
+        result = await self._session.execute(
+            select(ChapterVersion)
+            .where(ChapterVersion.chapter_id == chapter_id)
+            .order_by(ChapterVersion.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def add_version(self, version: ChapterVersion) -> ChapterVersion:
+        """버전 1건을 append하고 즉시 flush한다.
+
+        ``autoflush=False``라 flush 없이는 같은 세션 안의 후속 조회(예: dedup의
+        ``get_latest_version``)가 이 방금 추가한 행을 보지 못한다 — 다른 add_* 메서드와
+        동일 관례(플러시로 세션 내 재조회를 보장).
+        """
+        self._session.add(version)
+        await self._session.flush()
+        return version
+
+    async def count_versions(self, chapter_id: uuid.UUID) -> int:
+        """화의 버전 총 개수 — 목록 응답의 ``total``."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(ChapterVersion)
+            .where(ChapterVersion.chapter_id == chapter_id)
+        )
+        return result.scalar_one()
+
+    async def list_versions(
+        self, chapter_id: uuid.UUID, limit: int, offset: int
+    ) -> list[ChapterVersion]:
+        """최신순 ``limit + 1``개 조회.
+
+        마지막 1건은 페이지 경계 char_delta 계산용이며, 응답에서 빼는 것은 서비스
+        계층의 책임이다(plan.md #72 S3).
+        """
+        result = await self._session.execute(
+            select(ChapterVersion)
+            .where(ChapterVersion.chapter_id == chapter_id)
+            .order_by(ChapterVersion.created_at.desc())
+            .offset(offset)
+            .limit(limit + 1)
+        )
+        return list(result.scalars().all())
+
+    async def get_version(
+        self, chapter_id: uuid.UUID, version_id: uuid.UUID
+    ) -> ChapterVersion | None:
+        """화에 속한 버전 단건 조회(다른 화 소속이면 ``None`` — 교차 테넌트 404의 근거)."""
+        result = await self._session.execute(
+            select(ChapterVersion).where(
+                ChapterVersion.id == version_id, ChapterVersion.chapter_id == chapter_id
+            )
+        )
+        return result.scalar_one_or_none()

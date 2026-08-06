@@ -165,6 +165,74 @@ export type ChapterUpdate = {
 };
 
 /**
+ * ChapterVersionDetailResponse
+ *
+ * 버전 단건 응답 — 본문·요약 포함.
+ */
+export type ChapterVersionDetailResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+    /**
+     * Body
+     */
+    body: string;
+    /**
+     * Summary
+     */
+    summary?: string | null;
+};
+
+/**
+ * ChapterVersionListItem
+ *
+ * 버전 목록 한 항목 — 본문은 싣지 않는다(plan.md #72 S3, 목록 경량화).
+ */
+export type ChapterVersionListItem = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+    /**
+     * Charcount
+     */
+    charCount: number;
+    /**
+     * Chardelta
+     */
+    charDelta: number | null;
+    /**
+     * Hassummary
+     */
+    hasSummary: boolean;
+};
+
+/**
+ * ChapterVersionListResponse
+ *
+ * 버전 목록 응답 — 최신순, 전체 개수 포함(저장소 최초의 페이지네이션, ADR).
+ */
+export type ChapterVersionListResponse = {
+    /**
+     * Items
+     */
+    items: Array<ChapterVersionListItem>;
+    /**
+     * Total
+     */
+    total: number;
+};
+
+/**
  * ChatMessage
  *
  * A single message in a conversation turn.
@@ -2847,6 +2915,95 @@ export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdRespons
 };
 
 export type PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponse = PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses[keyof PatchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/versions';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ChapterVersionListResponse;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsResponses];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Episode Id
+         */
+        episode_id: string;
+        /**
+         * Chapter Id
+         */
+        chapter_id: string;
+        /**
+         * Version Id
+         */
+        version_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/versions/{version_id}';
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdError = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdErrors[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdErrors];
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: ChapterVersionDetailResponse;
+};
+
+export type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdResponse = GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdResponses[keyof GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdResponses];
 
 export type GetApiV1WorksByWorkIdExportData = {
     body?: never;

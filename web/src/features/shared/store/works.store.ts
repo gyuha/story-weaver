@@ -70,8 +70,6 @@ interface WorksState {
   addPart: (workId: string) => Promise<{ label: string; chapterId: string }>;
   /** 한 부에 속한 모든 화의 partLabel을 일괄 교체 */
   renamePart: (workId: string, oldLabel: string, newLabel: string) => Promise<void>;
-  /** 과거 버전의 본문으로 현재 화 본문을 덮어쓰기 (버전 기록 — 현재로 보내기) */
-  restoreChapterVersion: (workId: string, chapterId: string, versionId: string) => void;
   /** 화 본문 저장(PATCH) 성공 후 로컬 캐시에도 반영 */
   setChapterParagraphs: (workId: string, chapterId: string, paragraphs: Paragraph[]) => void;
   /** 화 삭제 — 제거 후 같은 부의 남은 화를 1..n 연속 재번호 (복구 불가) */
@@ -303,15 +301,6 @@ export const useWorksStore = create<WorksState>()(
         }
       });
     },
-
-    restoreChapterVersion: (workId, chapterId, versionId) =>
-      set((state) => {
-        const chapter = findChapter(state.works, workId, chapterId);
-        const version = chapter?.versions?.find((v) => v.id === versionId);
-        if (!chapter || !version) return;
-        // eco: 현재 본문만 덮어쓰기 (새 스냅샷 적재는 안 함)
-        chapter.paragraphs = version.paragraphs.map((p) => ({ ...p }));
-      }),
 
     setChapterParagraphs: (workId, chapterId, paragraphs) =>
       set((state) => {

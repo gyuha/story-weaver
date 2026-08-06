@@ -2311,6 +2311,175 @@
         }
       }
     },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/versions": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "화 버전 목록",
+        "operationId": "list_chapter_versions_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__versions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterVersionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/episodes/{episode_id}/chapters/{chapter_id}/versions/{version_id}": {
+      "get": {
+        "tags": [
+          "manuscript"
+        ],
+        "summary": "화 버전 단건 조회",
+        "operationId": "get_chapter_version_api_v1_works__work_id__episodes__episode_id__chapters__chapter_id__versions__version_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "chapter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapter Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterVersionDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/works/{work_id}/export": {
       "get": {
         "tags": [
@@ -4173,6 +4342,108 @@
         "type": "object",
         "title": "ChapterUpdate",
         "description": "챕터 수정 입력 — 모든 필드 선택(PATCH). ``global_seq``는 수정 불가."
+      },
+      "ChapterVersionDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "body"
+        ],
+        "title": "ChapterVersionDetailResponse",
+        "description": "버전 단건 응답 — 본문·요약 포함."
+      },
+      "ChapterVersionListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "charCount": {
+            "type": "integer",
+            "title": "Charcount"
+          },
+          "charDelta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chardelta"
+          },
+          "hasSummary": {
+            "type": "boolean",
+            "title": "Hassummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "charCount",
+          "charDelta",
+          "hasSummary"
+        ],
+        "title": "ChapterVersionListItem",
+        "description": "버전 목록 한 항목 — 본문은 싣지 않는다(plan.md #72 S3, 목록 경량화)."
+      },
+      "ChapterVersionListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterVersionListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ChapterVersionListResponse",
+        "description": "버전 목록 응답 — 최신순, 전체 개수 포함(저장소 최초의 페이지네이션, ADR)."
       },
       "ChatMessage": {
         "properties": {

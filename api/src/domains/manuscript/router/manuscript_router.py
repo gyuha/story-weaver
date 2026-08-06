@@ -12,7 +12,7 @@ from typing import Any, NoReturn
 
 import anyio
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -27,12 +27,15 @@ from domains.auth.security import get_current_user
 from domains.budget.dependency import require_budget_available
 from domains.budget.service import estimate_tokens, record_usage
 from domains.chat.ports import AbstractLLMPort
-from domains.manuscript.models import Chapter, Episode, Synopsis
+from domains.manuscript.models import Chapter, ChapterVersion, Episode, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
     ChapterCreate,
     ChapterResponse,
     ChapterUpdate,
+    ChapterVersionDetailResponse,
+    ChapterVersionListItem,
+    ChapterVersionListResponse,
     EpisodeCreate,
     EpisodeResponse,
     EpisodeUpdate,
@@ -40,7 +43,7 @@ from domains.manuscript.schemas import (
     SynopsisResponse,
     SynopsisUpdate,
 )
-from domains.manuscript.service import ManuscriptService
+from domains.manuscript.service import ChapterVersionSummary, ManuscriptService
 from domains.memory.repository import MemoryRepository
 from domains.memory.service import MemoryService
 from domains.moderation.service import (
@@ -89,6 +92,22 @@ def _to_chapter_response(chapter: Chapter) -> ChapterResponse:
         global_seq=chapter.global_seq,
         body=chapter.body,
         summary=chapter.summary,
+    )
+
+
+def _to_version_list_item(summary: ChapterVersionSummary) -> ChapterVersionListItem:
+    return ChapterVersionListItem(
+        id=summary.id,
+        created_at=summary.created_at,
+        char_count=summary.char_count,
+        char_delta=summary.char_delta,
+        has_summary=summary.has_summary,
+    )
+
+
+def _to_version_detail_response(version: ChapterVersion) -> ChapterVersionDetailResponse:
+    return ChapterVersionDetailResponse(
+        id=version.id, created_at=version.created_at, body=version.body, summary=version.summary
     )
 
 
@@ -431,6 +450,58 @@ async def delete_chapter(
         await service.delete_chapter(work_id, current_user.id, episode_id, chapter_id)
     except AppError as exc:
         _raise_http(exc)
+
+
+# ---------------------------------------------------------------------------
+# Chapter Versions (화 버전 기록, plan.md #72 S3)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/episodes/{episode_id}/chapters/{chapter_id}/versions",
+    response_model=ChapterVersionListResponse,
+    summary="화 버전 목록",
+)
+async def list_chapter_versions(
+    work_id: uuid.UUID,
+    episode_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    limit: int = Query(default=30, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    service: ManuscriptService = Depends(_get_service),
+) -> ChapterVersionListResponse:
+    try:
+        items, total = await service.list_versions(
+            work_id, current_user.id, episode_id, chapter_id, limit, offset
+        )
+    except AppError as exc:
+        _raise_http(exc)
+    return ChapterVersionListResponse(
+        items=[_to_version_list_item(item) for item in items], total=total
+    )
+
+
+@router.get(
+    "/episodes/{episode_id}/chapters/{chapter_id}/versions/{version_id}",
+    response_model=ChapterVersionDetailResponse,
+    summary="화 버전 단건 조회",
+)
+async def get_chapter_version(
+    work_id: uuid.UUID,
+    episode_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    version_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ManuscriptService = Depends(_get_service),
+) -> ChapterVersionDetailResponse:
+    try:
+        version = await service.get_version(
+            work_id, current_user.id, episode_id, chapter_id, version_id
+        )
+    except AppError as exc:
+        _raise_http(exc)
+    return _to_version_detail_response(version)
 
 
 # ---------------------------------------------------------------------------

@@ -1,24 +1,81 @@
-import type { Chapter, ChapterVersion } from '@/features/shared/types';
+import type { ChapterVersionListItem } from '@/api';
+import { manuscriptQueries } from '@/features/editor/api/manuscript.api';
+import { toParagraphs } from '@/features/editor/lib/hydrate-chapters';
+import {
+  dateGroupLabel,
+  formatCharDelta,
+  formatClockTime,
+  formatRelativeTime,
+} from '@/features/editor/lib/version-time';
+import type { Chapter } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { diffWords } from '../lib/word-diff';
 
+const PAGE_SIZE = 30;
+// eco: 서버가 항상 offset 0부터 limit개 전체를 최신순으로 주므로, limit을 늘려 다시
+// 받는 것만으로 "더 보기"가 중복 없이 누적된다(수동 병합 코드 불필요). API 상한(limit<=100,
+// plan.md #72)에 걸리면 더 못 늘어난다 — 화 하나가 버전 100개를 넘기면 진짜 offset
+// 페이지네이션(누적 상태 관리)으로 바꿔야 한다.
+const MAX_LIMIT = 100;
+
 interface Props {
+  workId: string;
   chapter: Chapter;
-  /** 현재 화 본문(비교 기준) — 보통 chapter.paragraphs에서 합친 텍스트 */
+  /** 현재 화 본문(비교 기준) — 에디터의 실시간 텍스트 */
   currentText: string;
-  onRestore: (version: ChapterVersion) => void;
+  /** 되돌리기 진행 중 — 버튼 재진입(더블클릭 등) 방지(리뷰 medium) */
+  restoring: boolean;
+  onRestore: (version: { id: string; body: string }) => void;
   onClose: () => void;
 }
 
-/** 버전 기록 모달 — 시간대별 보기 · 현재로 보내기 · 인라인 단어 diff */
-export function VersionHistoryModal({ chapter, currentText, onRestore, onClose }: Props) {
-  const versions = chapter.versions ?? [];
-  const [selId, setSelId] = useState<string | null>(versions[0]?.id ?? null);
+/** 버전 기록 모달 — 날짜 그룹·상대 시각 목록(C안) · 이 버전으로 되돌리기 · 인라인 단어 diff */
+export function VersionHistoryModal({
+  workId,
+  chapter,
+  currentText,
+  restoring,
+  onRestore,
+  onClose,
+}: Props) {
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
-  const selected = versions.find((v) => v.id === selId) ?? null;
-  const selectedText = selected?.paragraphs.map((p) => p.text).join('\n') ?? '';
+
+  const chapterPath = { work_id: workId, episode_id: chapter.episodeId, chapter_id: chapter.id };
+
+  const versionsQuery = useQuery(
+    manuscriptQueries.chapterVersions({ path: chapterPath, query: { limit, offset: 0 } })
+  );
+  const items = versionsQuery.data?.items ?? [];
+  const total = versionsQuery.data?.total ?? 0;
+  const latestId = items[0]?.id ?? null;
+  const remaining = total - items.length;
+
+  // 목록이 처음 로드되면 최신 버전을 기본 선택한다.
+  useEffect(() => {
+    if (selectedId === null && latestId !== null) setSelectedId(latestId);
+  }, [selectedId, latestId]);
+
+  // 최신 버전 본문 — 미저장 여부 판정에 쓴다. 기본 선택이 최신 항목이라 대개
+  // selectedQuery와 쿼리 키가 겹쳐 실제 요청은 한 번만 나간다(React Query dedupe, eco).
+  const latestQuery = useQuery({
+    ...manuscriptQueries.chapterVersion({ path: { ...chapterPath, version_id: latestId ?? '' } }),
+    enabled: latestId !== null,
+  });
+  const selectedQuery = useQuery({
+    ...manuscriptQueries.chapterVersion({
+      path: { ...chapterPath, version_id: selectedId ?? '' },
+    }),
+    enabled: selectedId !== null,
+  });
+
+  const isUnsaved = latestQuery.data ? currentText !== latestQuery.data.body : false;
+  const showUnsavedRow = items.length > 0 && isUnsaved;
+  const selected = selectedQuery.data;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-6">
@@ -53,43 +110,56 @@ export function VersionHistoryModal({ chapter, currentText, onRestore, onClose }
         </div>
 
         <div className="flex min-h-0 flex-1">
-          {/* 좌: 버전 목록 (최신순) */}
+          {/* 좌: 버전 목록 (최신순, 날짜 그룹) */}
           <div className="w-52 shrink-0 overflow-y-auto border-r border-line bg-surface-soft p-2">
-            <div className="px-2 py-1.5 text-[11.5px] font-semibold text-faint">현재</div>
-            <div className="mb-2 rounded-md bg-primary/10 px-2.5 py-2 text-[12.5px] font-medium text-primary">
-              편집 중 (현재 버전)
-            </div>
-            <div className="px-2 py-1.5 text-[11.5px] font-semibold text-faint">이전 버전</div>
-            {versions.length === 0 ? (
+            {versionsQuery.isPending ? (
+              <div className="px-2.5 py-2 text-[12px] text-faint">불러오는 중…</div>
+            ) : versionsQuery.isError ? (
+              <div className="px-2.5 py-2 text-[12px] text-danger">
+                버전 기록을 불러오지 못했습니다.
+              </div>
+            ) : items.length === 0 ? (
               <div className="px-2.5 py-2 text-[12px] text-faint">기록 없음</div>
             ) : (
-              versions.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setSelId(v.id)}
-                  className={cn(
-                    'mb-1 block w-full rounded-md px-2.5 py-2 text-left text-[12.5px] transition-colors',
-                    selId === v.id
-                      ? 'bg-surface font-medium text-ink'
-                      : 'text-ink-soft hover:bg-surface/60'
-                  )}
-                >
-                  {v.savedAt}
-                </button>
-              ))
+              <>
+                {showUnsavedRow && (
+                  <div className="mb-2 rounded-md border border-dashed border-[#fcd34d] bg-[#fffbeb] px-2.5 py-2 text-[12.5px] font-medium text-[#92400e]">
+                    편집 중 · 미저장
+                  </div>
+                )}
+                <VersionGroups
+                  items={items}
+                  latestId={latestId}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+                {remaining > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLimit((l) => Math.min(l + PAGE_SIZE, MAX_LIMIT))}
+                    disabled={limit >= MAX_LIMIT}
+                    className="mt-1 w-full rounded-md border border-line px-2.5 py-1.5 text-center text-[10.5px] text-ink-soft transition-colors hover:bg-surface disabled:opacity-40"
+                  >
+                    더 보기 ({remaining}개 남음)
+                  </button>
+                )}
+              </>
             )}
           </div>
 
           {/* 우: 선택 버전 본문 / diff */}
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex-1 overflow-y-auto px-6 py-5 font-serif text-[15px] leading-[1.9] text-ink">
-              {!selected ? (
+              {items.length === 0 ? (
                 <div className="text-[13px] text-faint">왼쪽에서 이전 버전을 선택하세요.</div>
+              ) : selectedQuery.isError ? (
+                <div className="text-[13px] text-danger">버전을 불러오지 못했습니다.</div>
+              ) : !selected ? (
+                <div className="text-[13px] text-faint">불러오는 중…</div>
               ) : showDiff ? (
-                <DiffView oldText={selectedText} newText={currentText} />
+                <DiffView oldText={selected.body} newText={currentText} />
               ) : (
-                selected.paragraphs.map((p, i) => (
+                toParagraphs(selected.body).map((p, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: 읽기 전용 스냅샷 문단
                   <p key={i} className="mb-3">
                     {p.text}
@@ -100,21 +170,114 @@ export function VersionHistoryModal({ chapter, currentText, onRestore, onClose }
             {selected && (
               <div className="flex h-14 shrink-0 items-center justify-between border-t border-line px-6">
                 <span className="text-[12px] text-faint">
-                  {showDiff ? '선택 버전 → 현재 변경분' : `${selected.savedAt} 버전 (읽기 전용)`}
+                  {showDiff
+                    ? '선택 버전 → 현재 변경분'
+                    : `${formatClockTime(selected.createdAt)} 버전 (읽기 전용)`}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => onRestore(selected)}
-                  className="h-9 rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
-                >
-                  현재로 보내기
-                </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-faint">현재 본문은 새 버전으로 보존됩니다</span>
+                  <button
+                    type="button"
+                    onClick={() => onRestore({ id: selected.id, body: selected.body })}
+                    disabled={restoring}
+                    className="h-9 rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-default disabled:opacity-50"
+                  >
+                    이 버전으로 되돌리기
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** 최신순 항목을 날짜 그룹(오늘/어제/MM-DD)으로 묶어 헤더와 함께 렌더한다. */
+function VersionGroups({
+  items,
+  latestId,
+  selectedId,
+  onSelect,
+}: {
+  items: ChapterVersionListItem[];
+  latestId: string | null;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const now = new Date();
+  const groups: { label: string; items: ChapterVersionListItem[] }[] = [];
+  for (const item of items) {
+    const label = dateGroupLabel(item.createdAt, now);
+    const lastGroup = groups.at(-1);
+    if (lastGroup?.label === label) lastGroup.items.push(item);
+    else groups.push({ label, items: [item] });
+  }
+
+  return (
+    <>
+      {groups.map((group) => (
+        <div key={group.label}>
+          <div className="px-2 py-1.5 text-[11.5px] font-semibold text-faint">{group.label}</div>
+          {group.items.map((item) => (
+            <VersionRow
+              key={item.id}
+              item={item}
+              now={now}
+              isLatest={item.id === latestId}
+              selected={item.id === selectedId}
+              onSelect={() => onSelect(item.id)}
+            />
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function VersionRow({
+  item,
+  now,
+  isLatest,
+  selected,
+  onSelect,
+}: {
+  item: ChapterVersionListItem;
+  now: Date;
+  isLatest: boolean;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid="version-item"
+      onClick={onSelect}
+      className={cn(
+        'mb-1 block w-full rounded-md px-2.5 py-2 text-left text-[12.5px] transition-colors',
+        selected ? 'bg-surface font-medium text-ink' : 'text-ink-soft hover:bg-surface/60'
+      )}
+    >
+      <span className="flex items-baseline gap-1.5">
+        <span>{formatRelativeTime(item.createdAt, now)}</span>
+        <span className="text-[9.5px] text-faint">{formatClockTime(item.createdAt)}</span>
+        {isLatest && (
+          <span className="ml-auto shrink-0 rounded-[3px] bg-primary px-1 text-[9px] font-semibold text-white">
+            최신
+          </span>
+        )}
+      </span>
+      <span className="mt-0.5 block text-[10px] text-faint">
+        {item.charCount.toLocaleString('ko-KR')}자
+        {item.charDelta !== null && (
+          <span className={item.charDelta >= 0 ? 'text-success' : 'text-danger'}>
+            {' '}
+            {formatCharDelta(item.charDelta)}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 

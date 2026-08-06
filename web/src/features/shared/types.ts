@@ -20,13 +20,6 @@ export type UpdateSuggestion =
   | { id: string; kind: 'attribute_change'; payload: AttributeChange }
   | { id: string; kind: 'timeline_state'; payload: TimelineChange };
 
-/** 버전 기록의 한 스냅샷 — 작가 집필 시간축의 과거 본문 (타임라인 상태와 다른 축) */
-export interface ChapterVersion {
-  id: string;
-  savedAt: string; // '2026-06-22 14:30' 등 표시용
-  paragraphs: Paragraph[];
-}
-
 /** 화(Chapter) — 씬 계층 폐지 후 원고 본문·메모리·제안을 화가 직접 보유한다(remove-scene ADR). */
 export interface Chapter {
   id: string;
@@ -51,8 +44,6 @@ export interface Chapter {
   pendingSuggestions?: UpdateSuggestion[];
   /** 인라인 AI 이어쓰기 고스트 텍스트 */
   aiSuggestion?: string;
-  /** 버전 기록 — 최신순 스냅샷 (현재 본문은 paragraphs, 과거는 여기) */
-  versions?: ChapterVersion[];
 }
 
 export interface EntityRelation {

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
@@ -94,5 +95,31 @@ class ChapterResponse(_CamelModel):
     title: str
     order_index: int
     global_seq: int
+    body: str
+    summary: str | None = None
+
+
+class ChapterVersionListItem(_CamelModel):
+    """버전 목록 한 항목 — 본문은 싣지 않는다(plan.md #72 S3, 목록 경량화)."""
+
+    id: uuid.UUID
+    created_at: datetime
+    char_count: int
+    char_delta: int | None
+    has_summary: bool
+
+
+class ChapterVersionListResponse(_CamelModel):
+    """버전 목록 응답 — 최신순, 전체 개수 포함(저장소 최초의 페이지네이션, ADR)."""
+
+    items: list[ChapterVersionListItem]
+    total: int
+
+
+class ChapterVersionDetailResponse(_CamelModel):
+    """버전 단건 응답 — 본문·요약 포함."""
+
+    id: uuid.UUID
+    created_at: datetime
     body: str
     summary: str | None = None

@@ -11,10 +11,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from core.database import Base
 
@@ -90,3 +92,42 @@ class Chapter(Base):
 
     def __repr__(self) -> str:
         return f"<Chapter id={self.id!r} title={self.title!r}>"
+
+
+class ChapterVersion(Base):
+    """화 버전 — 본문이 실린 화 PATCH 한 번마다 append되는 스냅샷(ADR 260805-214733).
+
+    ``work_id``를 두지 않는다 — 소유권 검증은 항상 부모 화(``ManuscriptService.get_chapter``)를
+    거치므로 하위 리소스에 별도 테넌트 컬럼이 불필요하다(plan.md 비고).
+
+    ``created_at``은 ``func.now()``(다른 테이블들의 관례) 대신 ``func.clock_timestamp()``를
+    쓴다 — 실측(그릴링 검증 노트): Postgres의 ``now()``는 트랜잭션 시작 시각이라 같은
+    트랜잭션에서 버전이 둘 append되면 값이 같아져 ``(chapter_id, created_at DESC)`` 정렬이
+    불안정해지지만, ``clock_timestamp()``는 문장 실행 시각이라 그러지 않는다(단, 초당
+    수백~수천 회의 타이트 루프 삽입에서는 이론적으로 여전히 동률 가능 — 이 서비스는 화
+    PATCH 하나당 버전 하나만 만들어 실 경로에서는 해당 없음).
+    """
+
+    __tablename__ = "chapter_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chapters.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    #: 그 버전 시점의 화 요약(ADR — 요약도 버전에 함께 스냅샷). 요약만 갱신하는 PATCH는
+    #: 새 버전을 만들지 않고 최신 버전의 이 컬럼만 갱신한다(최신 버전만 mutable).
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_chapter_versions_chapter_id_created_at", "chapter_id", created_at.desc()),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChapterVersion id={self.id!r} chapter_id={self.chapter_id!r}>"

@@ -4,6 +4,8 @@
 import {
   type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdData,
   type DeleteApiV1WorksByWorkIdEpisodesByEpisodeIdData,
+  type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdData,
+  type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsData,
   type GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersData,
   type GetApiV1WorksByWorkIdEpisodesData,
   type GetApiV1WorksByWorkIdSynopsisData,
@@ -19,6 +21,8 @@ import {
   deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId,
   getApiV1WorksByWorkIdEpisodes,
   getApiV1WorksByWorkIdEpisodesByEpisodeIdChapters,
+  getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersions,
+  getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionId,
   getApiV1WorksByWorkIdSynopsis,
   patchApiV1WorksByWorkIdEpisodesByEpisodeId,
   patchApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterId,
@@ -31,6 +35,9 @@ import {
 import {
   deleteApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdMutation,
   deleteApiV1WorksByWorkIdEpisodesByEpisodeIdMutation,
+  getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdOptions,
+  getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsOptions,
+  getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsQueryKey,
   getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersOptions,
   getApiV1WorksByWorkIdEpisodesOptions,
   getApiV1WorksByWorkIdSynopsisOptions,
@@ -122,12 +129,36 @@ export const manuscriptApi = {
     });
     return data;
   },
+  async chapterVersions(
+    options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsData>
+  ) {
+    const { data } = await getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersions({
+      ...options,
+      throwOnError: true,
+    });
+    return data;
+  },
+  async chapterVersion(
+    options: Options<GetApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdData>
+  ) {
+    const { data } =
+      await getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionId({
+        ...options,
+        throwOnError: true,
+      });
+    return data;
+  },
 };
 
 export const manuscriptQueries = {
   synopsis: getApiV1WorksByWorkIdSynopsisOptions,
   episodes: getApiV1WorksByWorkIdEpisodesOptions,
   chapters: getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersOptions,
+  chapterVersions: getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsOptions,
+  chapterVersion:
+    getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsByVersionIdOptions,
+  // 목록 캐시 무효화용 — query 없이 호출하면(limit/offset 생략) 부분 일치로 모든 페이지를 잡는다.
+  chapterVersionsKey: getApiV1WorksByWorkIdEpisodesByEpisodeIdChaptersByChapterIdVersionsQueryKey,
 };
 
 export const manuscriptMutations = {

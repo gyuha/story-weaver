@@ -11,10 +11,13 @@
 
 from __future__ import annotations
 
+import re
 import uuid
+from datetime import datetime
+from typing import NamedTuple
 
 from core.exceptions import AppError, NotFoundError
-from domains.manuscript.models import Chapter, Episode, Synopsis
+from domains.manuscript.models import Chapter, ChapterVersion, Episode, Synopsis
 from domains.manuscript.repository import ManuscriptRepository
 from domains.manuscript.schemas import (
     ChapterCreate,
@@ -25,6 +28,30 @@ from domains.manuscript.schemas import (
 from domains.manuscript.service.export_service import build_manuscript_zip
 from domains.memory.service import MemoryService
 from domains.works.service import WorksService
+
+_WHITESPACE_PATTERN = re.compile(r"\s")
+
+
+def _char_count(body: str) -> int:
+    """공백류(스페이스·탭·개행·전각 공백 등)를 제거한 글자 수.
+
+    web 에디터 상태바(``manuscript.tsx``의 ``editor.getText().replace(/\\s/g, '').length``)와
+    같은 규칙이다 — ``char_length(body)``(공백 포함 전체 문자 수)가 아니다. plan.md #72 S3
+    "확인 필요" 항목: 목록의 글자 수와 상태바 숫자가 어긋나지 않도록 서버를 에디터 규칙에
+    맞췄다(Postgres regexp_replace(body, '\\s', '', 'g')로도 동일하게 실측 확인 — 전각
+    공백(U+3000)까지 포함해 제거됨).
+    """
+    return len(_WHITESPACE_PATTERN.sub("", body))
+
+
+class ChapterVersionSummary(NamedTuple):
+    """버전 목록 한 항목 — 본문은 담지 않는다(plan.md #72 S3, 목록 경량화)."""
+
+    id: uuid.UUID
+    created_at: datetime
+    char_count: int
+    char_delta: int | None
+    has_summary: bool
 
 
 class ManuscriptService:
@@ -154,7 +181,81 @@ class ManuscriptService:
         # `ChapterUpdate(body="")`도 `{'body': ''}`로 실려 온다(실측).
         if "body" in changes:
             await self._memory_service.index_chapter(work_id, chapter.id, chapter.body)
+            await self._append_version_if_changed(chapter)
+        elif "summary" in changes:
+            # 본문 변경 없이 요약만 왔을 때 — 새 버전을 만들지 않고 최신 버전의 요약만
+            # 갱신한다(ADR 260805-214733 Consequences — "최신 버전 = 현재 화 상태의
+            # 거울"을 지키는 대가로 최신 버전만 mutable하다). 최신 버전이 아직 없으면
+            # (한 번도 본문을 저장한 적 없는 화) 아무것도 하지 않는다.
+            latest = await self._repo.get_latest_version(chapter.id)
+            if latest is not None:
+                latest.summary = chapter.summary
         return chapter
+
+    async def _append_version_if_changed(self, chapter: Chapter) -> None:
+        """직전(최신) 버전과 본문이 다를 때만 새 버전을 append한다(dedup, ADR 260805-214733).
+
+        "어떤 과거 버전과도 겹치지 않을 때"가 아니라 **직전 버전과만** 비교한다 —
+        되돌리기는 과거 버전의 본문을 그대로 다시 PATCH하는 것이라(복원 전용
+        엔드포인트 없음), 전체 이력과 비교하면 X→Y→X로 되돌아간 저장이 버전을 만들지
+        않아 "버전 수 = 본문 저장 횟수" 불변식이 깨진다.
+        """
+        latest = await self._repo.get_latest_version(chapter.id)
+        if latest is not None and latest.body == chapter.body:
+            # dedup으로 새 버전을 안 만들어도, 같은 PATCH에 summary가 함께 왔다면
+            # 최신 버전에 반영해야 한다 — 안 그러면 "최신 버전 = 현재 화 상태의 거울"
+            # 불변식이 깨진다(리뷰 발견: body+summary 동시 PATCH + dedup 조합).
+            latest.summary = chapter.summary
+            return
+        await self._repo.add_version(
+            ChapterVersion(chapter_id=chapter.id, body=chapter.body, summary=chapter.summary)
+        )
+
+    async def list_versions(
+        self,
+        work_id: uuid.UUID,
+        user_id: uuid.UUID,
+        episode_id: uuid.UUID,
+        chapter_id: uuid.UUID,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[ChapterVersionSummary], int]:
+        """화 버전 최신순 페이지 — (항목 목록, 전체 개수).
+
+        ``limit + 1``개를 조회해 마지막 1건은 char_delta 계산에만 쓰고 응답에서 제외한다
+        — 페이지 경계에서 delta가 전량 조회 시의 값과 어긋나지 않도록(plan.md #72 S3).
+        """
+        await self.get_chapter(work_id, user_id, episode_id, chapter_id)  # 소유권+존재 확인
+        total = await self._repo.count_versions(chapter_id)
+        fetched = await self._repo.list_versions(chapter_id, limit, offset)
+        items: list[ChapterVersionSummary] = []
+        for index, version in enumerate(fetched[:limit]):
+            older = fetched[index + 1] if index + 1 < len(fetched) else None
+            delta = None if older is None else _char_count(version.body) - _char_count(older.body)
+            items.append(
+                ChapterVersionSummary(
+                    id=version.id,
+                    created_at=version.created_at,
+                    char_count=_char_count(version.body),
+                    char_delta=delta,
+                    has_summary=version.summary is not None,
+                )
+            )
+        return items, total
+
+    async def get_version(
+        self,
+        work_id: uuid.UUID,
+        user_id: uuid.UUID,
+        episode_id: uuid.UUID,
+        chapter_id: uuid.UUID,
+        version_id: uuid.UUID,
+    ) -> ChapterVersion:
+        await self.get_chapter(work_id, user_id, episode_id, chapter_id)  # 소유권+존재 확인
+        version = await self._repo.get_version(chapter_id, version_id)
+        if version is None:
+            raise NotFoundError("ChapterVersion")
+        return version
 
     async def delete_chapter(
         self, work_id: uuid.UUID, user_id: uuid.UUID, episode_id: uuid.UUID, chapter_id: uuid.UUID
