@@ -8,19 +8,26 @@
 스키마 자체에 필드가 없어 PATCH 페이로드에 담겨도 반영되지 않는다. 생성/수정 시
 엔티티 카드(summary+attributes)를 ``MemoryService``로 임베딩해 메모리 검색의
 근거 데이터를 갱신한다(plan.md S3 — 정교한 재임베딩 최적화는 비목표라 동기 처리로
-충분).
+충분). 카드 삭제 시 이미지 파일 정리는 ``image_cleanup`` callable로 주입한다(plan.md
+S3) — FK CASCADE는 ``entity_images`` DB 행만 지우고 파일은 남기므로(ADR
+`260811-234511` Consequences) 명시적으로 지워야 한다. 기본값이 실제 정리 함수라
+기존 호출부는 고칠 필요가 없다(도메인 간 직접 모델 import 금지 — 함수만 주입).
 """
 
 from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import status
 from pydantic import ValidationError as PydanticValidationError
 
 from core.exceptions import AppError, NotFoundError
+from domains.image_generation.service.image_storage import (
+    delete_images_for_entity as _delete_entity_images,
+)
 from domains.memory.models import EmbeddingSourceType
 from domains.memory.service import MemoryService
 from domains.works.service import WorksService
@@ -48,11 +55,16 @@ def _entity_content(entity: Entity) -> str:
 
 class WorldBibleService:
     def __init__(
-        self, repo: WorldBibleRepository, works_service: WorksService, memory_service: MemoryService
+        self,
+        repo: WorldBibleRepository,
+        works_service: WorksService,
+        memory_service: MemoryService,
+        image_cleanup: Callable[[uuid.UUID, uuid.UUID], int] = _delete_entity_images,
     ) -> None:
         self._repo = repo
         self._works_service = works_service
         self._memory_service = memory_service
+        self._image_cleanup = image_cleanup
 
     async def list_entities(self, work_id: uuid.UUID, user_id: uuid.UUID) -> list[Entity]:
         await self._works_service.get_work(work_id, user_id)  # 소유권 확인 (미소유 시 404)
@@ -105,3 +117,4 @@ class WorldBibleService:
     ) -> None:
         entity = await self.get_entity(work_id, user_id, entity_id)
         await self._repo.delete(entity)
+        self._image_cleanup(work_id, entity_id)

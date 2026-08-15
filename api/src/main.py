@@ -285,6 +285,44 @@ def _register_routers(application: FastAPI) -> None:
     except ImportError:
         logger.debug("worldbible_router_not_found", note="Will be added in later phase")
 
+    # Image generation domain (화풍 카탈로그·견본)
+    try:
+        from domains.image_generation.router import art_styles_router
+
+        application.include_router(art_styles_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/art-styles")
+    except ImportError:
+        logger.debug("art_styles_router_not_found", note="Will be added in later phase")
+
+    # Image generation domain (작품 화풍 조회·저장)
+    try:
+        from domains.image_generation.router import works_art_style_router
+
+        application.include_router(works_art_style_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/art-style")
+    except ImportError:
+        logger.debug("works_art_style_router_not_found", note="Will be added in later phase")
+
+    # Image generation domain (설정 이미지 바이트 조회)
+    try:
+        from domains.image_generation.router import images_router as entity_images_router
+
+        application.include_router(entity_images_router, prefix="/api/v1")
+        logger.debug("router_registered", prefix="/api/v1/works/{work_id}/images")
+    except ImportError:
+        logger.debug("entity_images_router_not_found", note="Will be added in later phase")
+
+    # Image generation domain (설정 이미지 생성, SSE)
+    try:
+        from domains.image_generation.router import generate_router as entity_image_generate_router
+
+        application.include_router(entity_image_generate_router, prefix="/api/v1")
+        logger.debug(
+            "router_registered", prefix="/api/v1/works/{work_id}/entities/{entity_id}/images"
+        )
+    except ImportError:
+        logger.debug("entity_image_generate_router_not_found", note="Will be added in later phase")
+
     # Timeline domain (타임라인 상태)
     try:
         from domains.timeline.router import router as timeline_router

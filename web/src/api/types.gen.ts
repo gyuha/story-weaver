@@ -5,6 +5,44 @@ export type ClientOptions = {
 };
 
 /**
+ * ArtStyleResponse
+ *
+ * ``GET /art-styles`` 응답 항목. ``samples``는 카드 유형별 견본 URL(화풍 선택 화면용).
+ */
+export type ArtStyleResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Samples
+     */
+    samples: {
+        [key: string]: string;
+    };
+};
+
+/**
+ * ArtStyleUpdateRequest
+ *
+ * ``PUT /works/{work_id}/art-style`` 요청 바디. ``art_style_note``는 빈 문자열도 허용한다.
+ */
+export type ArtStyleUpdateRequest = {
+    /**
+     * Artstyleid
+     */
+    artStyleId: string;
+    /**
+     * Artstylenote
+     */
+    artStyleNote?: string | null;
+};
+
+/**
  * AttributeChange
  *
  * 기존 엔티티의 속성 변경 후보.
@@ -493,6 +531,39 @@ export type EntityCreate = {
 };
 
 /**
+ * EntityImageResponse
+ *
+ * 설정 이미지 한 항목. ``image_url``은 바이트 조회 엔드포인트의 경로를 담는다 —
+ * ``ArtStyleResponse.samples``가 쓰는 것과 같은 방식이다.
+ */
+export type EntityImageResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Imageurl
+     */
+    imageUrl: string;
+    /**
+     * Isprimary
+     */
+    isPrimary: boolean;
+    /**
+     * Visualdescription
+     */
+    visualDescription: string | null;
+    /**
+     * Templateid
+     */
+    templateId: string;
+    /**
+     * Createdat
+     */
+    createdAt: string;
+};
+
+/**
  * EntityResponse
  *
  * 엔티티 카드 응답.
@@ -645,6 +716,22 @@ export type ExtractUpdatesResponse = {
      * Timelinechanges
      */
     timelineChanges?: Array<TimelineChange>;
+};
+
+/**
+ * GenerateEntityImageRequest
+ *
+ * ``templateId``를 받지 않는다 — 작품의 화풍을 읽어 조립한다(S5, ADR `260813-110724`).
+ *
+ * 옛 웹이 여전히 ``templateId``를 보내더라도(2/2 배포 전까지) ``_CamelModel``의 기본
+ * ``extra="ignore"``가 조용히 걸러낸다 — 거부하면 2/2가 들어오기 전까지 로그가
+ * 시끄러워지므로 무시를 택했다(plan.md S5 확인 필요 항목).
+ */
+export type GenerateEntityImageRequest = {
+    /**
+     * Extraprompt
+     */
+    extraPrompt?: string;
 };
 
 /**
@@ -1289,6 +1376,26 @@ export type TokenResponse = {
 };
 
 /**
+ * UpdateEntityImageRequest
+ *
+ * 부분 갱신 — 보낸 필드만 반영한다(``exclude_unset``, worldbible·manuscript와 동일 방식).
+ *
+ * ``is_primary``는 ``True``만 받는다: 대표는 **다른 장을 올리는 것으로만** 바뀐다. 내리기만
+ * 허용하면 "이미지가 있는데 대표가 없는 카드"가 생겨 카드가 얼굴을 잃는다 — 이미지가
+ * 1장 이상인 카드는 대표가 정확히 1장이라는 불변식을 여기서 지킨다.
+ */
+export type UpdateEntityImageRequest = {
+    /**
+     * Isprimary
+     */
+    isPrimary?: true | null;
+    /**
+     * Visualdescription
+     */
+    visualDescription?: string | null;
+};
+
+/**
  * UpdateProfileRequest
  *
  * Request body for PATCH /auth/me (partial profile update).
@@ -1419,6 +1526,22 @@ export type VerifyEmailResponse = {
      */
     message?: string;
     user: UserResponse;
+};
+
+/**
+ * WorkArtStyleResponse
+ *
+ * ``GET``/``PUT /works/{work_id}/art-style`` 응답. 화풍 미지정 작품은 두 필드 모두 ``null``.
+ */
+export type WorkArtStyleResponse = {
+    /**
+     * Artstyleid
+     */
+    artStyleId: string | null;
+    /**
+     * Artstylenote
+     */
+    artStyleNote: string | null;
 };
 
 /**
@@ -3196,6 +3319,250 @@ export type PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses = {
 };
 
 export type PatchApiV1WorksByWorkIdEntitiesByEntityIdResponse = PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses[keyof PatchApiV1WorksByWorkIdEntitiesByEntityIdResponses];
+
+export type GetApiV1ArtStylesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/art-styles';
+};
+
+export type GetApiV1ArtStylesResponses = {
+    /**
+     * Response List Art Styles Endpoint Api V1 Art Styles Get
+     *
+     * Successful Response
+     */
+    200: Array<ArtStyleResponse>;
+};
+
+export type GetApiV1ArtStylesResponse = GetApiV1ArtStylesResponses[keyof GetApiV1ArtStylesResponses];
+
+export type GetApiV1ArtStylesByStyleIdSamplesByEntityTypeData = {
+    body?: never;
+    path: {
+        /**
+         * Style Id
+         */
+        style_id: string;
+        /**
+         * Entity Type
+         */
+        entity_type: 'character' | 'location' | 'event' | 'item';
+    };
+    query?: never;
+    url: '/api/v1/art-styles/{style_id}/samples/{entity_type}';
+};
+
+export type GetApiV1ArtStylesByStyleIdSamplesByEntityTypeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1ArtStylesByStyleIdSamplesByEntityTypeError = GetApiV1ArtStylesByStyleIdSamplesByEntityTypeErrors[keyof GetApiV1ArtStylesByStyleIdSamplesByEntityTypeErrors];
+
+export type GetApiV1ArtStylesByStyleIdSamplesByEntityTypeResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GetApiV1WorksByWorkIdArtStyleData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/art-style';
+};
+
+export type GetApiV1WorksByWorkIdArtStyleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdArtStyleError = GetApiV1WorksByWorkIdArtStyleErrors[keyof GetApiV1WorksByWorkIdArtStyleErrors];
+
+export type GetApiV1WorksByWorkIdArtStyleResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkArtStyleResponse;
+};
+
+export type GetApiV1WorksByWorkIdArtStyleResponse = GetApiV1WorksByWorkIdArtStyleResponses[keyof GetApiV1WorksByWorkIdArtStyleResponses];
+
+export type PutApiV1WorksByWorkIdArtStyleData = {
+    body: ArtStyleUpdateRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/art-style';
+};
+
+export type PutApiV1WorksByWorkIdArtStyleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PutApiV1WorksByWorkIdArtStyleError = PutApiV1WorksByWorkIdArtStyleErrors[keyof PutApiV1WorksByWorkIdArtStyleErrors];
+
+export type PutApiV1WorksByWorkIdArtStyleResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkArtStyleResponse;
+};
+
+export type PutApiV1WorksByWorkIdArtStyleResponse = PutApiV1WorksByWorkIdArtStyleResponses[keyof PutApiV1WorksByWorkIdArtStyleResponses];
+
+export type GetApiV1WorksByWorkIdImagesByImageIdData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Image Id
+         */
+        image_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/images/{image_id}';
+};
+
+export type GetApiV1WorksByWorkIdImagesByImageIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdImagesByImageIdError = GetApiV1WorksByWorkIdImagesByImageIdErrors[keyof GetApiV1WorksByWorkIdImagesByImageIdErrors];
+
+export type GetApiV1WorksByWorkIdImagesByImageIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type PatchApiV1WorksByWorkIdImagesByImageIdData = {
+    body: UpdateEntityImageRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Image Id
+         */
+        image_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/images/{image_id}';
+};
+
+export type PatchApiV1WorksByWorkIdImagesByImageIdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchApiV1WorksByWorkIdImagesByImageIdError = PatchApiV1WorksByWorkIdImagesByImageIdErrors[keyof PatchApiV1WorksByWorkIdImagesByImageIdErrors];
+
+export type PatchApiV1WorksByWorkIdImagesByImageIdResponses = {
+    /**
+     * Successful Response
+     */
+    200: EntityImageResponse;
+};
+
+export type PatchApiV1WorksByWorkIdImagesByImageIdResponse = PatchApiV1WorksByWorkIdImagesByImageIdResponses[keyof PatchApiV1WorksByWorkIdImagesByImageIdResponses];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdImagesData = {
+    body?: never;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}/images';
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdImagesError = GetApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors];
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdImagesResponses = {
+    /**
+     * Response List Entity Images Api V1 Works  Work Id  Entities  Entity Id  Images Get
+     *
+     * Successful Response
+     */
+    200: Array<EntityImageResponse>;
+};
+
+export type GetApiV1WorksByWorkIdEntitiesByEntityIdImagesResponse = GetApiV1WorksByWorkIdEntitiesByEntityIdImagesResponses[keyof GetApiV1WorksByWorkIdEntitiesByEntityIdImagesResponses];
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdImagesData = {
+    body: GenerateEntityImageRequest;
+    path: {
+        /**
+         * Work Id
+         */
+        work_id: string;
+        /**
+         * Entity Id
+         */
+        entity_id: string;
+    };
+    query?: never;
+    url: '/api/v1/works/{work_id}/entities/{entity_id}/images';
+};
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdImagesError = PostApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors[keyof PostApiV1WorksByWorkIdEntitiesByEntityIdImagesErrors];
+
+export type PostApiV1WorksByWorkIdEntitiesByEntityIdImagesResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetApiV1WorksByWorkIdEntitiesByEntityIdTimelineStatesData = {
     body?: never;

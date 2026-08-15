@@ -2,21 +2,30 @@ import type { Entity, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
 import { Clock, Pencil } from 'lucide-react';
+import { useEntityImages } from '../lib/use-entity-images';
+import { AuthedImage } from './authed-image';
+import { EntityImageSection } from './entity-image-section';
 
 export function EntityDetail({ work, entity }: { work: Work; entity: Entity }) {
   const states = work.timeline
     .filter((t) => t.entityId === entity.id)
     .sort((a, b) => a.chapterIndex - b.chapterIndex);
+  const { primaryImage } = useEntityImages(work.id, entity.id);
 
   return (
     <div className="min-w-0 flex-1 overflow-y-auto bg-paper">
       <div className="max-w-[660px] px-12 pt-[34px] pb-16">
         <div className="mb-2 flex items-start gap-4">
-          {entity.imageUrl ? (
-            <img
-              src={entity.imageUrl}
+          {primaryImage ? (
+            <AuthedImage
+              path={primaryImage.imageUrl}
               alt={entity.name}
               className="size-[58px] shrink-0 rounded-xl object-cover"
+              fallback={
+                <div className="grid size-[58px] shrink-0 place-items-center rounded-xl bg-[#f1f1ef] text-[30px]">
+                  {entity.emoji}
+                </div>
+              }
             />
           ) : (
             <div className="grid size-[58px] shrink-0 place-items-center rounded-xl bg-[#f1f1ef] text-[30px]">
@@ -97,6 +106,8 @@ export function EntityDetail({ work, entity }: { work: Work; entity: Entity }) {
             </Row>
           )}
         </div>
+
+        <EntityImageSection workId={work.id} entity={entity} />
 
         {states.length > 0 && (
           <div className="mt-[26px]">

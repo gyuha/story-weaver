@@ -1,0 +1,47 @@
+{
+  "$comment": "이미지 템플릿 카탈로그 — 단일 출처. 화풍(styles) 4종과 카드 유형별 구도(compositions) 4종의 두 축으로 분리돼 있다(.forge/adr/260813-110724 — 화풍은 작품 단위로 올라가고 템플릿엔 구도만 남는다). style.prompt_fragment는 매체·기법만, composition.prompt_fragment는 구도·배경·품질만 담는다(배경은 구도가 결정: 인물=흰 배경, 장소=장면 자체가 배경, 사건=장면, 아이템=완전한 흰 배경). composition.sample_subject는 samples/<style>-<type>.jpg를 재생성할 때만 쓰이며(같은 유형이면 화풍이 달라도 동일 대상) 런타임 프롬프트 조립에는 관여하지 않는다 — scripts/generate_template_samples.py 참조.",
+  "styles": [
+    {
+      "id": "ink",
+      "label": "수묵화",
+      "prompt_fragment": "수묵화풍 삽화, 먹선과 옅은 채색"
+    },
+    {
+      "id": "webtoon",
+      "label": "웹툰",
+      "prompt_fragment": "한국 웹툰 스타일, 선명한 셀 셰이딩과 또렷한 윤곽선"
+    },
+    {
+      "id": "oil",
+      "label": "유화",
+      "prompt_fragment": "고전 유화, 두터운 붓결과 깊은 명암"
+    },
+    {
+      "id": "photo",
+      "label": "사진풍",
+      "prompt_fragment": "사실적인 사진, 자연광 소프트 조명"
+    }
+  ],
+  "compositions": [
+    {
+      "entity_type": "character",
+      "prompt_fragment": "상반신 반신 구도, 차분한 표정, 흰 배경, 인물 한 명만, 고화질 설정화",
+      "sample_subject": "이십 대 여성 무협 검객, 칠흑색 장발을 느슨한 쪽머리로 올림, 짙은 청색 무복"
+    },
+    {
+      "entity_type": "location",
+      "prompt_fragment": "넓은 원경 구도, 인물 없음, 고화질 배경 설정화",
+      "sample_subject": "안개 낀 험준한 산중에 앉은 오래된 고찰"
+    },
+    {
+      "entity_type": "event",
+      "prompt_fragment": "사건의 한순간을 담은 장면 구도, 고화질",
+      "sample_subject": "안개 낀 산중 절벽에서 두 검객이 검을 맞대고 맞선 순간"
+    },
+    {
+      "entity_type": "item",
+      "prompt_fragment": "물건 하나만 단독으로, 완전한 흰 배경, 그림자 없음, 고화질 설정화",
+      "sample_subject": "옥으로 장식된 손잡이를 가진 고대 장검 한 자루"
+    }
+  ]
+}

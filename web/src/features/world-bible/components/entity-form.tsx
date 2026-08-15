@@ -1,9 +1,8 @@
 import type { NewEntityInput } from '@/features/shared/store/works.store';
 import type { Entity, EntityField, EntityType } from '@/features/shared/types';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
-import { Plus, Sparkles, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 
 const TYPES: EntityType[] = ['인물', '장소', '사건', '아이템'];
 const DEFAULT_EMOJI: Record<EntityType, string> = {
@@ -58,18 +57,6 @@ export function EntityForm({
       ? initial.relations.map((r) => ({ name: r.name, role: r.role }))
       : [{ name: '', role: '' }]
   );
-  const [prompt, setPrompt] = useState('');
-  const [generatedImage, setGeneratedImage] = useState<string | null>(initial?.imageUrl ?? null);
-
-  const generateImage = () => {
-    const desc = fieldValues.외모 ?? fieldValues.묘사 ?? '';
-    const finalPrompt = prompt.trim() || `${type} ${name || '엔티티'}${desc ? ` — ${desc}` : ''}`;
-    if (!prompt.trim()) setPrompt(finalPrompt);
-    // eco: 결정적 mock 플레이스홀더(data-uri SVG). 실 생성 API로 교체.
-    setGeneratedImage(makePlaceholder(name || type, emoji.trim() || DEFAULT_EMOJI[type]));
-    toast.success('이미지를 생성했습니다 (목업)');
-  };
-
   const changeType = (t: EntityType) => {
     setType(t);
     setEmoji(DEFAULT_EMOJI[t]);
@@ -95,7 +82,6 @@ export function EntityForm({
               .map((r) => ({ name: r.name.trim(), role: r.role.trim() }))
               .filter((r) => r.name)
           : undefined,
-      imageUrl: generatedImage ?? undefined,
     });
   };
 
@@ -270,35 +256,6 @@ export function EntityForm({
           </>
         )}
 
-        {/* 이미지 생성 */}
-        <div className="mt-7 border-t border-line pt-5">
-          <div className="mb-2 text-[13px] font-semibold text-muted-ink">이미지 생성</div>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={2}
-            placeholder="이미지 프롬프트 (비우면 유형·이름·외모로 자동 구성)"
-            className="mb-2 w-full resize-none rounded-md border border-line bg-paper px-3 py-2 text-sm leading-[1.6] text-ink outline-none focus:border-primary"
-          />
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={generateImage}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-ai/40 bg-ai/[0.06] px-3.5 text-[13px] font-medium text-ai transition-colors hover:bg-ai/[0.12]"
-            >
-              <Sparkles className="size-4" strokeWidth={2} />
-              생성
-            </button>
-            {generatedImage && (
-              <img
-                src={generatedImage}
-                alt="생성 미리보기"
-                className="h-[120px] rounded-lg border border-line object-cover"
-              />
-            )}
-          </div>
-        </div>
-
         {/* 액션 */}
         <div className="mt-8 flex gap-2">
           <button
@@ -320,15 +277,6 @@ export function EntityForm({
       </div>
     </div>
   );
-}
-
-const escapeXml = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-// eco: 결정적 mock 플레이스홀더 이미지(data-uri SVG). 실 생성 API로 교체.
-function makePlaceholder(name: string, emoji: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="#e9e6df"/><text x="160" y="104" font-size="68" text-anchor="middle">${escapeXml(emoji)}</text><text x="160" y="156" font-size="18" text-anchor="middle" fill="#3a3a36" font-family="sans-serif">${escapeXml(name)}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 function Label({ children }: { children: React.ReactNode }) {

@@ -403,10 +403,18 @@ class Settings(BaseSettings):
 
     ollama_base_url: str = "http://localhost:11434"
 
+    openai_compatible_base_url: str = ""
+    openai_compatible_api_key: SecretStr = SecretStr("")
+
     # ── Budget (M4-S2) ────────────────────────────────────────────────────────
     # env: BUDGET_TOKEN_LIMIT — 사용자별 주기(budget 도메인 DEFAULT_PERIOD_SECONDS) 토큰
     # 사용량 상한. 요금제별 실제 수치는 미결정(PRD 4.1) — 합리적 기본값으로 구조만 동작시킨다.
     budget_token_limit: int = Field(default=100_000, gt=0)
+
+    # ── Image storage (ADR 260811-234511) ────────────────────────────────────
+    # env: IMAGE_STORAGE_ROOT — 생성 이미지 저장 루트. 객체 스토리지로 옮길 때까지
+    # 로컬 파일시스템에 둔다. `.gitignore`의 `var/`에 걸린다.
+    image_storage_root: str = "var/images"
 
     @field_validator("llm_provider", mode="before")
     @classmethod
@@ -580,6 +588,8 @@ class Settings(BaseSettings):
             AZURE_OPENAI_DEPLOYMENT=self.azure_openai_deployment,
             AZURE_OPENAI_API_VERSION=self.azure_openai_api_version,
             OLLAMA_BASE_URL=self.ollama_base_url,
+            OPENAI_COMPATIBLE_BASE_URL=self.openai_compatible_base_url,
+            OPENAI_COMPATIBLE_API_KEY=self.openai_compatible_api_key,
         )
 
     def is_production(self) -> bool:

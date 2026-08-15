@@ -2807,6 +2807,442 @@
         }
       }
     },
+    "/api/v1/art-styles": {
+      "get": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "작품 화풍 카탈로그",
+        "operationId": "list_art_styles_endpoint_api_v1_art_styles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ArtStyleResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Art Styles Endpoint Api V1 Art Styles Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/art-styles/{style_id}/samples/{entity_type}": {
+      "get": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "화풍 견본 썸네일",
+        "operationId": "get_art_style_sample_api_v1_art_styles__style_id__samples__entity_type__get",
+        "parameters": [
+          {
+            "name": "style_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Style Id"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "character",
+                "location",
+                "event",
+                "item"
+              ],
+              "type": "string",
+              "title": "Entity Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/art-style": {
+      "get": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "작품 화풍 조회",
+        "description": "화풍이 아직 없는 작품은 두 필드 모두 ``null``(200) — \"미지정\"을 404와 구분한다.",
+        "operationId": "get_work_art_style_api_v1_works__work_id__art_style_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkArtStyleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "작품 화풍 저장",
+        "description": "언제든 다시 저장할 수 있다 — [[작품 화풍]]은 잠기지 않는다(ADR 260813-110724).",
+        "operationId": "update_work_art_style_api_v1_works__work_id__art_style_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtStyleUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkArtStyleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/images/{image_id}": {
+      "get": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "설정 이미지 바이트 조회",
+        "operationId": "get_entity_image_api_v1_works__work_id__images__image_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Image Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "대표 지정 · 시각 묘사 수정",
+        "description": "보낸 필드만 반영한다. 남의 ``work_id``·없는 이미지는 404.\n\n``set_visual_description``은 없는 이미지에 조용히 반환하므로, 여기서 ``get``으로 먼저\n확인한다 — 그 조회가 ``work_id`` 스코프라 테넌트 가드를 겸한다(ADR-0005).",
+        "operationId": "update_entity_image_api_v1_works__work_id__images__image_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Image Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEntityImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityImageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/works/{work_id}/entities/{entity_id}/images": {
+      "get": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "설정 이미지 목록",
+        "description": "카드의 설정 이미지를 append 순서로 돌려준다. 이미지가 없으면 빈 배열(404 아님).",
+        "operationId": "list_entity_images_api_v1_works__work_id__entities__entity_id__images_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntityImageResponse"
+                  },
+                  "title": "Response List Entity Images Api V1 Works  Work Id  Entities  Entity Id  Images Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "image-generation"
+        ],
+        "summary": "설정 이미지 생성 (SSE)",
+        "operationId": "generate_entity_image_api_v1_works__work_id__entities__entity_id__images_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Id"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateEntityImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/works/{work_id}/entities/{entity_id}/timeline-states": {
       "post": {
         "tags": [
@@ -4109,6 +4545,66 @@
   },
   "components": {
     "schemas": {
+      "ArtStyleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "samples": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "character",
+                "location",
+                "event",
+                "item"
+              ]
+            },
+            "type": "object",
+            "title": "Samples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "samples"
+        ],
+        "title": "ArtStyleResponse",
+        "description": "``GET /art-styles`` 응답 항목. ``samples``는 카드 유형별 견본 URL(화풍 선택 화면용)."
+      },
+      "ArtStyleUpdateRequest": {
+        "properties": {
+          "artStyleId": {
+            "type": "string",
+            "title": "Artstyleid"
+          },
+          "artStyleNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artstylenote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artStyleId"
+        ],
+        "title": "ArtStyleUpdateRequest",
+        "description": "``PUT /works/{work_id}/art-style`` 요청 바디. ``art_style_note``는 빈 문자열도 허용한다."
+      },
       "AttributeChange": {
         "properties": {
           "entityId": {
@@ -4815,6 +5311,54 @@
         "title": "EntityCreate",
         "description": "엔티티 카드 생성 입력. ``attributes``는 서비스 레벨에서 ``entity_type``별로 검증한다."
       },
+      "EntityImageResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "imageUrl": {
+            "type": "string",
+            "title": "Imageurl"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "title": "Isprimary"
+          },
+          "visualDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualdescription"
+          },
+          "templateId": {
+            "type": "string",
+            "title": "Templateid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "imageUrl",
+          "isPrimary",
+          "visualDescription",
+          "templateId",
+          "createdAt"
+        ],
+        "title": "EntityImageResponse",
+        "description": "설정 이미지 한 항목. ``image_url``은 바이트 조회 엔드포인트의 경로를 담는다 —\n``ArtStyleResponse.samples``가 쓰는 것과 같은 방식이다."
+      },
       "EntityResponse": {
         "properties": {
           "id": {
@@ -5056,6 +5600,18 @@
         "type": "object",
         "title": "ExtractUpdatesResponse",
         "description": "추출 결과 — 3개 카테고리. 파싱 실패 시 모두 빈 리스트."
+      },
+      "GenerateEntityImageRequest": {
+        "properties": {
+          "extraPrompt": {
+            "type": "string",
+            "title": "Extraprompt",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "GenerateEntityImageRequest",
+        "description": "``templateId``를 받지 않는다 — 작품의 화풍을 읽어 조립한다(S5, ADR `260813-110724`).\n\n옛 웹이 여전히 ``templateId``를 보내더라도(2/2 배포 전까지) ``_CamelModel``의 기본\n``extra=\"ignore\"``가 조용히 걸러낸다 — 거부하면 2/2가 들어오기 전까지 로그가\n시끄러워지므로 무시를 택했다(plan.md S5 확인 필요 항목)."
       },
       "HTTPValidationError": {
         "properties": {
@@ -5972,6 +6528,36 @@
         "title": "TokenResponse",
         "description": "JWT pair returned by login and refresh endpoints."
       },
+      "UpdateEntityImageRequest": {
+        "properties": {
+          "isPrimary": {
+            "anyOf": [
+              {
+                "type": "boolean",
+                "const": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isprimary"
+          },
+          "visualDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualdescription"
+          }
+        },
+        "type": "object",
+        "title": "UpdateEntityImageRequest",
+        "description": "부분 갱신 — 보낸 필드만 반영한다(``exclude_unset``, worldbible·manuscript와 동일 방식).\n\n``is_primary``는 ``True``만 받는다: 대표는 **다른 장을 올리는 것으로만** 바뀐다. 내리기만\n허용하면 \"이미지가 있는데 대표가 없는 카드\"가 생겨 카드가 얼굴을 잃는다 — 이미지가\n1장 이상인 카드는 대표가 정확히 1장이라는 불변식을 여기서 지킨다."
+      },
       "UpdateProfileRequest": {
         "properties": {
           "display_name": {
@@ -6192,6 +6778,39 @@
         ],
         "title": "VerifyEmailResponse",
         "description": "Response body for POST /auth/verify-email/{token}."
+      },
+      "WorkArtStyleResponse": {
+        "properties": {
+          "artStyleId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artstyleid"
+          },
+          "artStyleNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artstylenote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artStyleId",
+          "artStyleNote"
+        ],
+        "title": "WorkArtStyleResponse",
+        "description": "``GET``/``PUT /works/{work_id}/art-style`` 응답. 화풍 미지정 작품은 두 필드 모두 ``null``."
       },
       "WorkCreate": {
         "properties": {

@@ -50,7 +50,7 @@ const WORK: Work = {
 };
 
 describe('WorkShell 사이드바 메뉴 순서', () => {
-  it('시놉시스 → World Bible → 검토·타임라인 순서로 렌더된다', () => {
+  it('시놉시스 → World Bible → 검토·타임라인 → 이미지 스타일 순서로 렌더된다', () => {
     render(
       <WorkShell work={WORK} active="synopsis">
         <div />
@@ -60,10 +60,28 @@ describe('WorkShell 사이드바 메뉴 순서', () => {
     const synopsis = screen.getByText('시놉시스');
     const bible = screen.getByText('World Bible');
     const timeline = screen.getByText('검토 · 타임라인');
+    const artStyle = screen.getByText('이미지 스타일');
 
     // synopsis가 bible보다 앞(= bible이 synopsis 뒤)
     expect(synopsis.compareDocumentPosition(bible) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // bible이 timeline보다 앞
     expect(bible.compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // timeline이 이미지 스타일보다 앞
+    expect(
+      timeline.compareDocumentPosition(artStyle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('이미지 스타일이 active면 그 항목에 활성 표시가 붙는다', () => {
+    render(
+      <WorkShell work={WORK} active="artStyle">
+        <div />
+      </WorkShell>
+    );
+
+    const artStyleLink = screen.getByText('이미지 스타일').closest('a');
+    const synopsisLink = screen.getByText('시놉시스').closest('a');
+    expect(artStyleLink?.className).toContain('font-medium');
+    expect(synopsisLink?.className).not.toContain('font-medium');
   });
 });

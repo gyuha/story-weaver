@@ -27,7 +27,6 @@ export interface NewEntityInput {
   type: EntityType;
   name: string;
   emoji: string;
-  imageUrl?: string;
   alias?: string;
   summary: string;
   fields: EntityField[];
@@ -48,7 +47,7 @@ interface WorksState {
   setWorkTimeline: (workId: string, timeline: TimelineState[]) => void;
   /** 서버에서 조회한 설정 충돌 후보로 해당 work의 conflicts를 전량 교체 */
   setWorkConflicts: (workId: string, conflicts: Conflict[]) => void;
-  /** 서버에서 조회한 엔티티 카드로 해당 work의 entities를 전량 교체 — emoji/imageUrl/relations는
+  /** 서버에서 조회한 엔티티 카드로 해당 work의 entities를 전량 교체 — emoji/relations는
    * 백엔드에 없어(entity-mapping.ts) 기존 로컬 값이 있으면 보존 */
   setWorkEntities: (workId: string, entities: Entity[]) => void;
   /** 화 본문에서 신규 설정 후보를 추출·매칭시키고, 대기중(pending) 제안을 조회해 스토어에 반영 */
@@ -148,7 +147,6 @@ export const useWorksStore = create<WorksState>()(
           return {
             ...entity,
             emoji: existing.emoji,
-            ...(existing.imageUrl ? { imageUrl: existing.imageUrl } : {}),
             ...(existing.hanja ? { hanja: existing.hanja } : {}),
             ...(existing.relations ? { relations: existing.relations } : {}),
           };
@@ -475,10 +473,9 @@ export const useWorksStore = create<WorksState>()(
   }))
 );
 
-/** emoji/imageUrl/relations는 백엔드에 없어(entity-mapping.ts) 폼 입력값을 로컬에만 병합. */
+/** emoji/relations는 백엔드에 없어(entity-mapping.ts) 폼 입력값을 로컬에만 병합. */
 function decorateFromInput(entity: Entity, input: NewEntityInput): Entity {
   entity.emoji = input.emoji;
-  if (input.imageUrl) entity.imageUrl = input.imageUrl;
   if (input.relations?.length) entity.relations = input.relations;
   return entity;
 }

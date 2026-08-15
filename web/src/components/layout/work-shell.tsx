@@ -1,12 +1,12 @@
 import type { Work } from '@/features/shared/types';
 import { ManuscriptDownloadButton } from '@/features/works/components/manuscript-download-button';
-import { Clock, FileText, Sparkles } from 'lucide-react';
+import { Clock, FileText, Palette, Sparkles } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { NavItem, SectionLabel, SidebarShell, WorkspaceHeader } from './sidebar-parts';
 import { TopBar } from './top-bar';
 import { WorkTree } from './work-tree';
 
-export type WorkSection = 'write' | 'bible' | 'synopsis' | 'timeline';
+export type WorkSection = 'write' | 'bible' | 'synopsis' | 'timeline' | 'artStyle';
 
 interface WorkShellProps {
   work: Work;
@@ -47,6 +47,13 @@ export function WorkShell({ work, active, activeChapterId, children }: WorkShell
               label="검토 · 타임라인"
               active={active === 'timeline'}
               to="/works/$workId/timeline"
+              params={{ workId: work.id }}
+            />
+            <NavItem
+              icon={Palette}
+              label="이미지 스타일"
+              active={active === 'artStyle'}
+              to="/works/$workId/art-style"
               params={{ workId: work.id }}
             />
           </div>

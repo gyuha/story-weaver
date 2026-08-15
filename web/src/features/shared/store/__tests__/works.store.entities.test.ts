@@ -219,7 +219,9 @@ describe('updateEntity', () => {
 });
 
 describe('setWorkEntities', () => {
-  it('서버 목록으로 교체하되 백엔드에 없는 emoji/imageUrl/relations는 기존 로컬 값을 보존한다', () => {
+  // 설정 이미지는 이제 서버가 진실의 출처다(task 78) — `imageUrl`은 Entity 타입에서 사라졌고
+  // 보존 대상은 백엔드에 여전히 없는 emoji·relations 둘뿐이다.
+  it('서버 목록으로 교체하되 백엔드에 없는 emoji/relations는 기존 로컬 값을 보존한다', () => {
     useWorksStore.setState({
       works: [
         makeWork({
@@ -230,7 +232,6 @@ describe('setWorkEntities', () => {
               type: '인물',
               name: '이서하',
               emoji: '🧝',
-              imageUrl: 'data:image/svg+xml,local',
               summary: '주인공',
               fields: [],
               relations: [{ name: '악역', role: '원수' }],
@@ -259,7 +260,6 @@ describe('setWorkEntities', () => {
         type: '인물',
         name: '이서하(서버)',
         emoji: '🧝',
-        imageUrl: 'data:image/svg+xml,local',
         summary: '주인공(서버)',
         fields: [{ label: '외모', value: '흑발' }],
         relations: [{ name: '악역', role: '원수' }],

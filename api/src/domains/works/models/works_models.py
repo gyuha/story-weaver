@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -41,6 +41,10 @@ class Work(Base):
     style: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="구상")
     cover_theme: Mapped[str] = mapped_column(String(16), nullable=False, default="dark")
+    # [[작품 화풍]] — ``style``(문체)과 헷갈리지 않게 ``art_style_``로 접두한다.
+    # 기존 작품에 기본값을 채우지 않는다(ADR 260813-110724) — null이면 미지정.
+    art_style_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    art_style_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -52,6 +52,16 @@ class WorksService:
         work = await self.get_work(work_id, user_id)
         await self._repo.delete(work)
 
+    async def update_art_style(
+        self, work_id: uuid.UUID, user_id: uuid.UUID, art_style_id: str, art_style_note: str | None
+    ) -> Work:
+        """[[작품 화풍]] 저장. 화풍 id 유효성은 호출자(image_generation 라우터)가 검증한다 —
+        works 도메인은 화풍 카탈로그를 모른다(도메인 경계, api/CLAUDE.md)."""
+        work = await self.get_work(work_id, user_id)
+        work.art_style_id = art_style_id
+        work.art_style_note = art_style_note
+        return work
+
 
 def _short_label(title: str) -> str:
     """표지/사이드바용 한 글자 약자 — 프론트 SHORT_LABEL과 동일 규칙."""

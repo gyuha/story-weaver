@@ -48,15 +48,10 @@ export function EntityList({ work, selectedId }: { work: Work; selectedId?: stri
                       : 'text-ink hover:bg-ink/[0.04]'
                   )}
                 >
-                  {entity.imageUrl ? (
-                    <img
-                      src={entity.imageUrl}
-                      alt=""
-                      className="size-[18px] shrink-0 rounded object-cover"
-                    />
-                  ) : (
-                    <span className="text-[15px]">{entity.emoji}</span>
-                  )}
+                  {/* eco: 이모지만 쓴다 — 여기서 대표 이미지를 보여주려면 카드마다 목록을
+                      조회해야 하고(행이 N개면 요청도 N개), 한 번에 받는 벌크 엔드포인트가
+                      백엔드에 없다. 그 엔드포인트가 생기면 여기 썸네일을 붙인다. */}
+                  <span className="text-[15px]">{entity.emoji}</span>
                   <span className="flex-1 truncate">{entity.name}</span>
                 </Link>
               );

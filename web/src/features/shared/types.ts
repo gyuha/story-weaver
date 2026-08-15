@@ -63,8 +63,6 @@ export interface Entity {
   name: string;
   hanja?: string;
   emoji: string;
-  /** 생성·첨부된 설정 이미지 (data-uri/URL). 없으면 emoji로 표시 */
-  imageUrl?: string;
   alias?: string;
   summary: string;
   fields: EntityField[];

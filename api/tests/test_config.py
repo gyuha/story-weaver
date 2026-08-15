@@ -608,6 +608,27 @@ class TestLLMSettingsViaRootSettings:
         assert llm.litellm_model == "ollama/llama3.2"
         assert llm.as_litellm_kwargs()["api_base"] == "http://custom-ollama:11434"
 
+    def test_llm_openai_compatible_via_settings(self) -> None:
+        """`openai_compatible`의 base URL·키가 루트 Settings를 거쳐 실제로 전달된다.
+
+        회귀 가드: 이 프로바이더는 ``LLMSettings``를 직접 생성하는 테스트(위
+        ``TestLLMProviderRouting``)로만 덮여 있었고 ``Settings.llm`` 브리지는 덮여
+        있지 않았다. 그 사이에서 두 필드가 전달되지 않아 ``api_base``가 항상 빈
+        문자열이었다 — ``LLMSettings``의 ``model_config``에는 ``env_file``이 없어
+        ``.env``를 스스로 읽지 못하므로, 루트 Settings가 넘겨주지 않으면 값이 사라진다.
+        나머지 다섯 프로바이더는 처음부터 전달되고 있었다.
+        """
+        s = make_settings(
+            LLM_PROVIDER="openai_compatible",
+            LLM_DEFAULT_MODEL="cx/some-model",
+            OPENAI_COMPATIBLE_BASE_URL="http://gateway.test:20128/v1",
+            OPENAI_COMPATIBLE_API_KEY="sk-compat-integration",  # pragma: allowlist secret
+        )
+        llm = s.llm
+        assert llm.openai_compatible_base_url == "http://gateway.test:20128/v1"
+        assert llm.active_api_key == "sk-compat-integration"  # pragma: allowlist secret
+        assert llm.as_litellm_kwargs()["api_base"] == "http://gateway.test:20128/v1"
+
     def test_invalid_llm_provider_raises_validation_error(self) -> None:
         with pytest.raises(Exception):  # pydantic ValidationError
             make_settings(LLM_PROVIDER="nonexistent-provider")
