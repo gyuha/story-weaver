@@ -81,3 +81,48 @@
 ## 2/2로 넘어가는 것 (계획이 예고한 대로)
 
 계획이 "1of2 UAT에서 관측해 기록하라"고 지시한 어긋남이 **그대로 열려 있다**: 진입점은 아직 모달이고 페이지는 URL 직접 접근이므로, 집필 화면에 미저장 편집분이 남은 채 페이지에 오면 우측("현재" = 최신 버전)이 실제 원고와 어긋난다. 2/2의 S1(진입 시 선저장 `await`)이 이 창을 닫는다.
+
+---
+
+# 라운드 1 — fg-loop in-place 수정 (2026-08-08)
+
+`<!-- repaired-by: fg-loop -->`. 위 원본 기록은 회고 연료라 지우지 않고 남겼다(fg-run은 "fresh run.md"를 지시하지만, 스파이크·번들 오염·미확인 항목의 정직한 기록을 파기하면 나중 fg-learn이 쓸 재료가 사라진다 — 재실행 가드는 STATUS `verified:`가 담당하므로 이 보존이 가드를 약화시키지 않는다).
+
+## UAT가 잡은 결함 — 좁은 창에서 diff 표가 가로로 넘친다
+
+브라우저 UAT를 실제 주소(`/works/{workId}/versions/{chapterId}`)에서 끝까지 돌려 6개 항목을 봤고, **6번(가로 스크롤 없는 줄바꿈)이 뷰포트 769~1255px 구간에서 깨져 있었다.**
+
+원인: 라이브러리 `diffContainer`가 `min-width: 1000px`을 걸고(`node_modules/react-diff-viewer-continued/lib/cjs/src/styles.js:109`), 이를 푸는 미디어쿼리가 컨테이너가 아니라 **뷰포트** `max-width: 768px`을 본다(같은 파일 135행). 이 페이지의 diff 창 = `뷰포트 − 사이드바 256px`이므로 창이 1000px보다 좁아지는 769~1255px 구간에서 표가 넘친다. 앱의 `styles` 오버라이드는 이 값을 재설정하지 않았다.
+
+**S1 스파이크가 왜 못 봤는가 — 추정이 아니라 스크린샷을 열어 확인했다.** `/tmp/version-diff-spike/02-narrow-1024.png`(1024px 폭, 아직 남아 있다)를 직접 열어 보니 **사이드바가 없고** diff가 화면 전폭을 쓴다(좌 컬럼 ~0–512, 우 ~512–1024). 즉 스파이크의 diff 창은 ~1024px ≥ 1000px이라 `min-width` 바닥에 닿지 않았다. 실화면은 창 = 뷰포트 − 사이드바 256px이라 768px로 떨어져 닿는다. 원본 기록이 "격리 하네스로 대체"라고 정직하게 남긴 바로 그 지점이 결함을 숨겼다. (그 스크린샷은 테마 매핑 전이라 아직 모노스페이스다 — 폰트도 실화면과 달랐다.)
+
+수정: `versions-page.tsx`의 `diffViewerStyles`에 `diffContainer: { minWidth: 0 }` 추가(주석으로 이유 명시). 한 줄.
+
+## 정지조건 검사 — red → green (동일 하네스)
+
+| 검사 | 수정 전 | 수정 후 |
+|---|---|---|
+| C1 `pnpm typecheck` | pass (무출력) | pass (무출력) |
+| C2 `pnpm lint` | pass | pass (`Checked 232 files. No fixes applied.`) |
+| C3 `pnpm test` | pass 54 files/379 | pass 54 files/379 (회귀 0) |
+| C4 폭 1440·1280·1024·900·768 | **FAIL** — `1024: sw1000>cw768, cell+232` · `900: sw1000>cw644, cell+356` | **PASS** — 5폭 전부 ok |
+| C5 상호작용 4종 | pass | pass |
+| C6 토큰색·serif | pass | pass |
+| C7 콘솔 에러 | pass (0건) | pass (0건) |
+
+C4 계측을 도중에 한 번 교정했다 — 처음엔 텍스트 Range 우단을 봤는데 `pre-wrap`의 줄 끝 공백이 사각형에 포함돼 768px에서 2px 거짓 초과(`txt770` vs 뷰포트 768)가 났다. 창 `scrollWidth > clientWidth`와 **셀 박스가 창 우단을 넘는 양**으로 바꿨고, **교정 후 동일 하네스로 red(`1024: cell+232`)와 green(5폭 ok)을 둘 다 관측했다** — 통과가 계측 완화 때문이 아님은 이 red/green 쌍이 근거다.
+
+C6 실패도 하네스 버그였다: 라이브러리가 어절 diff를 `<ins>`/`<del>`로 렌더하는데(`node_modules/react-diff-viewer-continued/lib/cjs/src/index.js:368,370,451,454` — grep으로 확인) 첫 판 하네스가 `span`만 훑어 `<del>`의 `line-through`를 못 봤다. 선택자에 `ins,del`을 넣자 통과.
+
+**이 검사가 목표와 같은 명제를 보는가** — C4는 실브라우저에서 창의 `scrollWidth/clientWidth`와 셀 박스 좌표를 재므로 "가로 스크롤 없이 좌우가 나란히 읽힌다"를 직접 본다. `styles` 객체에 `minWidth: 0`이 붙었는지 단정하는 식(값 존재 검사)은 의도적으로 쓰지 않았다 — 그건 우선순위·오버라이드로 무력화돼도 통과하는 검사다. **jsdom은 레이아웃 엔진이 없어 이 명제를 원리상 관측할 수 없다**(`web/vitest.config.ts:7` `environment: 'jsdom'` — 직접 확인). 그래서 C3(vitest)이 통과하는 것은 C4에 대해 아무 증거가 아니다.
+
+## 확인한 것 / 남은 한계
+
+- **C4~C7 하네스는 저장소가 아니라 scratchpad에 있다.** playwright를 devDependency로 넣는 것은 #74의 비목표이고 루프의 승인 범위 밖이라 뺐다. **결과적으로 이 결함에는 커밋된 회귀 테스트가 없다** — vitest는 jsdom이라 레이아웃을 못 봐 원리상 이 결함을 잡을 수 없다. 후속 후보로 남긴다.
+- 임시 계정·작품을 만들어 검사하고 매 회 삭제했다. **최종 검사 직후 psql로 재확인**: 잔여 임시 계정(`email LIKE 'loopuat%' OR 'uat74%'`) **0건**, 사용자 실데이터 무손상(`gyuha@gyuha.com` 1건 · 실제 화 `4224bd79…`의 버전 2건 · `works` 총 9건 — 착수 시점과 동일).
+- 원본 기록이 "확인 필요"로 남긴 S4 항목(배지 색·hover 마커·`변경 없음`)은 이번에 **실제 페이지에서 실증됐다** — C5가 그것이다.
+
+## 후속 후보 (범위 밖)
+
+- **커밋된 브라우저 회귀 테스트가 없다.** 이 결함군(레이아웃·폭)은 jsdom으로 못 잡는다. playwright 도입 여부는 별도 fg-ask 안건.
+- 원본 기록의 후속 후보(라우트 파일 export로 인한 코드스플리팅 결함 3곳 — `read/$chapterId.tsx` · `read/index.tsx` · `synopsis.tsx`)는 여전히 열려 있다.

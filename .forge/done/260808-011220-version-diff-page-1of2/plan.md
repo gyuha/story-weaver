@@ -2,6 +2,7 @@
 <!-- task: 74 -->
 <!-- part: 1/2 -->
 <!-- tdd: on -->
+<!-- repaired-by: fg-loop -->
 # 버전 비교 페이지 (1/2): 전용 라우트와 react-diff-viewer-continued 좌우 diff
 
 ## Goal / Non-goals
