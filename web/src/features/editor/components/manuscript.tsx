@@ -1,13 +1,12 @@
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { apiErrorMessage } from '@/features/auth/lib/api-error';
 import { useAssistStream } from '@/features/editor/api/assist.api';
-import { manuscriptApi, manuscriptQueries } from '@/features/editor/api/manuscript.api';
+import { manuscriptApi } from '@/features/editor/api/manuscript.api';
 import { toParagraphs } from '@/features/editor/lib/hydrate-chapters';
 import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter, Work } from '@/features/shared/types';
 import { cn } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -38,7 +37,6 @@ import { DraftProgressModal } from './draft-progress-modal';
 import { SelectionAiMenu } from './selection-ai-menu';
 import { ContinueSuggestionModal } from './suggestion-picker';
 import { SummaryModal, type SummaryPhase } from './summary-modal';
-import { VersionHistoryModal } from './version-history-modal';
 
 /** 품질 티어 — ADR-0004. 사용자는 모델명이 아닌 이 티어만 고른다. */
 const QUALITY_TIERS = ['저비용', '균형', '고품질'] as const;
@@ -55,9 +53,6 @@ export function ManuscriptEditor({
   chapter: Chapter;
 }) {
   const [tier, setTier] = useState<QualityTier>('고품질');
-  const [showHistory, setShowHistory] = useState(false);
-  // 되돌리기 버튼 재진입 방지(리뷰 medium) — restoringRef와 함께 갱신한다.
-  const [isRestoring, setIsRestoring] = useState(false);
   const [titleDraft, setTitleDraft] = useState(chapter.title);
   const [showDraft, setShowDraft] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -76,7 +71,7 @@ export function ManuscriptEditor({
   // 늘려쓰기 완료 감지용 — 위 두 ref와 공유 금지(같은 이유).
   const prevDraftStreamingRef = useRef(false);
   const assist = useAssistStream();
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const renameChapter = useWorksStore((s) => s.renameChapter);
   const setChapterParagraphs = useWorksStore((s) => s.setChapterParagraphs);
   const saveChapterSummary = useWorksStore((s) => s.saveChapterSummary);
@@ -90,10 +85,6 @@ export function ManuscriptEditor({
   // 이미 파괴됐을 수 있어(useEditor의 정리가 먼저 돈다) editor를 읽지 않고 이 ref를 쓴다.
   // 한 번도 편집하지 않으면 null로 남아 "변경 없음"을 뜻한다.
   const latestBodyRef = useRef<string | null>(null);
-  // 되돌리기 진행 중 잠금(리뷰 critical·medium) — 언마운트 자동 저장이 되돌리기와 조율 없이
-  // 별도 PATCH를 쏘아 방금 끝난 되돌리기를 되돌리는 경합을 막고, 되돌리기 버튼 더블클릭
-  // 재진입도 같은 잠금으로 막는다.
-  const restoringRef = useRef(false);
 
   // 자동 저장 토스트가 가리킬 화 이름. 제목은 편집 중 바뀔 수 있는데 언마운트 정리
   // 클로저는 마운트 시점 값을 붙잡으므로, 매 렌더마다 갱신하는 ref로 최신값을 읽는다.
@@ -257,7 +248,7 @@ export function ManuscriptEditor({
   }, [assist.isStreaming, assist.error, assist.text, summaryPhase]);
 
   // 늘려쓰기 완료를 감지해 본문을 **한 번에** 대체한다. 조각조각 넣지 않는 이유: 한 번의
-  // setContent면 에디터의 되돌리기 한 번으로 원상복구되기 때문이다(`restoreVersion`과 같은 방식).
+  // setContent면 에디터의 되돌리기 한 번으로 원상복구되기 때문이다.
   useEffect(() => {
     const finished = prevDraftStreamingRef.current && !assist.isStreaming;
     prevDraftStreamingRef.current = assist.isStreaming;
@@ -324,10 +315,6 @@ export function ManuscriptEditor({
   // 그 경우 편집분은 복구되지 않으므로, 확실히 남겨야 할 때는 수동 저장을 쓴다.
   useEffect(() => {
     return () => {
-      // 되돌리기가 진행 중이면 건너뛴다(리뷰 critical) — 되돌리기 자신이 선저장·복원을
-      // 이미 처리하므로, 여기서 조율 없이 또 PATCH를 쏘면 두 요청의 도착 순서에 따라
-      // 방금 끝난 되돌리기가 조용히 무효화될 수 있다.
-      if (restoringRef.current) return;
       const body = latestBodyRef.current;
       if (body === null || body === initialBodyRef.current) return;
       const label = chapterLabelRef.current;
@@ -377,57 +364,30 @@ export function ManuscriptEditor({
     });
   };
 
-  // 이 버전으로 되돌리기: 미저장 편집분이 있으면 먼저 선저장(유실 방지) → 선택 버전 본문을
-  // PATCH → 목록 invalidate → 에디터·스토어 반영. 선저장이 실패하면 여기서 멈춘다 —
-  // 진행하면 작가의 미저장분이 영구 유실된다(에디터 본문도 건드리지 않는다).
-  const restoreVersion = async (version: { id: string; body: string }) => {
-    // 진행 중 재진입(더블클릭 등) 방지(리뷰 medium) — 언마운트 정리와 공유하는 잠금이다.
-    if (restoringRef.current) return;
-    restoringRef.current = true;
-    setIsRestoring(true);
-    try {
-      const chapterPath = {
-        work_id: work.id,
-        episode_id: chapter.episodeId,
-        chapter_id: chapter.id,
-      };
-      const currentText = editor?.getText({ blockSeparator: '\n' }) ?? '';
-      const hasUnsaved = currentText !== initialBodyRef.current;
-
-      if (hasUnsaved) {
-        try {
-          await manuscriptApi.updateChapter({ path: chapterPath, body: { body: currentText } });
-        } catch (err) {
-          toast.error(apiErrorMessage(err, '되돌리기 전 편집 내용을 저장하지 못했습니다'));
-          return;
-        }
-        setChapterParagraphs(work.id, chapter.id, toParagraphs(currentText));
-        initialBodyRef.current = currentText;
-      }
-
+  // 버전 기록 페이지로 이동한다. 미저장 편집분이 있으면 **먼저 저장을 await한다** — 페이지가
+  // "현재 본문 == 최신 버전"을 전제로 diff를 보여주므로, 저장하지 않고 이동하면 작가는 자기
+  // 편집분이 빠진 비교를 보게 된다. 저장이 실패하면 이동하지 않는다(편집분이 화면에 남아
+  // 있어야 다시 시도할 수 있다). 저장 성공 시 `initialBodyRef`를 갱신하므로 이동으로 인한
+  // 언마운트 정리가 같은 본문을 한 번 더 PATCH하지 않는다 — 기존 기계장치를 그대로 쓴다.
+  const openVersions = async () => {
+    const currentText = editor?.getText({ blockSeparator: '\n' }) ?? '';
+    if (currentText !== initialBodyRef.current) {
       try {
-        await manuscriptApi.updateChapter({ path: chapterPath, body: { body: version.body } });
+        await manuscriptApi.updateChapter({
+          path: { work_id: work.id, episode_id: chapter.episodeId, chapter_id: chapter.id },
+          body: { body: currentText },
+        });
       } catch (err) {
-        toast.error(apiErrorMessage(err, '이전 버전으로 되돌리지 못했습니다'));
+        toast.error(apiErrorMessage(err, '버전 기록을 열기 전 저장하지 못했습니다'));
         return;
       }
-
-      queryClient.invalidateQueries({
-        queryKey: manuscriptQueries.chapterVersionsKey({ path: chapterPath }),
-      });
-      editor?.commands.setContent(
-        version.body
-          .split('\n')
-          .map((text) => `<p>${escapeHtml(text)}</p>`)
-          .join('')
-      );
-      setChapterParagraphs(work.id, chapter.id, toParagraphs(version.body));
-      initialBodyRef.current = version.body;
-      toast.success('이전 버전으로 되돌렸습니다');
-    } finally {
-      restoringRef.current = false;
-      setIsRestoring(false);
+      setChapterParagraphs(work.id, chapter.id, toParagraphs(currentText));
+      initialBodyRef.current = currentText;
     }
+    navigate({
+      to: '/works/$workId/versions/$chapterId',
+      params: { workId: work.id, chapterId: chapter.id },
+    });
   };
 
   const setLink = () => {
@@ -495,7 +455,7 @@ export function ManuscriptEditor({
               onClick={() => toast('장면 이미지 생성 (목업)')}
             />
             <ActionChip icon={RotateCw} label="다시쓰기" onClick={() => toast('다시쓰기 (목업)')} />
-            <ActionChip icon={History} label="버전 기록" onClick={() => setShowHistory(true)} />
+            <ActionChip icon={History} label="버전 기록" onClick={openVersions} />
 
             <div className="ml-auto">
               <label className="relative flex h-9 items-center rounded-full border border-line bg-paper pl-3 pr-8 text-[13.5px] font-medium text-ink-soft">
@@ -695,17 +655,6 @@ export function ManuscriptEditor({
           <Maximize2 className="size-[14px]" strokeWidth={2} />
         </button>
       </div>
-
-      {showHistory && (
-        <VersionHistoryModal
-          workId={work.id}
-          chapter={chapter}
-          currentText={editor?.getText({ blockSeparator: '\n' }) ?? ''}
-          restoring={isRestoring}
-          onRestore={restoreVersion}
-          onClose={() => setShowHistory(false)}
-        />
-      )}
     </div>
   );
 }

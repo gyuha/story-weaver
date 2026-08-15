@@ -1,18 +1,21 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { manuscriptQueries } from '@/features/editor/api/manuscript.api';
+import { apiErrorMessage } from '@/features/auth/lib/api-error';
+import { manuscriptApi, manuscriptQueries } from '@/features/editor/api/manuscript.api';
 import { VersionGroups } from '@/features/editor/components/version-list';
-import { useWorkChapters } from '@/features/editor/lib/hydrate-chapters';
+import { toParagraphs, useWorkChapters } from '@/features/editor/lib/hydrate-chapters';
 import { findChapter, useWork } from '@/features/shared/store/selectors';
+import { useWorksStore } from '@/features/shared/store/works.store';
 import type { Chapter } from '@/features/shared/types';
-import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { ArrowLeft, Undo2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ReactDiffViewer, {
   DiffMethod,
   type ReactDiffViewerStylesOverride,
 } from 'react-diff-viewer-continued';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 30;
 // eco: version-history-modal.tsx와 동일한 "limit만 늘려 다시 받기" 방식 — 근거 주석은 그쪽 참조.
@@ -22,6 +25,11 @@ const MAX_LIMIT = 100;
 // 단어 강조는 기존 모달 diff(version-history-modal.tsx의 DiffView)와 같은 초록/빨강 계열로 맞춘다.
 // whiteSpace/lineBreak 등 줄바꿈 관련 기본값은 그대로 둔다(S1 스파이크 실측 — 이미 산문 줄바꿈 처리됨).
 const diffViewerStyles: ReactDiffViewerStylesOverride = {
+  // 라이브러리 diffContainer는 min-width:1000px을 걸고, 이를 푸는 미디어쿼리가 컨테이너가 아니라
+  // 뷰포트(max-width:768px)를 본다. 이 페이지의 diff 창은 "뷰포트 − 사이드바 256px"이라
+  // 뷰포트 769~1255px 구간에서 창이 1000px보다 좁아져 표가 넘치고 가로 스크롤이 생긴다.
+  // 바닥을 없애면 창 폭을 그대로 따라가고 줄바꿈은 기본값(pre-wrap/lineBreak:anywhere)이 처리한다.
+  diffContainer: { minWidth: 0 },
   variables: {
     light: {
       diffViewerBackground: 'var(--paper)',
@@ -107,6 +115,11 @@ function VersionsView({ workId, chapter }: { workId: string; chapter: Chapter })
   // 좌(기준)=항목 클릭으로 이동, 우(비교)="우로 지정" 마커로만 이동(기본값은 현재=최신 버전).
   const [leftId, setLeftId] = useState<string | null>(null);
   const [rightId, setRightId] = useState<string | null>(null);
+  // 되돌리기 진행 중 — 버튼을 disabled로 만들어 더블클릭 재진입을 막는다.
+  const [reverting, setReverting] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const setChapterParagraphs = useWorksStore((s) => s.setChapterParagraphs);
 
   const chapterPath = { work_id: workId, episode_id: chapter.episodeId, chapter_id: chapter.id };
 
@@ -143,6 +156,31 @@ function VersionsView({ workId, chapter }: { workId: string; chapter: Chapter })
   const bodiesError = rightQuery.isError || (leftId !== null && leftQuery.isError);
   const sameVersion = leftId !== null && leftId === rightId;
 
+  // 이 버전으로 되돌리기 — 좌(기준)로 찍힌 버전의 본문을 PATCH 한 번으로 되쓴다. 선저장은
+  // 없다: 이 페이지에 들어올 때 집필 화면이 이미 저장을 보장했다(task #75 S1). 서버가 모든
+  // 본문 PATCH에서 버전을 append하므로(ADR 260805-214733) 지금 본문도 새 버전으로 남는다.
+  const revert = async () => {
+    if (leftId === null || leftBody === undefined || reverting) return;
+    setReverting(true);
+    try {
+      await manuscriptApi.updateChapter({ path: chapterPath, body: { body: leftBody } });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, '이전 버전으로 되돌리지 못했습니다'));
+      setReverting(false);
+      return;
+    }
+    // 복귀한 집필 화면이 옛 본문을 보지 않도록 스토어를 먼저 갱신한다.
+    setChapterParagraphs(workId, chapter.id, toParagraphs(leftBody));
+    queryClient.invalidateQueries({
+      queryKey: manuscriptQueries.chapterVersionsKey({ path: chapterPath }),
+    });
+    toast.success('이전 버전으로 되돌렸습니다');
+    navigate({
+      to: '/works/$workId/write/$chapterId',
+      params: { workId, chapterId: chapter.id },
+    });
+  };
+
   return (
     <div className="flex h-screen flex-col bg-paper text-ink">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-5">
@@ -155,6 +193,18 @@ function VersionsView({ workId, chapter }: { workId: string; chapter: Chapter })
           집필로 돌아가기
         </Link>
         <span className="text-sm font-semibold text-ink">버전 기록 · {chapter.title}</span>
+
+        <div className="ml-auto flex items-center gap-2.5">
+          <span className="text-[12px] text-faint">현재 본문은 새 버전으로 보존됩니다</span>
+          <button
+            type="button"
+            onClick={revert}
+            disabled={reverting || leftId === null || leftBody === undefined}
+            className="flex h-7 items-center gap-1.5 rounded-[5px] border border-line px-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            <Undo2 className="size-4" strokeWidth={2} />이 버전으로 되돌리기
+          </button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
