@@ -26,6 +26,8 @@ AI 웹소설 창작 SaaS "StoryWeaver"의 FastAPI 백엔드. 제품 설계 문�
 - **src layout** 유지 — import는 `src` 기준.
 - mypy strict·ruff 통과가 기본. 커밋 전 `task lint`.
 - **Alembic 마이그레이션은 항상 리뷰 후 커밋** — autogenerate SQL을 검토할 것.
+- **마이그레이션 왕복 테스트는 `"head"`로 복원하고 복원을 `finally`에 둔다.** 공유 dev DB에 실제 마이그레이션을 돌리는 테스트가 하드코딩된 리비전(`command.upgrade(cfg, "0005_entity_images")`)으로 복원하면, 다음 마이그레이션이 추가되는 순간 DB가 그 리비전에 갇혀 이후 모든 테스트가 무너진다. task 80에서 **16 failed · 150 errors**로 실측했고 원인을 `alembic current`로 특정했다. `downgrade`와 `upgrade` 사이에서 단정하는 형태도 같은 함정이다 — 단정이 실패하면 복원이 실행되지 않는다.
+- **QA 계정에 `@*.test` 도메인을 쓰지 않는다.** pydantic `EmailStr`이 `.test`를 예약 TLD로 거부해 `/api/v1/auth/me`가 **500**을 내고 웹 로그인이 불가능하다(task 81 실측). `@example.com`을 쓴다.
 - 비밀값은 `.env`(로컬)·`.env.prod`(운영)에. 절대 커밋 금지.
 
 ## 주요 명령어
