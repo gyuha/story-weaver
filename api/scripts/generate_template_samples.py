@@ -32,6 +32,9 @@ import urllib.request
 from pathlib import Path
 
 IMAGE_MODEL = "antigravity/gemini-3.1-flash-image"
+# 화풍 선택 화면은 인물·장소·아이템 3유형만 렌더하므로(`art-style-screen.tsx`의 `SAMPLE_TYPES`)
+# ``event`` 견본은 새로 만들지 않는다. 기존 4종의 ``*-event.jpg`` 4장은 이미 있어 그대로 남는다.
+SKIP_ENTITY_TYPES = {"event"}
 THUMB_PX = 320
 TIMEOUT_S = 300
 RETRIES = 5
@@ -89,6 +92,8 @@ def main() -> int:
     failures: list[str] = []
     for style in catalog["styles"]:
         for composition in catalog["compositions"]:
+            if composition["entity_type"] in SKIP_ENTITY_TYPES:
+                continue
             template_id = f"{style['id']}-{composition['entity_type']}"
             target = SAMPLES / f"{template_id}.jpg"
             if target.exists():
