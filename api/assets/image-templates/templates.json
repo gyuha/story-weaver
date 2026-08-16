@@ -20,6 +20,56 @@
       "id": "photo",
       "label": "사진풍",
       "prompt_fragment": "사실적인 사진, 자연광 소프트 조명"
+    },
+    {
+      "id": "anime",
+      "label": "애니메이션풍",
+      "prompt_fragment": "일본 애니메이션 작화, 부드러운 그러데이션 채색과 간결한 윤곽선"
+    },
+    {
+      "id": "shoujo",
+      "label": "소녀만화풍",
+      "prompt_fragment": "소녀만화 일러스트, 파스텔 톤 채색과 섬세한 선"
+    },
+    {
+      "id": "watercolor",
+      "label": "수채화",
+      "prompt_fragment": "수채화, 번지는 물감과 투명한 채색"
+    },
+    {
+      "id": "pen",
+      "label": "펜화",
+      "prompt_fragment": "흑백 펜 드로잉, 촘촘한 해칭과 굵은 윤곽선"
+    },
+    {
+      "id": "concept",
+      "label": "콘셉트 아트",
+      "prompt_fragment": "디지털 콘셉트 아트, 정교한 디테일과 극적인 조명"
+    },
+    {
+      "id": "render3d",
+      "label": "3D 렌더",
+      "prompt_fragment": "3D 시네마틱 렌더, 물리 기반 재질과 얕은 피사계 심도"
+    },
+    {
+      "id": "noir",
+      "label": "느와르 흑백",
+      "prompt_fragment": "흑백 사진, 강한 명암 대비와 짙은 그림자"
+    },
+    {
+      "id": "oriental",
+      "label": "동양 채색화",
+      "prompt_fragment": "동양 진채 채색화, 광물 안료의 선명한 색과 금선 묘사"
+    },
+    {
+      "id": "cyberpunk",
+      "label": "사이버펑크",
+      "prompt_fragment": "네온 조명 디지털 페인팅, 청보라 림라이트와 하이테크 질감"
+    },
+    {
+      "id": "darkfantasy",
+      "label": "다크 판타지",
+      "prompt_fragment": "어두운 디지털 페인팅, 거친 질감과 낮은 채도"
     }
   ],
   "compositions": [

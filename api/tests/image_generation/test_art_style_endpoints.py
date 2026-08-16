@@ -75,18 +75,33 @@ async def owner_work(two_users: tuple[User, User]) -> AsyncIterator[Work]:
 
 
 # ---------------------------------------------------------------------------
-# 화풍 카탈로그 — 인증 불필요, 4개, 유형별 견본 URL
+# 화풍 카탈로그 — 인증 불필요, 14개, 유형별 견본 URL
 # ---------------------------------------------------------------------------
 
 
-async def test_list_art_styles_returns_4_with_sample_urls(app: FastAPI) -> None:
+async def test_list_art_styles_returns_14_with_sample_urls(app: FastAPI) -> None:
     async with _anonymous_client(app) as client:
         resp = await client.get("/api/v1/art-styles")
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body) == 4
+    assert len(body) == 14
     ids = {s["id"] for s in body}
-    assert ids == {"ink", "webtoon", "oil", "photo"}
+    assert ids == {
+        "ink",
+        "webtoon",
+        "oil",
+        "photo",
+        "anime",
+        "shoujo",
+        "watercolor",
+        "pen",
+        "concept",
+        "render3d",
+        "noir",
+        "oriental",
+        "cyberpunk",
+        "darkfantasy",
+    }
     for style in body:
         assert style["label"]
         samples = style["samples"]
@@ -95,9 +110,18 @@ async def test_list_art_styles_returns_4_with_sample_urls(app: FastAPI) -> None:
 
 
 async def test_art_style_sample_urls_return_200_jpeg(app: FastAPI) -> None:
+    """견본 파일을 갖춘 화풍의 견본 URL은 실제 JPEG를 돌려준다.
+
+    새 화풍 10종의 견본 30장은 part 2/2가 채운다 — 그때 아래 목록을 14종으로 넓히면
+    이 테스트가 견본 완비의 기계적 증거가 된다. 견본이 아직 없는 화풍은 404가 정상이며
+    (`get_art_style_sample`의 `Sample not yet generated`), 화면은 플레이스홀더를 그린다.
+    """
+    styles_with_samples = {"ink", "webtoon", "oil", "photo"}
     async with _anonymous_client(app) as client:
         catalog_resp = await client.get("/api/v1/art-styles")
         for style in catalog_resp.json():
+            if style["id"] not in styles_with_samples:
+                continue
             for sample_url in style["samples"].values():
                 resp = await client.get(sample_url)
                 assert resp.status_code == 200, sample_url

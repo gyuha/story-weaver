@@ -1,6 +1,6 @@
 """image_generation 도메인 S2 — 화풍·구도 축 분리 카탈로그 로더 테스트 (TDD).
 
-`api/assets/image-templates/templates.json`(화풍 4 + 카드 유형별 구도 4)을 1회
+`api/assets/image-templates/templates.json`(화풍 14 + 카드 유형별 구도 4)을 1회
 로드 + pydantic 검증해 조회·조립하는
 :mod:`domains.image_generation.service.template_catalog`를 검증한다. DB·네트워크 없음.
 """
@@ -24,18 +24,44 @@ from domains.image_generation.service.template_catalog import (
 
 pytestmark = pytest.mark.unit
 
-STYLE_IDS = ["ink", "webtoon", "oil", "photo"]
+STYLE_IDS = [
+    "ink",
+    "webtoon",
+    "oil",
+    "photo",
+    "anime",
+    "shoujo",
+    "watercolor",
+    "pen",
+    "concept",
+    "render3d",
+    "noir",
+    "oriental",
+    "cyberpunk",
+    "darkfantasy",
+]
 ENTITY_TYPES = ["character", "location", "event", "item"]
 
+# 견본 썸네일이 **실제로 존재해야 하는** (화풍, 유형) 조합. 파일명 규약(모든 조합에서 성립)과
+# 파일 존재(견본을 만든 조합에서만 성립)는 다른 명제라 나눠 검증한다.
+# 기존 4종은 event 포함 4유형이 다 있고, 새 10종의 견본 30장은 part 2/2가 채운다 —
+# 그때 아래 `_NEW_STYLES_WITH_SAMPLES`에 10종을 넣으면 이 테스트가 완료의 기계적 증거가 된다.
+_LEGACY_STYLES = ["ink", "webtoon", "oil", "photo"]  # event 포함 4유형 견본을 이미 갖고 있다
+_NEW_STYLES_WITH_SAMPLES: list[str] = []  # part 2/2가 견본을 채운 새 화풍을 여기에 넣는다
+_SCREEN_ENTITY_TYPES = ["character", "location", "item"]  # 화풍 선택 화면이 렌더하는 3유형
+SAMPLE_COMBINATIONS = [(s, t) for s in _LEGACY_STYLES for t in ENTITY_TYPES] + [
+    (s, t) for s in _NEW_STYLES_WITH_SAMPLES for t in _SCREEN_ENTITY_TYPES
+]
+
 
 # ---------------------------------------------------------------------------
-# 정상 카탈로그 — 화풍 4 + 구도 4
+# 정상 카탈로그 — 화풍 14 + 구도 4
 # ---------------------------------------------------------------------------
 
 
-def test_list_art_styles_returns_4() -> None:
+def test_list_art_styles_returns_14() -> None:
     styles = list_art_styles()
-    assert len(styles) == 4
+    assert len(styles) == 14
     assert {s.id for s in styles} == set(STYLE_IDS)
 
 
@@ -111,10 +137,15 @@ def test_compose_prompt_suffix_unknown_entity_type_raises() -> None:
 
 @pytest.mark.parametrize("style_id", STYLE_IDS)
 @pytest.mark.parametrize("entity_type", ENTITY_TYPES)
-def test_sample_path_points_to_real_file(style_id: str, entity_type: str) -> None:
-    path = sample_path(style_id, entity_type)
-    assert path.name == f"{style_id}-{entity_type}.jpg"
-    assert path.is_file()
+def test_sample_path_follows_naming_convention(style_id: str, entity_type: str) -> None:
+    """파일명 규약은 견본 존재 여부와 무관하게 모든 조합에서 성립한다."""
+    assert sample_path(style_id, entity_type).name == f"{style_id}-{entity_type}.jpg"
+
+
+@pytest.mark.parametrize(("style_id", "entity_type"), SAMPLE_COMBINATIONS)
+def test_sample_file_exists(style_id: str, entity_type: str) -> None:
+    """견본이 있어야 하는 조합은 실제 파일을 가리킨다."""
+    assert sample_path(style_id, entity_type).is_file()
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 """이미지 템플릿 카탈로그 로더 (S2, `.forge/plan.md` — 화풍·구도 축 분리).
 
-`api/assets/image-templates/templates.json`을 화풍(``styles`` 4개) + 카드 유형별
+`api/assets/image-templates/templates.json`을 화풍(``styles`` 14개) + 카드 유형별
 구도(``compositions`` 4개)로 1회 로드 + pydantic 검증해 캐시한다. 형식이 깨졌으면
 예외를 던져 부팅에서 드러나게 한다 — 조용히 빈 목록을 돌려주지 않는다. JSON의
 ``$comment``·``sample_subject``는 각 스키마의 ``extra="ignore"``가 조용히 걸러낸다
@@ -34,7 +34,7 @@ def _load_catalog() -> tuple[list[ArtStyleFragment], list[CompositionFragment]]:
 
 
 def list_art_styles() -> list[ArtStyleFragment]:
-    """화풍 카탈로그 4개."""
+    """화풍 카탈로그 14개."""
     styles, _ = _load_catalog()
     return styles
 

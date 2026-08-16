@@ -75,7 +75,7 @@ export function ArtStyleScreen({ work }: { work: Work }) {
         이 작품에서 설정 이미지를 생성할 때 쓰일 화풍을 견본으로 골라 주세요.
       </p>
 
-      <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {artStyles.map((style) => {
           const selected = style.id === selectedId;
           return (
