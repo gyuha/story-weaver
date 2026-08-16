@@ -37,7 +37,7 @@ description: >-
 
 ## 검증 (web은 테스트 러너가 없다)
 - 끝나면 **반드시** `cd web && pnpm typecheck`와 `pnpm lint`를 통과시킨다(포맷 실패는 `pnpm lint:fix`).
-- 실 API 연동 동작은 정적 분석으로 단정하지 말고 **playwriter MCP**(`mcp__playwriter_latest__execute`)로 `http://localhost:3000`을 띄워 로딩·에러·인증 흐름을 육안 확인한다. 백엔드가 필요하면 구동 전제와 포트를 반환에 명시한다.
+- 실 API 연동 동작은 정적 분석으로 단정하지 말고 **agent-browser MCP**(`mcp__agent-browser__agent_browser_open`으로 `http://localhost:3000`을 띄우고 `_snapshot`/`_screenshot`으로 확인)로 로딩·에러·인증 흐름을 육안 확인한다. 백엔드가 필요하면 구동 전제와 포트를 반환에 명시한다.
 
 ## 반환
-바꾼 파일 목록, 어떤 mock을 어떤 훅으로 교체했는지, 인증/스펙/프록시 관련 결정, 그리고 검증 결과(typecheck·lint 통과 + playwriter로 확인한 동작, 백엔드 구동 전제)를 정리해 돌려준다.
+바꾼 파일 목록, 어떤 mock을 어떤 훅으로 교체했는지, 인증/스펙/프록시 관련 결정, 그리고 검증 결과(typecheck·lint 통과 + agent-browser로 확인한 동작, 백엔드 구동 전제)를 정리해 돌려준다.

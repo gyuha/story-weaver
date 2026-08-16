@@ -3,7 +3,7 @@ name: web-feature-builder
 description: >-
   StoryWeaver의 web(React 19 + Vite + TypeScript) 프론트엔드 mock-UI 기능을 구현·수정한다.
   features/<도메인>의 타입·Zustand mock 스토어·컴포넌트·TanStack 라우트를 만들고,
-  Biome 컨벤션과 pnpm typecheck/lint, playwriter 육안 확인으로 검증한다.
+  Biome 컨벤션과 pnpm typecheck/lint, agent-browser 육안 확인으로 검증한다.
   Use when a work slice builds or changes a web/ UI feature, screen, component, route,
   or a features/*/store mock store (UI-mock stage) — i.e. anything under web/src.
   Do NOT use for api/ (FastAPI 백엔드) work.
@@ -29,7 +29,7 @@ description: >-
 
 ## 검증 (이 프로젝트는 web 테스트 러너가 없다)
 - 끝나면 **반드시** `cd web && pnpm typecheck`와 `pnpm lint`를 통과시킨다(포맷 실패는 `pnpm lint:fix`).
-- UI 변경의 실제 렌더·동작은 **playwriter MCP**(`mcp__playwriter_latest__execute`)로 `http://localhost:3000`을 띄워 육안 확인한다("버튼이 보이는지", "동작하는지"는 추측하지 말 것).
+- UI 변경의 실제 렌더·동작은 **agent-browser MCP**(`mcp__agent-browser__agent_browser_open`으로 `http://localhost:3000`을 띄우고 `_snapshot`/`_screenshot`으로 확인)로 육안 확인한다("버튼이 보이는지", "동작하는지"는 추측하지 말 것).
 
 ## 반환
-바꾼 파일 목록(경로), 핵심 결정/분기, 그리고 검증 결과(typecheck·lint 통과 여부 + playwriter로 확인한 동작)를 한눈에 정리해 돌려준다.
+바꾼 파일 목록(경로), 핵심 결정/분기, 그리고 검증 결과(typecheck·lint 통과 여부 + agent-browser로 확인한 동작)를 한눈에 정리해 돌려준다.

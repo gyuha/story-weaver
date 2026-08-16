@@ -37,7 +37,7 @@ pnpm generate   # openapi-ts: docs/openapi.json → src/api 타입·SDK 재생�
 
 테스트 러너: **vitest** + RTL (설정 완료). 검증은 `pnpm typecheck` + `pnpm lint` + `pnpm test`로 한다.
 
-**화면 확인** — UI 변경의 실제 렌더링·동작을 눈으로 확인해야 할 때는 **playwriter MCP**(`mcp__playwriter_latest__execute`)로 브라우저를 띄워 `http://localhost:3000`을 확인한다. "버튼이 보이는지", "네비게이션이 동작하는지" 등 정적 분석으로 단정할 수 없는 것은 추측하지 말고 playwriter로 직접 확인할 것.
+**화면 확인** — UI 변경의 실제 렌더링·동작을 눈으로 확인해야 할 때는 **agent-browser MCP**(`mcp__agent-browser__agent_browser_*` — `open`으로 `http://localhost:3000`을 띄우고 `snapshot`으로 접근성 트리를, `screenshot`으로 화면을 본다)로 확인한다. "버튼이 보이는지", "네비게이션이 동작하는지" 등 정적 분석으로 단정할 수 없는 것은 추측하지 말고 직접 확인할 것.
 
 ## 코드 그래프 (graphify)
 
