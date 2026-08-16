@@ -69,13 +69,15 @@ export function ArtStyleScreen({ work }: { work: Work }) {
   };
 
   return (
-    <div className="mx-auto max-w-[820px] px-10 py-12">
+    <div className="mx-auto max-w-[1120px] px-10 py-12">
       <h1 className="mb-1 text-[22px] font-bold text-ink">이미지 스타일</h1>
       <p className="mb-8 text-[13px] text-ink-soft">
         이 작품에서 설정 이미지를 생성할 때 쓰일 화풍을 견본으로 골라 주세요.
       </p>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* 카드 하나에 견본 3장(80px)+gap+패딩으로 최소 280px이 필요하다 — 그보다 좁아지면
+          견본이 잘리므로 열 수를 뷰포트에 맞춰 1 → 2 → 3으로 늘린다. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {artStyles.map((style) => {
           const selected = style.id === selectedId;
           return (
