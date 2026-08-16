@@ -11,6 +11,8 @@ export default defineConfig({
       routesDirectory: 'src/routes',
       generatedRouteTree: 'src/routeTree.gen.ts',
       autoCodeSplitting: true,
+      // 라우트 디렉터리 안의 테스트 파일은 라우트가 아니다(경고 제거).
+      routeFileIgnorePattern: '__tests__',
     }),
     react(),
     tailwindcss(),
