@@ -44,10 +44,20 @@ ENTITY_TYPES = ["character", "location", "event", "item"]
 
 # 견본 썸네일이 **실제로 존재해야 하는** (화풍, 유형) 조합. 파일명 규약(모든 조합에서 성립)과
 # 파일 존재(견본을 만든 조합에서만 성립)는 다른 명제라 나눠 검증한다.
-# 기존 4종은 event 포함 4유형이 다 있고, 새 10종의 견본 30장은 part 2/2가 채운다 —
-# 그때 아래 `_NEW_STYLES_WITH_SAMPLES`에 10종을 넣으면 이 테스트가 완료의 기계적 증거가 된다.
-_LEGACY_STYLES = ["ink", "webtoon", "oil", "photo"]  # event 포함 4유형 견본을 이미 갖고 있다
-_NEW_STYLES_WITH_SAMPLES: list[str] = []  # part 2/2가 견본을 채운 새 화풍을 여기에 넣는다
+# 기존 4종은 event 포함 4유형이 다 있고, 새 10종은 화면이 쓰는 3유형만 갖는다(event 미생성).
+_LEGACY_STYLES = ["ink", "webtoon", "oil", "photo"]  # event 포함 4유형 견본을 갖고 있다
+_NEW_STYLES_WITH_SAMPLES = [  # 3유형 견본을 갖춘 새 화풍 (task 83에서 채웠다)
+    "anime",
+    "shoujo",
+    "watercolor",
+    "pen",
+    "concept",
+    "render3d",
+    "noir",
+    "oriental",
+    "cyberpunk",
+    "darkfantasy",
+]
 _SCREEN_ENTITY_TYPES = ["character", "location", "item"]  # 화풍 선택 화면이 렌더하는 3유형
 SAMPLE_COMBINATIONS = [(s, t) for s in _LEGACY_STYLES for t in ENTITY_TYPES] + [
     (s, t) for s in _NEW_STYLES_WITH_SAMPLES for t in _SCREEN_ENTITY_TYPES

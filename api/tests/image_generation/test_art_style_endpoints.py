@@ -110,19 +110,21 @@ async def test_list_art_styles_returns_14_with_sample_urls(app: FastAPI) -> None
 
 
 async def test_art_style_sample_urls_return_200_jpeg(app: FastAPI) -> None:
-    """견본 파일을 갖춘 화풍의 견본 URL은 실제 JPEG를 돌려준다.
+    """화풍 14종 전부가 화면이 쓰는 3유형 견본 URL로 실제 JPEG를 돌려준다.
 
-    새 화풍 10종의 견본 30장은 part 2/2가 채운다 — 그때 아래 목록을 14종으로 넓히면
-    이 테스트가 견본 완비의 기계적 증거가 된다. 견본이 아직 없는 화풍은 404가 정상이며
-    (`get_art_style_sample`의 `Sample not yet generated`), 화면은 플레이스홀더를 그린다.
+    ``event``는 화면이 렌더하지 않아 새 화풍 10종에는 만들지 않았으므로(기존 4종만 보유)
+    검사 대상에서 뺀다 — 그 조합은 404가 정상이고(`Sample not yet generated`) 화면은
+    애초에 요청하지 않는다.
     """
-    styles_with_samples = {"ink", "webtoon", "oil", "photo"}
+    screen_types = {"character", "location", "item"}
     async with _anonymous_client(app) as client:
         catalog_resp = await client.get("/api/v1/art-styles")
-        for style in catalog_resp.json():
-            if style["id"] not in styles_with_samples:
-                continue
-            for sample_url in style["samples"].values():
+        styles = catalog_resp.json()
+        assert len(styles) == 14
+        for style in styles:
+            for entity_type, sample_url in style["samples"].items():
+                if entity_type not in screen_types:
+                    continue
                 resp = await client.get(sample_url)
                 assert resp.status_code == 200, sample_url
                 assert resp.headers["content-type"] == "image/jpeg"
