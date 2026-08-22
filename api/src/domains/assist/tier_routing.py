@@ -69,6 +69,22 @@ TASK_TIER: dict[TaskType, Tier] = {
     TaskType.draft: Tier.high_quality,
 }
 
+#: task_type → sampling temperature (assist 전용, 티어와 다른 축 — task 85).
+#: 창작 계열(이어쓰기·인필링·대사변환·문체변환·늘려쓰기)은 0.7, 결정적 계열
+#: (교정·제목·요약)은 0.2. **이 값은 받은 조언과 통념에 기댄 것이고 이 저장소에서
+#: 실측한 값이 아니다** — 문체가 실제로 덜 흔들리는지는 같은 프롬프트를 여러 온도로
+#: 여러 번 돌려 비교해야 알 수 있고, 그 측정은 이번 범위 밖이다.
+TASK_TEMPERATURE: dict[TaskType, float] = {
+    TaskType.continue_: 0.7,
+    TaskType.infill: 0.7,
+    TaskType.dialogue: 0.7,
+    TaskType.style: 0.7,
+    TaskType.draft: 0.7,
+    TaskType.correct: 0.2,
+    TaskType.title_: 0.2,
+    TaskType.summary: 0.2,
+}
+
 #: tier → factory-getter dispatch. Both tiers use the chat domain's default
 #: factory today; point either entry at a different getter once a second
 #: model/provider exists.
@@ -102,7 +118,7 @@ def get_client_for_tier(tier: Tier) -> AbstractLLMPort:
     return factory.get_llm_client()
 
 
-def get_fast_writing_client() -> AbstractLLMPort:
+def get_fast_writing_client(task: TaskType | None = None) -> AbstractLLMPort:
     """집필 보조 작업(이어쓰기·인필링·대사변환·문체변환·교정·제목) 전용 클라이언트.
 
     이 작업들은 짧은 창작 보조라 깊은 추론보다 **응답 속도**가 더 중요하다. 그래서
@@ -111,10 +127,22 @@ def get_fast_writing_client() -> AbstractLLMPort:
     고품질 모델을 배선하는 순간, 이 seam이 없으면 그 태스크들이 조용히 느려지거나
     비싸진다.
 
-    **현재는 기본 클라이언트와 동일하다** — 실제 프로바이더가 하나뿐이라(
+    **모델 선택은 현재 기본 클라이언트와 동일하다** — 실제 프로바이더가 하나뿐이라(
     ``_TIER_FACTORY_GETTERS``의 두 티어가 같은 팩토리) 분기할 대상이 없다. 빠른
     모델을 실제로 붙일 때 여기만 고치면 된다. 다른 도메인
     (dynamic_update/works beat-sheet/relationships)이 쓰는 :func:`get_client_for_tier`는
     영향받지 않는다.
+
+    ``task``가 주어지면 ``TASK_TEMPERATURE`` 값을 요청별 override로 실어 보낸다
+    (task 85 S1). ``task``가 ``None``이면 온도를 override하지 않고 전역
+    ``LLM_TEMPERATURE``를 그대로 쓴다 — assist 도메인 바깥의 호출부(예:
+    ``manuscript_router``의 기획의도 이어쓰기)는 이번 작업의 범위 밖이라 그대로 둔다.
+
+    Parameters
+    ----------
+    task:
+        호출하는 assist 태스크. 주어지면 ``TASK_TEMPERATURE[task]``를 온도로 쓴다.
     """
-    return LLMClient()
+    if task is None:
+        return LLMClient()
+    return LLMClient(temperature=TASK_TEMPERATURE[task])

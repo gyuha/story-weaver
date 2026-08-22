@@ -177,37 +177,38 @@ async def _get_service(
 
 # thinking 모드를 끈 전용 LLM 클라이언트를 고르는 의존성(tier_routing.get_fast_writing_client
 # 참고). 라우트마다 별도 함수 객체로 둬야 테스트에서 ``app.dependency_overrides``로
-# 개별 override 가능.
+# 개별 override 가능. 각자의 TaskType을 넘겨 TASK_TEMPERATURE(task 85 S1)가 실제로
+# 요청별로 전달되게 한다.
 def _continue_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.continue_)
 
 
 def _infill_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.infill)
 
 
 def _dialogue_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.dialogue)
 
 
 def _style_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.style)
 
 
 def _correct_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.correct)
 
 
 def _title_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.title_)
 
 
 def _summary_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.summary)
 
 
 def _draft_llm_client() -> AbstractLLMPort:
-    return get_fast_writing_client()
+    return get_fast_writing_client(TaskType.draft)
 
 
 async def _bind_rate_limit_user(

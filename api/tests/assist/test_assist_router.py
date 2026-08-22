@@ -18,6 +18,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
@@ -36,6 +37,7 @@ from domains.assist.router.assist_router import (
     _summary_llm_client,
     _title_llm_client,
 )
+from domains.assist.tier_routing import TaskType
 from domains.auth.models import User
 from domains.auth.security import get_current_user
 from domains.budget.service import record_usage
@@ -593,6 +595,34 @@ async def test_title_other_tenant_returns_404(
             json={"text": "본문 텍스트."},
         )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 태스크별 온도 배선 (task 85 S1) — "표에 값이 있다"가 아니라 "그 값이 클라이언트
+# 호출까지 전달된다"를 고정한다. 각 라우트의 LLM 의존성 함수가 자기 TaskType으로
+# get_fast_writing_client를 부르는지 직접 호출해 확인한다(HTTP 왕복 없이).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("dependency", "expected_task"),
+    [
+        (_continue_llm_client, TaskType.continue_),
+        (_infill_llm_client, TaskType.infill),
+        (_dialogue_llm_client, TaskType.dialogue),
+        (_style_llm_client, TaskType.style),
+        (_correct_llm_client, TaskType.correct),
+        (_title_llm_client, TaskType.title_),
+        (_summary_llm_client, TaskType.summary),
+        (_draft_llm_client, TaskType.draft),
+    ],
+)
+def test_llm_client_dependency_requests_its_own_task_temperature(
+    dependency: Any, expected_task: TaskType
+) -> None:
+    with patch("domains.assist.router.assist_router.get_fast_writing_client") as mock_get:
+        dependency()
+        mock_get.assert_called_once_with(expected_task)
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import pytest
 from langchain_core.messages.ai import AIMessage
 
 from domains.assist.tier_routing import (
+    TASK_TEMPERATURE,
     TASK_TIER,
     TaskType,
     Tier,
@@ -126,7 +127,7 @@ def test_get_client_for_tier_rejects_unknown_tier() -> None:
 def test_get_fast_writing_client_returns_protocol_satisfying_client() -> None:
     """``ChatLiteLLM``을 패치해 네트워크 호출 없이 프로토콜 충족만 확인한다."""
     with patch("infra.llm.provider_factory.ChatLiteLLM"):
-        client = get_fast_writing_client()
+        client = get_fast_writing_client(TaskType.continue_)
         assert isinstance(client, LLMClientProtocol)
 
 
@@ -136,10 +137,48 @@ def test_get_fast_writing_client_sends_no_provider_specific_params() -> None:
     현재 프로바이더는 그 키를 조용히 무시하므로 남겨두면 "동작하는 설정"으로 오독된다.
     """
     with patch("infra.llm.provider_factory.ChatLiteLLM") as mock_chat_litellm:
-        get_fast_writing_client()
+        get_fast_writing_client(TaskType.continue_)
         _, kwargs = mock_chat_litellm.call_args
         assert "thinking" not in str(kwargs)
         assert kwargs.get("model_kwargs") in (None, {})
+
+
+# ---------------------------------------------------------------------------
+# TASK_TEMPERATURE — task_type -> sampling temperature (task 85 S1)
+# ---------------------------------------------------------------------------
+
+
+def test_all_task_types_have_a_temperature() -> None:
+    """태스크가 늘 때 온도 테이블에 등재를 빠뜨리면 여기서 red가 된다."""
+    assert set(TASK_TEMPERATURE) == set(TaskType)
+
+
+@pytest.mark.parametrize(
+    "task_type",
+    [TaskType.continue_, TaskType.infill, TaskType.dialogue, TaskType.style, TaskType.draft],
+)
+def test_creative_tasks_use_high_temperature(task_type: TaskType) -> None:
+    assert TASK_TEMPERATURE[task_type] == 0.7
+
+
+@pytest.mark.parametrize("task_type", [TaskType.correct, TaskType.title_, TaskType.summary])
+def test_deterministic_tasks_use_low_temperature(task_type: TaskType) -> None:
+    assert TASK_TEMPERATURE[task_type] == 0.2
+
+
+def test_get_fast_writing_client_forwards_task_temperature_to_the_client() -> None:
+    """ "표에 값이 있다"가 아니라 "그 값이 클라이언트까지 간다"를 고정한다(plan.md 검증 노트 2).
+
+    ``ChatLiteLLM`` 생성 호출까지 도달한 ``temperature`` kwarg를 태스크별로 단언한다.
+    """
+    with patch("infra.llm.provider_factory.ChatLiteLLM") as mock_chat_litellm:
+        get_fast_writing_client(TaskType.continue_)
+        _, creative_kwargs = mock_chat_litellm.call_args
+        assert creative_kwargs["temperature"] == 0.7
+
+        get_fast_writing_client(TaskType.correct)
+        _, deterministic_kwargs = mock_chat_litellm.call_args
+        assert deterministic_kwargs["temperature"] == 0.2
 
 
 def test_summary_task_exists_and_is_low_cost() -> None:
