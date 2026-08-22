@@ -63,6 +63,8 @@ interface WorksState {
   saveChapterSummary: (workId: string, chapterId: string, summary: string) => Promise<void>;
   /** 작품 제목을 실 API로 수정 — 시놉시스 화면의 인라인 편집용 */
   renameWork: (workId: string, title: string) => Promise<void>;
+  /** 작품의 [[문체 지침]]을 실 API로 수정 — 시놉시스 화면의 저장/취소 편집용 */
+  updateStyleNote: (workId: string, styleNote: string) => Promise<void>;
   /** 지정한 부에 빈 화를 추가하고 새 화 id를 반환 (index = 작품 내 max+1) */
   addChapter: (workId: string, partLabel: string) => Promise<string>;
   /** 새 부와 그 첫 화를 만들고, 부 라벨과 함께 만든 화의 id를 돌려준다. */
@@ -247,6 +249,14 @@ export const useWorksStore = create<WorksState>()(
       set((state) => {
         const work = state.works.find((w) => w.id === workId);
         if (work) work.title = title;
+      });
+    },
+
+    updateStyleNote: async (workId, styleNote) => {
+      await worksApi.update({ path: { work_id: workId }, body: { styleNote } });
+      set((state) => {
+        const work = state.works.find((w) => w.id === workId);
+        if (work) work.styleNote = styleNote;
       });
     },
 

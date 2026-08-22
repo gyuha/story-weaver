@@ -51,6 +51,7 @@ class WorkUpdate(_CamelModel):
     sub_genre: str | None = Field(default=None, max_length=64)
     keywords: list[str] | None = None
     style: str | None = Field(default=None, min_length=1, max_length=64)
+    style_note: str | None = None
     status: str | None = Field(default=None, max_length=32)
     cover_theme: str | None = Field(default=None, max_length=16)
 
@@ -68,6 +69,7 @@ class WorkResponse(_CamelModel):
     sub_genre: str
     keywords: list[str]
     style: str
+    style_note: str | None
     status: str
     cover_theme: str
     last_edited_label: str

@@ -59,6 +59,7 @@ const WORK: Work = {
   subGenre: '회귀',
   keywords: [],
   style: '간결체',
+  styleNote: null,
   status: '구상',
   coverTheme: 'dark',
   stats: { chapters: 0, words: '0', wordsUnit: '천자', characters: 0, progress: 0 },
@@ -70,11 +71,11 @@ const WORK: Work = {
   reviewSummary: { scenes: 0, states: 0, conflicts: 0 },
 };
 
-function renderEditor() {
+function renderEditor(work: Work = WORK) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <SynopsisEditor work={WORK} />
+      <SynopsisEditor work={work} />
     </QueryClientProvider>
   );
 }
@@ -251,5 +252,46 @@ describe('SynopsisEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: '취소' }));
 
     expect(continueStopSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('문체 지침 입력란이 렌더되고 작품에 저장된 값으로 채워진다', async () => {
+    mockGetSynopsis.mockResolvedValue({ id: 's1', workId: 'w1', body: '' });
+
+    renderEditor({ ...WORK, styleNote: '건조한 하드보일드, 3인칭 제한 시점' });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('문체 지침')).toHaveValue('건조한 하드보일드, 3인칭 제한 시점');
+    });
+  });
+
+  it('문체 지침을 입력하고 저장하면 작품 수정 API가 1회 호출된다', async () => {
+    mockGetSynopsis.mockResolvedValue({ id: 's1', workId: 'w1', body: '' });
+    mockUpdateWork.mockResolvedValue({ id: 'w1', styleNote: '간결하게' });
+
+    renderEditor();
+    await waitFor(() => expect(screen.getByLabelText('기획의도')).toHaveValue(''));
+
+    await userEvent.type(screen.getByLabelText('문체 지침'), '간결하게');
+    await userEvent.click(screen.getByRole('button', { name: '문체 지침 저장' }));
+
+    expect(mockUpdateWork).toHaveBeenCalledTimes(1);
+    expect(mockUpdateWork).toHaveBeenCalledWith({
+      path: { work_id: 'w1' },
+      body: { styleNote: '간결하게' },
+    });
+  });
+
+  it('문체 지침 "취소"를 누르면 마지막 저장 상태로 되돌리고 저장 API를 호출하지 않는다', async () => {
+    mockGetSynopsis.mockResolvedValue({ id: 's1', workId: 'w1', body: '' });
+
+    renderEditor({ ...WORK, styleNote: '원래 지침' });
+    await waitFor(() => expect(screen.getByLabelText('문체 지침')).toHaveValue('원래 지침'));
+
+    const textarea = screen.getByLabelText('문체 지침');
+    await userEvent.type(textarea, ' 추가');
+    await userEvent.click(screen.getByRole('button', { name: '문체 지침 취소' }));
+
+    expect(textarea).toHaveValue('원래 지침');
+    expect(mockUpdateWork).not.toHaveBeenCalled();
   });
 });

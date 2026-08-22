@@ -1605,6 +1605,10 @@ export type WorkResponse = {
      */
     style: string;
     /**
+     * Stylenote
+     */
+    styleNote: string | null;
+    /**
      * Status
      */
     status: string;
@@ -1676,6 +1680,10 @@ export type WorkUpdate = {
      * Style
      */
     style?: string | null;
+    /**
+     * Stylenote
+     */
+    styleNote?: string | null;
     /**
      * Status
      */

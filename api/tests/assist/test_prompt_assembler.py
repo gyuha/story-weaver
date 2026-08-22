@@ -20,6 +20,7 @@ from domains.assist.schemas import (
     DraftInput,
     InfillInput,
     StyleInput,
+    SummaryInput,
     TitleInput,
 )
 from domains.assist.service.prompt_assembler import _TASK_INSTRUCTION, assemble_prompt
@@ -279,3 +280,71 @@ def test_draft_prompt_rejects_wrong_input_type() -> None:
             memory_items=_MEMORY_ITEMS,
             task_input=ContinueInput(cursor_text="틀린 입력"),
         )
+
+
+# ---------------------------------------------------------------------------
+# 문체 지침(work_style_note) 조건부 주입 (task #84 S2) — 있으면 포함, 없으면(None/빈
+# 문자열) 아무것도 넣지 않는다(껍데기 문장 금지). `_COMMON_BASE` 변경이라 집필 보조
+# 8종 전부가 한 번에 커버된다 — 아래에서 8종 전체를 파라미터화해 단언한다.
+# ---------------------------------------------------------------------------
+
+_TASK_INPUT_BY_TYPE: dict[TaskType, object] = {
+    TaskType.continue_: ContinueInput(cursor_text="지원은 검을 뽑아 들었다."),
+    TaskType.infill: InfillInput(before_text="앞 문장.", after_text="뒤 문장."),
+    TaskType.dialogue: DialogueInput(intent="지원이 거절한다", characters=[]),
+    TaskType.style: StyleInput(text="지원은 검을 뽑았다.", target_style="판타지풍"),
+    TaskType.correct: CorrectInput(text="지원은 검울 뽑았다."),
+    TaskType.title_: TitleInput(text="비 오는 골목에서 그는 검을 들었다."),
+    TaskType.summary: SummaryInput(text="지원이 검을 뽑고 적을 물리쳤다."),
+    TaskType.draft: DraftInput(text="주인공이 스승을 만나 검을 받는다."),
+}
+
+_STYLE_NOTE_MARKER = "작가가 지정한 문체 지침"
+
+
+@pytest.mark.parametrize("task_type", list(TaskType))
+def test_style_note_included_when_present_for_all_task_types(task_type: TaskType) -> None:
+    messages = assemble_prompt(
+        task_type,
+        work_genre="무협",
+        work_style="간결체",
+        work_style_note="쉼표를 아껴 쓰고 문장은 짧게 끊는다.",
+        memory_items=_MEMORY_ITEMS,
+        task_input=_TASK_INPUT_BY_TYPE[task_type],  # type: ignore[arg-type]
+    )
+    text = _combined_text(messages)
+
+    assert _STYLE_NOTE_MARKER in text
+    assert "쉼표를 아껴 쓰고 문장은 짧게 끊는다." in text
+
+
+@pytest.mark.parametrize("task_type", list(TaskType))
+@pytest.mark.parametrize("blank_note", [None, ""])
+def test_style_note_absent_when_none_or_blank_for_all_task_types(
+    task_type: TaskType, blank_note: str | None
+) -> None:
+    messages = assemble_prompt(
+        task_type,
+        work_genre="무협",
+        work_style="간결체",
+        work_style_note=blank_note,
+        memory_items=_MEMORY_ITEMS,
+        task_input=_TASK_INPUT_BY_TYPE[task_type],  # type: ignore[arg-type]
+    )
+    text = _combined_text(messages)
+
+    assert _STYLE_NOTE_MARKER not in text
+
+
+def test_style_note_omitted_keyword_defaults_to_absent() -> None:
+    """기존 호출부(``work_style_note`` 미지정)와의 하위 호환 — 기본값은 미주입."""
+    messages = assemble_prompt(
+        TaskType.continue_,
+        work_genre="무협",
+        work_style="간결체",
+        memory_items=_MEMORY_ITEMS,
+        task_input=ContinueInput(cursor_text="지원은 검을 뽑아 들었다."),
+    )
+    text = _combined_text(messages)
+
+    assert _STYLE_NOTE_MARKER not in text

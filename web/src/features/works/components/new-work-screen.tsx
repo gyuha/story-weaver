@@ -107,6 +107,7 @@ export function NewWorkScreen() {
         subGenre: created.subGenre,
         keywords: created.keywords,
         style,
+        styleNote: created.styleNote,
         status: created.status as Work['status'], // 새 작품은 서버에서 항상 '구상' (works_service.py)
         coverTheme: created.coverTheme as Work['coverTheme'], // 새 작품은 항상 'dark'
         stats: {

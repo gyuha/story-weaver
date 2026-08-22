@@ -127,6 +127,7 @@ def assemble_prompt(
     *,
     work_genre: str,
     work_style: str,
+    work_style_note: str | None = None,
     memory_items: Sequence[MemoryItemResponse],
     task_input: AssistTaskInput,
 ) -> list[BaseMessage]:
@@ -138,6 +139,9 @@ def assemble_prompt(
         5개 집필 보조 작업 중 하나.
     work_genre, work_style:
         작품의 ``genre``/``style`` (공통 베이스에 삽입).
+    work_style_note:
+        작가가 자유 서술로 적은 [[문체 지침]](``Work.style_note``). 비어 있거나
+        ``None``이면 아무것도 주입하지 않는다(껍데기 문장 금지).
     memory_items:
         `MemorySearchService.search()`가 반환하는 병합된 메모리 결과(P1~P3).
         주입 수준(풀세트/경량/최소)은 ``task_type``에 따라 이 함수가 필터링한다.
@@ -151,10 +155,10 @@ def assemble_prompt(
         ``[SystemMessage, HumanMessage]`` — ``LLMClient.ainvoke``/``astream``에
         그대로 전달 가능.
     """
-    system_parts = [
-        _COMMON_BASE.format(genre=work_genre, style=work_style),
-        _TASK_INSTRUCTION[task_type],
-    ]
+    system_parts = [_COMMON_BASE.format(genre=work_genre, style=work_style)]
+    if work_style_note:
+        system_parts.append(f"작가가 지정한 문체 지침: {work_style_note}")
+    system_parts.append(_TASK_INSTRUCTION[task_type])
 
     if task_type is TaskType.continue_:
         if not isinstance(task_input, ContinueInput):

@@ -92,6 +92,7 @@ async def test_create_work_returns_201_with_camelcase(client: AsyncClient) -> No
         "lastEditedLabel",
         "stats",
         "reviewSummary",
+        "styleNote",
     ):
         assert key in body
     assert body["stats"]["wordsUnit"] == "천자"

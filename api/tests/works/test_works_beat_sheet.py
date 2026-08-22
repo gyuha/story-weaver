@@ -62,6 +62,23 @@ async def owner_work(owner: User) -> Work:
 
 
 @pytest.fixture
+async def owner_work_with_style_note(owner: User) -> Work:
+    async with AsyncSessionFactory() as session:
+        work = Work(
+            user_id=owner.id,
+            title="회귀한 무사",
+            short_label="회",
+            genre="무협",
+            keywords=["회귀", "복수"],
+            style="간결체",
+            style_note="쉼표를 아껴 쓰고 문장은 짧게 끊는다.",
+        )
+        session.add(work)
+        await session.commit()
+        return work
+
+
+@pytest.fixture
 def app() -> FastAPI:
     app = FastAPI()
     app.include_router(works_router, prefix="/api/v1")
@@ -116,6 +133,39 @@ async def test_beat_sheet_uses_high_quality_tier_client_and_prompt_includes_genr
     prompt_text = " ".join(str(m.content) for m in fake.received_messages)
     assert "무협" in prompt_text
     assert "간결체" in prompt_text
+
+
+# ---------------------------------------------------------------------------
+# 문체 지침(style_note) 조건부 주입 (task #84 S2) — 있으면 포함, 없으면 미포함.
+# ---------------------------------------------------------------------------
+
+
+async def test_beat_sheet_prompt_includes_style_note_when_set(
+    app: FastAPI, owner_work_with_style_note: Work, owner: User
+) -> None:
+    fake = _FakeLLMClient("1화: 발단 — 그는 눈을 떴다.")
+    app.dependency_overrides[_beat_sheet_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(f"/api/v1/works/{owner_work_with_style_note.id}/beat-sheet")
+
+    assert resp.status_code == 200
+    prompt_text = " ".join(str(m.content) for m in fake.received_messages)
+    assert "쉼표를 아껴 쓰고 문장은 짧게 끊는다." in prompt_text
+
+
+async def test_beat_sheet_prompt_omits_style_note_marker_when_not_set(
+    app: FastAPI, owner_work: Work, owner: User
+) -> None:
+    fake = _FakeLLMClient("1화: 발단 — 그는 눈을 떴다.")
+    app.dependency_overrides[_beat_sheet_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(f"/api/v1/works/{owner_work.id}/beat-sheet")
+
+    assert resp.status_code == 200
+    prompt_text = " ".join(str(m.content) for m in fake.received_messages)
+    assert "작가가 지정한 문체 지침" not in prompt_text
 
 
 # ---------------------------------------------------------------------------

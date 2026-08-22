@@ -67,6 +67,7 @@ class AssistService:
             task_type,
             work_genre=work.genre,
             work_style=work.style,
+            work_style_note=work.style_note,
             memory_items=memory_items,
             task_input=task_input,
         )

@@ -86,6 +86,15 @@ async def test_update_work_applies_changes(works_service: WorksService) -> None:
     assert updated.genre == "무협"  # 미지정 필드는 보존
 
 
+async def test_update_work_sets_style_note(works_service: WorksService) -> None:
+    user_id = uuid.uuid4()
+    created = await works_service.create_work(user_id, _create())
+    updated = await works_service.update_work(
+        created.id, user_id, WorkUpdate(style_note="건조한 하드보일드, 3인칭 제한 시점")
+    )
+    assert updated.style_note == "건조한 하드보일드, 3인칭 제한 시점"
+
+
 async def test_update_work_other_tenant_raises(works_service: WorksService) -> None:
     owner, intruder = uuid.uuid4(), uuid.uuid4()
     created = await works_service.create_work(owner, _create())

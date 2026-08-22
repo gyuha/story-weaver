@@ -6883,6 +6883,17 @@
             "type": "string",
             "title": "Style"
           },
+          "styleNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stylenote"
+          },
           "status": {
             "type": "string",
             "title": "Status"
@@ -6911,6 +6922,7 @@
           "subGenre",
           "keywords",
           "style",
+          "styleNote",
           "status",
           "coverTheme",
           "lastEditedLabel",
@@ -7030,6 +7042,17 @@
               }
             ],
             "title": "Style"
+          },
+          "styleNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stylenote"
           },
           "status": {
             "anyOf": [

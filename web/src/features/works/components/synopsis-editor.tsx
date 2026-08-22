@@ -12,14 +12,18 @@ import { toast } from 'sonner';
 /** 시놉시스 화면의 제목·기획의도 편집 — 둘 다 blur 시 자동 저장(ADR-0011은 폐기, 이 두 필드로 대체). */
 export function SynopsisEditor({ work }: { work: Work }) {
   const renameWork = useWorksStore((s) => s.renameWork);
+  const updateStyleNote = useWorksStore((s) => s.updateStyleNote);
   const [titleDraft, setTitleDraft] = useState(work.title);
   const [intentDraft, setIntentDraft] = useState('');
   // 마지막으로 저장에 성공한 값 — "취소"가 되돌아갈 기준점.
   const [savedIntent, setSavedIntent] = useState('');
-  const [savedField, setSavedField] = useState<'title' | 'intent' | null>(null);
+  const [styleNoteDraft, setStyleNoteDraft] = useState(work.styleNote ?? '');
+  const [savedStyleNote, setSavedStyleNote] = useState(work.styleNote ?? '');
+  const [savedField, setSavedField] = useState<'title' | 'intent' | 'styleNote' | null>(null);
   const [showDraft, setShowDraft] = useState(false);
   const continueStream = useSynopsisContinueStream();
   const intentRef = useRef<HTMLTextAreaElement>(null);
+  const styleNoteRef = useRef<HTMLTextAreaElement>(null);
 
   // 내용 길이에 맞춰 높이를 늘린다(상한 없음) — 높이를 초기화한 뒤 scrollHeight로
   // 다시 재는 표준 패턴. 로드·적용·취소 등 값이 바뀌는 모든 경로에서 동작한다.
@@ -30,6 +34,14 @@ export function SynopsisEditor({ work }: { work: Work }) {
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, [intentDraft]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: styleNoteDraft가 바뀔 때만 높이 재계산
+  useEffect(() => {
+    const el = styleNoteRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [styleNoteDraft]);
 
   // eco: 시놉시스가 아직 없는 작품(404)은 흔한 정상 상태 — 에러 표시 없이 빈 값으로 시작한다.
   const synopsisQuery = useQuery({
@@ -46,7 +58,7 @@ export function SynopsisEditor({ work }: { work: Work }) {
 
   const updateSynopsis = useMutation(manuscriptMutations.updateSynopsis());
 
-  const flashSaved = (field: 'title' | 'intent') => {
+  const flashSaved = (field: 'title' | 'intent' | 'styleNote') => {
     setSavedField(field);
     setTimeout(() => setSavedField((f) => (f === field ? null : f)), 1500);
   };
@@ -77,6 +89,18 @@ export function SynopsisEditor({ work }: { work: Work }) {
   };
 
   const cancelIntent = () => setIntentDraft(savedIntent);
+
+  // 문체 지침도 기획의도와 같은 확정 방식 — blur 자동 저장이 아니라 "저장"/"취소" 버튼으로만 확정한다.
+  const commitStyleNote = () => {
+    updateStyleNote(work.id, styleNoteDraft)
+      .then(() => {
+        setSavedStyleNote(styleNoteDraft);
+        flashSaved('styleNote');
+      })
+      .catch((err) => toast.error(apiErrorMessage(err, '문체 지침을 저장하지 못했습니다')));
+  };
+
+  const cancelStyleNote = () => setStyleNoteDraft(savedStyleNote);
 
   const runContinue = () => {
     if (!intentDraft.trim()) {
@@ -171,6 +195,45 @@ export function SynopsisEditor({ work }: { work: Work }) {
             {savedField === 'intent' && <SavedBadge />}
           </div>
         )}
+      </div>
+
+      <div className="mt-6">
+        <label
+          htmlFor="synopsis-style-note"
+          className="mb-1.5 block text-[12px] font-semibold tracking-[0.04em] text-muted-ink"
+        >
+          문체 지침
+        </label>
+        <textarea
+          ref={styleNoteRef}
+          id="synopsis-style-note"
+          value={styleNoteDraft}
+          onChange={(e) => setStyleNoteDraft(e.target.value)}
+          placeholder="예: 건조한 하드보일드, 3인칭 제한 시점, 감정 설명 금지 (비워도 됩니다)"
+          rows={4}
+          className="min-h-[100px] w-full resize-none overflow-hidden rounded-md border border-line bg-transparent p-3 font-serif text-[16.5px] leading-[1.9] text-ink outline-none placeholder:text-faintest focus:border-primary"
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="문체 지침 저장"
+            onClick={commitStyleNote}
+            className="flex h-8 items-center gap-1.5 rounded-full border border-line bg-paper px-3.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-surface"
+          >
+            <Save className="size-[13px]" strokeWidth={2} />
+            저장
+          </button>
+          <button
+            type="button"
+            aria-label="문체 지침 취소"
+            onClick={cancelStyleNote}
+            disabled={styleNoteDraft === savedStyleNote}
+            className="flex h-8 items-center rounded-full px-3.5 text-[13px] font-medium text-faint transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            취소
+          </button>
+          {savedField === 'styleNote' && <SavedBadge />}
+        </div>
       </div>
     </div>
   );

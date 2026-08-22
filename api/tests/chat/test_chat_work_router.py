@@ -69,6 +69,23 @@ async def owner_work(two_users: tuple[User, User]) -> Work:
 
 
 @pytest.fixture
+async def owner_work_with_style_note(two_users: tuple[User, User]) -> Work:
+    owner, _ = two_users
+    async with AsyncSessionFactory() as session:
+        work = Work(
+            user_id=owner.id,
+            title="회귀한 무사",
+            short_label="회",
+            genre="무협",
+            style="간결체",
+            style_note="쉼표를 아껴 쓰고 문장은 짧게 끊는다.",
+        )
+        session.add(work)
+        await session.commit()
+        return work
+
+
+@pytest.fixture
 def app() -> FastAPI:
     app = FastAPI()
     app.include_router(works_router, prefix="/api/v1")
@@ -181,6 +198,43 @@ async def test_context_includes_current_chapter_body_and_memory(
     assert "주인공의 스승" in system_text
     human_text = str(fake.received_messages[-1].content)
     assert human_text == "이 장면 어때?"
+
+
+# ---------------------------------------------------------------------------
+# 문체 지침(style_note) 조건부 주입 (task #84 S2) — 있으면 포함, 없으면 미포함.
+# ---------------------------------------------------------------------------
+
+
+async def test_context_includes_style_note_when_set(
+    app: FastAPI, owner_work_with_style_note: Work, two_users: tuple[User, User]
+) -> None:
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work_with_style_note.id)
+    fake = _FakeLLMClient(["답변입니다."])
+    app.dependency_overrides[_work_chat_llm_client] = lambda: fake
+
+    resp = await _send_message(
+        app, owner, owner_work_with_style_note.id, chapter["id"], "이 장면 어때?"
+    )
+
+    assert resp.status_code == 200
+    system_text = str(fake.received_messages[0].content)
+    assert "쉼표를 아껴 쓰고 문장은 짧게 끊는다." in system_text
+
+
+async def test_context_omits_style_note_marker_when_not_set(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    owner, _ = two_users
+    chapter = await _create_chapter(app, owner, owner_work.id)
+    fake = _FakeLLMClient(["답변입니다."])
+    app.dependency_overrides[_work_chat_llm_client] = lambda: fake
+
+    resp = await _send_message(app, owner, owner_work.id, chapter["id"], "이 장면 어때?")
+
+    assert resp.status_code == 200
+    system_text = str(fake.received_messages[0].content)
+    assert "작가가 지정한 문체 지침" not in system_text
 
 
 # ---------------------------------------------------------------------------

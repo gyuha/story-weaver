@@ -116,6 +116,8 @@ export interface Work {
   subGenre: string; // '회귀' 등 라벨
   keywords: string[];
   style: WritingStyle;
+  /** [[문체 지침]] — 작가가 자유 서술로 적는 작품 고유 문체 규칙. 비어 있으면 null. */
+  styleNote: string | null;
   status: '연재 중' | '구상' | '초고';
   coverTheme: 'dark' | 'green' | 'orange';
   stats: WorkStats;

@@ -45,6 +45,10 @@ class Work(Base):
     # 기존 작품에 기본값을 채우지 않는다(ADR 260813-110724) — null이면 미지정.
     art_style_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     art_style_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    # [[문체 지침]] — ``style``(간결체/만연체/서정체 라벨)과 다른 필드다. 작가가 자기
+    # 문체 규칙을 자유 서술로 적는 자리이며, 라벨을 대체하지 않고 병행한다.
+    # 기존 작품에 기본값을 채우지 않는다(ADR 260813-110724) — null이면 미지정.
+    style_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

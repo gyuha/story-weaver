@@ -60,6 +60,7 @@ def _to_response(work: Work) -> WorkResponse:
         sub_genre=work.sub_genre,
         keywords=list(work.keywords),
         style=work.style,
+        style_note=work.style_note,
         status=work.status,
         cover_theme=work.cover_theme,
         last_edited_label=last_edited,
@@ -162,6 +163,8 @@ def _build_beat_sheet_messages(work: Work) -> list[BaseMessage]:
         "1화부터 시작하는 회차별 비트를 한 줄씩 생성하세요. 각 줄은 "
         "'N화: 단계 — 설명' 형식으로 쓰고, 다른 설명 없이 줄 목록만 출력하세요."
     )
+    if work.style_note:
+        system += f" 작가가 지정한 문체 지침: {work.style_note}"
     return [SystemMessage(content=system), HumanMessage(content="비트 시트를 생성해줘.")]
 
 

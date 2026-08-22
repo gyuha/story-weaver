@@ -63,6 +63,25 @@ async def owner_work(two_users: tuple[User, User]) -> Work:
 
 
 @pytest.fixture
+async def owner_work_with_style_note(two_users: tuple[User, User]) -> Work:
+    owner, _ = two_users
+    async with AsyncSessionFactory() as session:
+        work = Work(
+            user_id=owner.id,
+            title="회귀한 무사",
+            short_label="회",
+            genre="무협",
+            sub_genre="회귀",
+            keywords=["복수", "성장"],
+            style="간결체",
+            style_note="쉼표를 아껴 쓰고 문장은 짧게 끊는다.",
+        )
+        session.add(work)
+        await session.commit()
+        return work
+
+
+@pytest.fixture
 def app() -> FastAPI:
     app = FastAPI()
     app.include_router(manuscript_router, prefix="/api/v1")
@@ -126,6 +145,47 @@ async def test_continue_streams_fake_chunks_and_prompt_includes_work_context(
     assert "복수" in system_text and "성장" in system_text
     assert "간결체" in system_text
     assert human_text == "이 작품은 회귀한 무사가"
+
+
+# ---------------------------------------------------------------------------
+# 문체 지침(style_note) 조건부 주입 (task #84 S2) — 있으면 포함, 없으면 미포함.
+# ---------------------------------------------------------------------------
+
+
+async def test_continue_prompt_includes_style_note_when_set(
+    app: FastAPI, owner_work_with_style_note: Work, two_users: tuple[User, User]
+) -> None:
+    owner, _ = two_users
+    fake = _FakeLLMClient(["이어지는 문장."])
+    app.dependency_overrides[_synopsis_continue_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work_with_style_note.id}/synopsis/continue",
+            json={"text": "이 작품은 회귀한 무사가"},
+        )
+
+    assert resp.status_code == 200
+    system_text = str(fake.received_messages[0].content)
+    assert "쉼표를 아껴 쓰고 문장은 짧게 끊는다." in system_text
+
+
+async def test_continue_prompt_omits_style_note_marker_when_not_set(
+    app: FastAPI, owner_work: Work, two_users: tuple[User, User]
+) -> None:
+    owner, _ = two_users
+    fake = _FakeLLMClient(["이어지는 문장."])
+    app.dependency_overrides[_synopsis_continue_llm_client] = lambda: fake
+
+    async with _client_as(app, owner) as client:
+        resp = await client.post(
+            f"/api/v1/works/{owner_work.id}/synopsis/continue",
+            json={"text": "이 작품은 회귀한 무사가"},
+        )
+
+    assert resp.status_code == 200
+    system_text = str(fake.received_messages[0].content)
+    assert "작가가 지정한 문체 지침" not in system_text
 
 
 # ---------------------------------------------------------------------------

@@ -60,9 +60,11 @@ class ChatContextService:
         manuscript_text = chapter.body or "(현재 화 본문 없음)"
         memory_items = await self._memory_search_service.search(work_id, user_id, chapter_id)
 
+        style_note_line = f"작가가 지정한 문체 지침: {work.style_note}\n" if work.style_note else ""
         return (
             "당신은 웹소설 작가의 집필을 보조하는 AI 어시스턴트입니다. "
             f"이 작품의 장르는 '{work.genre}', 문체는 '{work.style}'입니다.\n"
+            f"{style_note_line}"
             "아래는 작가가 현재 쓰고 있는 화(챕터)의 원고 전문과 관련 설정(메모리)입니다. "
             "이를 근거로 작가의 질문에 답하거나 대화하세요.\n\n"
             f"[현재 화 원고]\n{manuscript_text}\n\n"

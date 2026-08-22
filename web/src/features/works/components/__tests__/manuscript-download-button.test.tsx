@@ -30,6 +30,7 @@ const WORK: Work = {
   subGenre: '회귀',
   keywords: [],
   style: '간결체',
+  styleNote: null,
   status: '구상',
   coverTheme: 'dark',
   stats: { chapters: 3, words: '12', wordsUnit: '천자', characters: 0, progress: 0 },

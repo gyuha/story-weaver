@@ -178,6 +178,8 @@ def _build_synopsis_continue_messages(work: Work, text: str) -> list[BaseMessage
         "아래 지금까지 쓰인 기획의도 뒤에 자연스럽게 이어지는 문장을 생성하세요. "
         "기존 문장은 다시 쓰지 말고 이어지는 내용만 출력하세요."
     )
+    if work.style_note:
+        system += f" 작가가 지정한 문체 지침: {work.style_note}"
     return [SystemMessage(content=system), HumanMessage(content=text)]
 
 
